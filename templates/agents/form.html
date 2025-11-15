@@ -22,7 +22,7 @@
 </div>
 
 <div class="form-container">
-    <form method="post" class="form">
+    <form method="post" enctype="multipart/form-data" class="form">
         {% csrf_token %}
         
         {% if not agent %}
@@ -129,9 +129,23 @@
             </div>
 
             <div class="form-group">
-                <label for="knowledge_base">Base de Conhecimento (Markdown)</label>
-                <textarea name="knowledge_base" id="knowledge_base" rows="10" placeholder="# Informações importantes&#10;&#10;Adicione aqui o conhecimento que o agente deve ter...">{% if agent %}{{ agent.knowledge_base }}{% endif %}</textarea>
-                <small class="form-helper">📚 Informações que o agente usará para responder perguntas</small>
+                <label for="knowledge_pdf">Upload PDF de Conhecimento</label>
+                <input type="file" name="knowledge_pdf" id="knowledge_pdf" accept=".pdf">
+                {% if agent and agent.knowledge_pdf %}
+                <div style="margin-top: var(--space-3); padding: var(--space-3); background: var(--primary-50); border-radius: var(--radius-md); display: flex; align-items: center; gap: var(--space-2);">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span style="color: var(--primary-700); font-weight: 500;">{{ agent.knowledge_pdf.name }}</span>
+                </div>
+                {% endif %}
+                <small class="form-helper">📄 O PDF será enviado automaticamente para o N8N quando salvar</small>
+            </div>
+
+            <div class="form-group">
+                <label for="n8n_webhook_url">Webhook N8N (Opcional)</label>
+                <input type="url" name="n8n_webhook_url" id="n8n_webhook_url" value="{% if agent %}{{ agent.n8n_webhook_url }}{% endif %}" placeholder="https://seu-n8n.com/webhook/agent-updated">
+                <small class="form-helper">🔔 URL do webhook do N8N para receber notificações quando o agente for atualizado (especialmente quando fizer upload de PDF)</small>
             </div>
 
             <div class="form-group">

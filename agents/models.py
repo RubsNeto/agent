@@ -191,6 +191,13 @@ class Agent(models.Model):
         verbose_name="Base de Conhecimento",
         help_text="Informações sobre serviços, políticas, etc (Markdown)"
     )
+    knowledge_pdf = models.FileField(
+        upload_to="knowledge_pdfs/",
+        null=True,
+        blank=True,
+        verbose_name="PDF de Conhecimento",
+        help_text="Upload do PDF com informações do negócio (será extraído automaticamente)"
+    )
     
     # Tratamento de exceções
     fallback_message = models.TextField(
@@ -202,6 +209,15 @@ class Agent(models.Model):
         default=DEFAULT_ESCALATION_RULE,
         verbose_name="Regra de Escalonamento",
         help_text="Quando e como transferir para atendente humano"
+    )
+    
+    # Integração com N8N
+    n8n_webhook_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name="Webhook N8N",
+        help_text="URL do webhook do N8N para notificar atualizações (ex: quando PDF é upado)"
     )
     
     # Metadata

@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Agent
+from .utils import extract_text_from_pdf
 from organizations.models import Organization
 from audit.models import AuditLog
 
@@ -31,6 +32,7 @@ def agent_create(request):
         
         organization = get_object_or_404(Organization, id=org_id, owner=request.user)
         
+        # Criar agente
         agent = Agent.objects.create(
             organization=organization,
             name=name,
@@ -42,7 +44,29 @@ def agent_create(request):
             knowledge_base=request.POST.get("knowledge_base", ""),
             fallback_message=request.POST.get("fallback_message", ""),
             escalation_rule=request.POST.get("escalation_rule", ""),
+            n8n_webhook_url=request.POST.get("n8n_webhook_url", ""),
         )
+        
+        # Processar upload de PDF se houver
+        if 'knowledge_pdf' in request.FILES:
+            pdf_file = request.FILES['knowledge_pdf']
+            agent.knowledge_pdf = pdf_file
+            
+            try:
+                # Extrair texto do PDF
+                extracted_text = extract_text_from_pdf(pdf_file)
+                
+                # Adicionar ao knowledge_base existente
+                if agent.knowledge_base:
+                    agent.knowledge_base += "\n\n---\n\n# Conhecimento Extra\u00eddo do PDF\n\n" + extracted_text
+                else:
+                    agent.knowledge_base = extracted_text
+                    
+                messages.success(request, f"PDF processado com sucesso! {len(extracted_text)} caracteres extra\u00eddos.")
+            except Exception as e:
+                messages.warning(request, f"Erro ao processar PDF: {str(e)}")
+            
+            agent.save()
         
         AuditLog.log(
             action="create",
@@ -72,10 +96,30 @@ def agent_edit(request, slug):
         agent.greeting = request.POST.get("greeting", agent.greeting)
         agent.tone = request.POST.get("tone", agent.tone)
         agent.style_guidelines = request.POST.get("style_guidelines", agent.style_guidelines)
-        agent.knowledge_base = request.POST.get("knowledge_base", agent.knowledge_base)
         agent.fallback_message = request.POST.get("fallback_message", agent.fallback_message)
         agent.escalation_rule = request.POST.get("escalation_rule", agent.escalation_rule)
+        agent.n8n_webhook_url = request.POST.get("n8n_webhook_url", agent.n8n_webhook_url)
         agent.is_active = request.POST.get("is_active") == "on"
+        
+        # Processar upload de PDF se houver
+        if 'knowledge_pdf' in request.FILES:
+            pdf_file = request.FILES['knowledge_pdf']
+            agent.knowledge_pdf = pdf_file
+            
+            try:
+                # Extrair texto do PDF
+                extracted_text = extract_text_from_pdf(pdf_file)
+                
+                # Adicionar ao knowledge_base existente
+                if agent.knowledge_base:
+                    agent.knowledge_base += "\n\n---\n\n# Conhecimento Extra\u00eddo do PDF\n\n" + extracted_text
+                else:
+                    agent.knowledge_base = extracted_text
+                    
+                messages.success(request, f"PDF processado com sucesso! {len(extracted_text)} caracteres extra\u00eddos.")
+            except Exception as e:
+                messages.warning(request, f"Erro ao processar PDF: {str(e)}")
+        
         agent.save()
         
         AuditLog.log(

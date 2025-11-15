@@ -10,7 +10,7 @@
 </div>
 
 <div class="table-container">
-    {% if apikeys %}
+    {% if api_keys %}
         <table class="data-table">
             <thead>
                 <tr>
@@ -22,21 +22,21 @@
                 </tr>
             </thead>
             <tbody>
-                {% for key in apikeys %}
+                {% for key in api_keys %}
                 <tr>
                     <td><strong>{{ key.name }}</strong></td>
                     <td>{{ key.organization.name }}</td>
                     <td><code class="api-key">{{ key.key }}</code></td>
                     <td>
                         {% if key.is_active %}
-                            <span class="badge badge-success">Ativa</span>
+                            <span class="badge" style="background: var(--primary-500); color: white;">Ativa</span>
                         {% else %}
-                            <span class="badge badge-danger">Inativa</span>
+                            <span class="badge" style="background: var(--gray-400); color: white;">Inativa</span>
                         {% endif %}
                     </td>
                     <td class="action-buttons">
                         <button onclick="copyKey('{{ key.key }}')" class="btn btn-sm btn-secondary"> Copiar</button>
-                        <a href="{% url 'organizations:apikey_delete' key.pk %}" class="btn btn-sm btn-danger">Excluir</a>
+                        <a href="{% url 'organizations:apikey_delete' key.pk %}" class="btn btn-sm" style="background: var(--gray-600); color: white;">Excluir</a>
                     </td>
                 </tr>
                 {% endfor %}

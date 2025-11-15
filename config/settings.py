@@ -111,6 +111,10 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
+# Media files (uploads)
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 # Whitenoise configuration
 STORAGES = {
     "default": {
@@ -132,8 +136,13 @@ LOGOUT_REDIRECT_URL = "accounts:login"
 
 # CSRF Trusted Origins
 csrf_origins = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = []
 if csrf_origins:
     CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins.split(",") if origin.strip()]
+
+# Adicionar ngrok URL
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS.append("https://petra-nonlogistical-freeman.ngrok-free.dev")
 
 # Cache configuration (para rate limiting)
 CACHES = {

@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block title %}Documentação da API{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+            Documentação da API
+        </h1>
+        <p style="color: var(--gray-600); font-size: 1.125rem; margin-top: var(--space-2);">
+            Como integrar seus agentes com N8N e outras ferramentas
+        </p>
+    </div>
+</div>
+
+<div class="form-container" style="max-width: 900px; margin: 0 auto;">
+    <!-- Autenticação -->
+    <div class="info-box" style="margin-bottom: var(--space-8); background: var(--primary-50); border-left: 4px solid var(--primary-500);">
+        <h2 style="color: var(--primary-600); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+            </svg>
+            Autenticação
+        </h2>
+        <p style="margin-bottom: var(--space-4); color: var(--gray-700);">
+            Todas as requisições à API requerem autenticação via <strong>API Key</strong>.
+        </p>
+        
+        <div style="background: var(--gray-900); padding: var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-4);">
+            <p style="color: var(--gray-400); font-size: 0.875rem; margin-bottom: var(--space-2);">Header de Autenticação:</p>
+            <code style="color: #22d3ee; font-family: 'Consolas', monospace;">Authorization: Bearer SUA_API_KEY_AQUI</code>
+        </div>
+
+        <p style="color: var(--gray-600); font-size: 0.875rem;">
+            💡 <strong>Dica:</strong> Crie suas API Keys em <a href="{% url 'organizations:apikeys' %}" style="color: var(--primary-600);">Organizações → API Keys</a>
+        </p>
+    </div>
+
+    <!-- Endpoint: Buscar Configuração do Agente -->
+    <div class="card" style="margin-bottom: var(--space-8); padding: var(--space-6);">
+        <h2 style="color: var(--primary-600); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            GET /api/n8n/agents/&lt;slug&gt;/config
+        </h2>
+
+        <p style="color: var(--gray-700); margin-bottom: var(--space-6);">
+            Retorna a configuração <strong>leve</strong> de um agente (sem knowledge_base).
+            Use este endpoint para buscar configurações básicas frequentemente.
+        </p>
+
+        <!-- URL Completa -->
+        <div style="margin-bottom: var(--space-6);">
+            <label style="display: block; font-weight: 600; margin-bottom: var(--space-2); color: var(--gray-700);">URL Completa:</label>
+            <div style="background: var(--gray-900); padding: var(--space-4); border-radius: var(--radius-md);">
+                <code style="color: #22d3ee; font-family: 'Consolas', monospace; word-break: break-all;">
+                    {{ request.scheme }}://{{ request.get_host }}/api/n8n/agents/SEU-AGENTE-SLUG/config
+                </code>
+            </div>
+        </div>
+
+        <!-- Parâmetros -->
+        <div style="margin-bottom: var(--space-6);">
+            <label style="display: block; font-weight: 600; margin-bottom: var(--space-2); color: var(--gray-700);">Parâmetros:</label>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--gray-50); text-align: left;">
+                        <th style="padding: var(--space-3); border: 1px solid var(--gray-200);">Nome</th>
+                        <th style="padding: var(--space-3); border: 1px solid var(--gray-200);">Tipo</th>
+                        <th style="padding: var(--space-3); border: 1px solid var(--gray-200);">Descrição</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: var(--space-3); border: 1px solid var(--gray-200);"><code>slug</code></td>
+                        <td style="padding: var(--space-3); border: 1px solid var(--gray-200);">Path</td>
+                        <td style="padding: var(--space-3); border: 1px solid var(--gray-200);">Slug único do agente</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Exemplo de Requisição (N8N) -->
+        <div style="margin-bottom: var(--space-6);">
+            <label style="display: block; font-weight: 600; margin-bottom: var(--space-2); color: var(--gray-700);">
+                ⚙️ Configuração no N8N (HTTP Request):
+            </label>
+            <div style="background: var(--gray-50); padding: var(--space-4); border-radius: var(--radius-md); border-left: 4px solid var(--primary-500);">
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li style="margin-bottom: var(--space-3);">
+                        <strong>Method:</strong> <code style="background: var(--gray-200); padding: 2px 8px; border-radius: 4px;">GET</code>
+                    </li>
+                    <li style="margin-bottom: var(--space-3);">
+                        <strong>URL:</strong> <code style="background: var(--gray-200); padding: 2px 8px; border-radius: 4px;">{{ request.scheme }}://{{ request.get_host }}/api/n8n/agents/&#123;&#123;$json["agent_slug"]&#125;&#125;/config</code>
+                    </li>
+                    <li style="margin-bottom: var(--space-3);">
+                        <strong>Authentication:</strong> <code style="background: var(--gray-200); padding: 2px 8px; border-radius: 4px;">Generic Credential Type</code>
+                    </li>
+                    <li style="margin-bottom: var(--space-3);">
+                        <strong>Header Name:</strong> <code style="background: var(--gray-200); padding: 2px 8px; border-radius: 4px;">X-API-Key</code>
+                    </li>
+                    <li>
+                        <strong>Header Value:</strong> <code style="background: var(--gray-200); padding: 2px 8px; border-radius: 4px;">SUA_API_KEY</code>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Exemplo de Resposta -->
+        <div>
+            <label style="display: block; font-weight: 600; margin-bottom: var(--space-2); color: var(--gray-700);">Exemplo de Resposta (JSON):</label>
+            <pre style="background: var(--gray-900); color: var(--gray-100); padding: var(--space-4); border-radius: var(--radius-md); overflow-x: auto; font-size: 0.875rem; line-height: 1.6;"><code>{
+  "name": "Maria Atendente",
+  "slug": "maria-atendente-unhas-fast",
+  "role": "atendente",
+  "sector": "manicure/pedicure",
+  "language": "pt-BR",
+  "greeting": "Olá! Eu sou Maria, como posso ajudar?",
+  "tone": "simpatico_acolhedor",
+  "style_guidelines": "Use linguagem simples e amigável...",
+  "business_hours": {
+    "mon": "09:00-18:00",
+    "tue": "09:00-18:00",
+    ...
+  },
+  "fallback_message": "Desculpe, não entendi...",
+  "escalation_rule": "Transferir para humano quando..."
+}</code></pre>
+        </div>
+    </div>
+
+    <!-- Endpoint: Buscar Base de Conhecimento -->
+    <div class="card" style="margin-bottom: var(--space-8); padding: var(--space-6);">
+        <h2 style="color: var(--primary-600); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            GET /api/n8n/agents/&lt;slug&gt;/knowledge
+        </h2>
+
+        <p style="color: var(--gray-700); margin-bottom: var(--space-6);">
+            Retorna a <strong>base de conhecimento completa</strong> do agente (pode ser grande).
+            Use este endpoint apenas quando precisar do knowledge_base, geralmente após receber um webhook de atualização.
+        </p>
+
+        <!-- URL Completa -->
+        <div style="margin-bottom: var(--space-6);">
+            <label style="display: block; font-weight: 600; margin-bottom: var(--space-2); color: var(--gray-700);">URL Completa:</label>
+            <div style="background: var(--gray-900); padding: var(--space-4); border-radius: var(--radius-md);">
+                <code style="color: #22d3ee; font-family: 'Consolas', monospace; word-break: break-all;">
+                    {{ request.scheme }}://{{ request.get_host }}/api/n8n/agents/SEU-AGENTE-SLUG/knowledge
+                </code>
+            </div>
+        </div>
+
+        <!-- Exemplo de Resposta -->
+        <div>
+            <label style="display: block; font-weight: 600; margin-bottom: var(--space-2); color: var(--gray-700);">Exemplo de Resposta (JSON):</label>
+            <pre style="background: var(--gray-900); color: var(--gray-100); padding: var(--space-4); border-radius: var(--radius-md); overflow-x: auto; font-size: 0.875rem; line-height: 1.6;"><code>{
+  "slug": "maria-atendente-unhas-fast",
+  "knowledge_base": "## Serviços Oferecidos\n\nManicure...\n\n---\n\n# Conhecimento Extraído do PDF\n\n[texto extraído do PDF...]",
+  "has_pdf": true,
+  "updated_at": "2025-11-13T11:15:54Z"
+}</code></pre>
+        </div>
+    </div>
+
+    <!-- Webhook de Notificação -->
+    <div class="card" style="margin-bottom: var(--space-8); padding: var(--space-6); border-left: 4px solid #22d3ee;">
+        <h2 style="color: var(--primary-600); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            Webhook de Atualização (N8N)
+        </h2>
+
+        <p style="color: var(--gray-700); margin-bottom: var(--space-6);">
+            Quando um agente é atualizado (especialmente quando um PDF é carregado), o sistema pode enviar uma notificação para seu N8N automaticamente.
+            Configure o campo <strong>"Webhook N8N"</strong> ao criar/editar um agente.
+        </p>
+
+        <div style="background: var(--gray-50); padding: var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-6);">
+            <h3 style="margin-bottom: var(--space-3); color: var(--gray-700);">Como Funciona:</h3>
+            <ol style="margin: 0; padding-left: var(--space-5); color: var(--gray-600);">
+                <li style="margin-bottom: var(--space-2);">Configure um Webhook no N8N (ex: <code style="background: var(--gray-200); padding: 2px 6px; border-radius: 4px;">https://seu-n8n.com/webhook/agent-updated</code>)</li>
+                <li style="margin-bottom: var(--space-2);">Cole a URL do webhook no campo "Webhook N8N" do seu agente</li>
+                <li style="margin-bottom: var(--space-2);">Quando o agente for salvo/atualizado, você receberá uma notificação POST</li>
+                <li>Use essa notificação para buscar o <code style="background: var(--gray-200); padding: 2px 6px; border-radius: 4px;">/knowledge</code> e treinar seu RAG</li>
+            </ol>
+        </div>
+
+        <div>
+            <label style="display: block; font-weight: 600; margin-bottom: var(--space-2); color: var(--gray-700);">Payload do Webhook (POST):</label>
+            <pre style="background: var(--gray-900); color: var(--gray-100); padding: var(--space-4); border-radius: var(--radius-md); overflow-x: auto; font-size: 0.875rem; line-height: 1.6;"><code>{
+  "agent_slug": "maria-atendente-unhas-fast",
+  "has_pdf": true,
+  "updated_at": "2025-11-13T11:15:54Z"
+}</code></pre>
+        </div>
+    </div>
+
+    <!-- Rate Limiting -->
+    <div class="info-box" style="margin-bottom: var(--space-8); background: linear-gradient(135deg, var(--warning) 0%, #f59e0b 100%); border: none; color: white;">
+        <h3 style="margin-bottom: var(--space-2); display: flex; align-items: center; gap: var(--space-2);">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            Rate Limiting
+        </h3>
+        <p style="margin: 0;">
+            Limite de <strong>60 requisições por minuto</strong> por IP/organização.
+        </p>
+    </div>
+
+    <!-- Códigos de Status -->
+    <div class="card" style="padding: var(--space-6);">
+        <h3 style="color: var(--primary-600); margin-bottom: var(--space-4);">📋 Códigos de Status HTTP</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: var(--gray-50); text-align: left;">
+                    <th style="padding: var(--space-3); border: 1px solid var(--gray-200);">Código</th>
+                    <th style="padding: var(--space-3); border: 1px solid var(--gray-200);">Significado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: var(--space-3); border: 1px solid var(--gray-200);"><code style="color: #10b981;">200 OK</code></td>
+                    <td style="padding: var(--space-3); border: 1px solid var(--gray-200);">Sucesso! Dados retornados.</td>
+                </tr>
+                <tr>
+                    <td style="padding: var(--space-3); border: 1px solid var(--gray-200);"><code style="color: #f59e0b;">401 Unauthorized</code></td>
+                    <td style="padding: var(--space-3); border: 1px solid var(--gray-200);">API Key inválida ou ausente.</td>
+                </tr>
+                <tr>
+                    <td style="padding: var(--space-3); border: 1px solid var(--gray-200);"><code style="color: #ef4444;">404 Not Found</code></td>
+                    <td style="padding: var(--space-3); border: 1px solid var(--gray-200);">Agente não encontrado ou inativo.</td>
+                </tr>
+                <tr>
+                    <td style="padding: var(--space-3); border: 1px solid var(--gray-200);"><code style="color: #ef4444;">429 Too Many Requests</code></td>
+                    <td style="padding: var(--space-3); border: 1px solid var(--gray-200);">Limite de requisições excedido.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

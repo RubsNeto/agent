@@ -1,0 +1,7 @@
+# Ignorar todos os arquivos na pasta media
+*
+# Mas manter a estrutura de diretórios
+!.gitignore
+!knowledge_pdfs/
+knowledge_pdfs/*
+!knowledge_pdfs/.gitkeep
