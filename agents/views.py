@@ -29,6 +29,9 @@ def agent_detail(request, slug):
 def agent_create(request):
     """Criar novo agente com formulário simplificado."""
     if request.method == "POST":
+        print("DEBUG CREATE - POST recebido")
+        print(f"DEBUG CREATE - action: {request.POST.get('action')}")
+        
         # Verificar se é aplicação de preset
         apply_preset_action = request.POST.get('action') == 'apply_preset'
         
@@ -53,6 +56,13 @@ def agent_create(request):
                 "presets": AGENT_PRESETS,
                 "is_create": True
             })
+        
+        print(f"DEBUG CREATE - form.is_valid(): {form.is_valid()}")
+        if not form.is_valid():
+            print(f"DEBUG CREATE - Erros do formulário: {form.errors}")
+            print(f"DEBUG CREATE - Erros por campo:")
+            for field, errors in form.errors.items():
+                print(f"  - {field}: {errors}")
         
         if form.is_valid():
             agent = form.save(commit=False)

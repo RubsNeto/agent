@@ -150,12 +150,15 @@
     <form method="post" enctype="multipart/form-data" id="agentForm">
         {% csrf_token %}
         
-        <!-- Campos hidden necessários para edição -->
+        <!-- Campos hidden necessários -->
         {% if not is_create %}
             <input type="hidden" name="organization" value="{{ agent.organization.id }}">
             <input type="hidden" name="sector" value="{{ agent.sector|default:'geral' }}">
             <!-- Status toggle duplicado dentro do form para enviar o valor -->
             <input type="hidden" name="status_toggle" id="status_toggle_hidden" value="{{ form.status_toggle.value|default:'ativo' }}">
+        {% else %}
+            <!-- Campo sector com valor padrão para criação -->
+            <input type="hidden" name="sector" value="geral" id="sector_hidden">
         {% endif %}
         
         <!-- SEÇÃO 1: BÁSICO -->
@@ -394,6 +397,23 @@
                 <div class="form-group">
                     {{ form.sector.label_tag }}
                     {{ form.sector }}
+                    <script>
+                    // Sincronizar campo sector visível com hidden
+                    {% if is_create %}
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const sectorField = document.querySelector('input[name="sector"]:not([type="hidden"]), select[name="sector"]');
+                        const sectorHidden = document.getElementById('sector_hidden');
+                        if (sectorField && sectorHidden) {
+                            sectorField.addEventListener('change', function() {
+                                sectorHidden.value = this.value || 'geral';
+                            });
+                            sectorField.addEventListener('input', function() {
+                                sectorHidden.value = this.value || 'geral';
+                            });
+                        }
+                    });
+                    {% endif %}
+                    </script>
                 </div>
                 
                 <div class="form-group">
