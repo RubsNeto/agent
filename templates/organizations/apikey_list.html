@@ -48,6 +48,22 @@
                         </svg>
                     </button>
                 </div>
+                {% if key.agent %}
+                <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(99, 102, 241, 0.1)); padding: 0.75rem; border-radius: 6px; margin-top: 0.5rem; border-left: 3px solid #8b5cf6;">
+                    <div style="font-size: 0.75rem; font-weight: 600; color: #6366f1; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">URL da API</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                        <code style="font-size: 0.75rem; color: var(--gray-700); word-break: break-all;">/api/n8n/agents/{{ key.agent.slug }}/config</code>
+                        <button onclick="copyUrl('{{ key.agent.slug }}')" class="btn-icon" title="Copiar URL completa">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.5rem;">
+                        💡 Use esta URL no N8N com o header <strong>X-API-Key</strong>
+                    </div>
+                </div>
+                {% endif %}
             </div>
             <div class="list-item-actions">
                 <a href="{% url 'organizations:apikey_delete' key.pk %}" class="btn-icon btn-icon-danger" title="Excluir">
@@ -74,6 +90,14 @@
 function copyKey(key) {
     navigator.clipboard.writeText(key).then(() => {
         alert('Chave API copiada para a área de transferência!');
+    });
+}
+
+function copyUrl(slug) {
+    const baseUrl = window.location.origin;
+    const url = `${baseUrl}/api/n8n/agents/${slug}/config`;
+    navigator.clipboard.writeText(url).then(() => {
+        alert('URL completa copiada para a área de transferência!');
     });
 }
 </script>
