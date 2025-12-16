@@ -6,7 +6,8 @@
 {% block content %}
 <div style="max-width: 700px; margin: 0 auto;">
     <!-- Message Container -->
-    <div id="message-container" style="position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 350px; max-width: 500px;"></div>
+    <div id="message-container"
+        style="position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 350px; max-width: 500px;"></div>
 
     <!-- Header -->
     <div class="card"
@@ -184,9 +185,10 @@
     const connectedState = document.getElementById('connected-state');
     const errorState = document.getElementById('error-state');
 
-    function showMessage(message, type = 'success') {
+    function showMessage(message, type = 'success')
+    {
         const messageContainer = document.getElementById('message-container');
-        
+
         const colors = {
             success: {
                 bg: 'linear-gradient(135deg, #10b981, #059669)',
@@ -207,9 +209,9 @@
                     </svg>`
             }
         };
-        
+
         const color = colors[type] || colors.success;
-        
+
         const messageEl = document.createElement('div');
         messageEl.style.cssText = `
             background: ${color.bg};
@@ -223,7 +225,7 @@
             gap: 1rem;
             animation: slideInRight 0.3s ease-out;
         `;
-        
+
         messageEl.innerHTML = `
             <div style="flex-shrink: 0;">
                 ${color.icon}
@@ -237,11 +239,12 @@
                 </svg>
             </button>
         `;
-        
+
         messageContainer.appendChild(messageEl);
-        
+
         // Auto-remover após 5 segundos
-        setTimeout(() => {
+        setTimeout(() =>
+        {
             messageEl.style.animation = 'slideOutRight 0.3s ease-out';
             setTimeout(() => messageEl.remove(), 300);
         }, 5000);
@@ -322,17 +325,19 @@
             transform: translateX(400px);
             opacity: 0;
         }
+
         to {
             transform: translateX(0);
             opacity: 1;
         }
     }
-    
+
     @keyframes slideOutRight {
         from {
             transform: translateX(0);
             opacity: 1;
         }
+
         to {
             transform: translateX(400px);
             opacity: 0;

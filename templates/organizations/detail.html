@@ -91,7 +91,8 @@
                         style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-500); margin-bottom: 0.5rem;">Telefone</label>
                     <p style="color: var(--gray-900); font-family: monospace; font-size: 1rem; margin: 0;">
                         {% if organization.phone %}
-                        <a href="tel:{{ organization.phone }}" style="color: #3b82f6; text-decoration: none;">{{ organization.phone }}</a>
+                        <a href="tel:{{ organization.phone }}" style="color: #3b82f6; text-decoration: none;">{{
+                            organization.phone }}</a>
                         {% else %}<span style="color: var(--gray-400);">Não informado</span>{% endif %}
                     </p>
                 </div>
@@ -123,19 +124,22 @@
                 <div>
                     <label
                         style="display: block; font-size: 0.75rem; font-weight: 500; color: var(--gray-500); margin-bottom: 0.25rem;">Slug</label>
-                    <p style="font-family: monospace; font-size: 0.875rem; color: var(--gray-900); margin: 0;">{{ organization.slug }}</p>
+                    <p style="font-family: monospace; font-size: 0.875rem; color: var(--gray-900); margin: 0;">{{
+                        organization.slug }}</p>
                 </div>
                 <div>
                     <label
                         style="display: block; font-size: 0.75rem; font-weight: 500; color: var(--gray-500); margin-bottom: 0.25rem;">Criado
                         em</label>
-                    <p style="font-size: 0.875rem; color: var(--gray-900); margin: 0;">{{ organization.created_at|date:"d/m/Y H:i" }}</p>
+                    <p style="font-size: 0.875rem; color: var(--gray-900); margin: 0;">{{
+                        organization.created_at|date:"d/m/Y H:i" }}</p>
                 </div>
                 <div>
                     <label
                         style="display: block; font-size: 0.75rem; font-weight: 500; color: var(--gray-500); margin-bottom: 0.25rem;">Última
                         atualização</label>
-                    <p style="font-size: 0.875rem; color: var(--gray-900); margin: 0;">{{ organization.updated_at|date:"d/m/Y H:i" }}</p>
+                    <p style="font-size: 0.875rem; color: var(--gray-900); margin: 0;">{{
+                        organization.updated_at|date:"d/m/Y H:i" }}</p>
                 </div>
             </div>
         </div>
