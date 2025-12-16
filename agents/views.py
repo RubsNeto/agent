@@ -165,7 +165,23 @@ def agent_create(request):
                 diff={"name": agent.name, "slug": agent.slug}
             )
             
-            messages.success(request, f"Agente '{agent.name}' criado com sucesso! ✨")
+            # Gerar API Key automaticamente para usuários não-admin
+            if not request.user.is_superuser:
+                from organizations.models import ApiKey
+                api_key = ApiKey.objects.create(
+                    padaria=agent.padaria,
+                    agent=agent,
+                    name=f"Auto - {agent.name}"
+                )
+                messages.success(
+                    request, 
+                    f"Agente '{agent.name}' criado com sucesso! ✨\n\n"
+                    f"🔑 API Key gerada: {api_key.key}\n\n"
+                    f"⚠️ Copie a chave agora! Ela não será exibida novamente."
+                )
+            else:
+                messages.success(request, f"Agente '{agent.name}' criado com sucesso! ✨")
+            
             return redirect("agents:detail", slug=agent.slug)
     else:
         # Check for padaria query param to pre-select
