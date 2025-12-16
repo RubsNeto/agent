@@ -5,4 +5,5 @@ app_name = "ui"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("guia/", views.guia, name="guia"),
 ]

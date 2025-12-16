@@ -9,6 +9,12 @@ from datetime import timedelta
 
 
 @login_required
+def guia(request):
+    """Guia de implementação do sistema."""
+    return render(request, "ui/guia.html")
+
+
+@login_required
 def dashboard(request):
     """Dashboard principal."""
     user = request.user

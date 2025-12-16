@@ -12,4 +12,5 @@ urlpatterns = [
     path("<slug:slug>/", views.organization_detail, name="detail"),
     path("<slug:slug>/edit/", views.organization_edit, name="edit"),
     path("<slug:slug>/delete/", views.organization_delete, name="delete"),
+    path("<slug:slug>/whatsapp/", views.whatsapp_connect, name="whatsapp_connect"),
 ]

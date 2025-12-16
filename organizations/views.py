@@ -1,8 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.conf import settings
+from django.http import JsonResponse
 from .models import Padaria, PadariaUser, ApiKey
 from audit.models import AuditLog
+import requests
+import json
 
 
 def get_user_padarias(user):
@@ -302,3 +306,160 @@ def apikey_delete(request, pk):
         return redirect("organizations:apikeys")
     
     return render(request, "organizations/apikey_confirm_delete.html", {"api_key": api_key})
+
+
+@login_required
+def whatsapp_connect(request, slug):
+    """Gerar QR Code para conectar WhatsApp via Evolution API."""
+    padarias = get_user_padarias(request.user)
+    organization = get_object_or_404(Padaria, slug=slug)
+    
+    # Verificar acesso
+    if not request.user.is_superuser and organization not in padarias:
+        messages.error(request, "Você não tem acesso a esta padaria.")
+        return redirect("organizations:list")
+    
+    # Nome da instância baseado no slug da padaria
+    instance_name = f"padaria_{organization.slug}"
+    
+    context = {
+        "organization": organization,
+        "instance_name": instance_name,
+        "qr_code": None,
+        "is_connected": False,
+        "error": None,
+        "pairing_code": None,
+    }
+    
+    # Se for requisição AJAX para buscar QR Code
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            # Configurar Evolution API
+            api_url = settings.EVOLUTION_API_URL
+            api_key = settings.EVOLUTION_API_KEY
+            
+            if not api_url or not api_key:
+                return JsonResponse({
+                    "success": False,
+                    "error": "Configurações da Evolution API não encontradas. Configure EVOLUTION_API_URL e EVOLUTION_API_KEY no .env"
+                })
+            
+            headers = {
+                "apikey": api_key,
+                "Content-Type": "application/json"
+            }
+            
+            # Passo 1: Tentar criar a instância (se não existir)
+            create_url = f"{api_url}/instance/create"
+            create_payload = {
+                "instanceName": instance_name,
+                "qrcode": True,
+                "integration": "WHATSAPP-BAILEYS"
+            }
+            
+            try:
+                create_response = requests.post(create_url, headers=headers, json=create_payload, timeout=10)
+                
+                # Se retornar 201 (criado) ou 200 (já existe), seguir em frente
+                if create_response.status_code in [200, 201]:
+                    # Registrar criação da instância
+                    AuditLog.log(
+                        action="whatsapp_instance_created",
+                        entity="Padaria",
+                        padaria=organization,
+                        actor=request.user,
+                        entity_id=organization.id,
+                        diff={"instance": instance_name}
+                    )
+                elif create_response.status_code == 409:
+                    # Instância já existe, está OK
+                    pass
+                else:
+                    # Outro erro ao criar
+                    error_msg = create_response.json().get("message", create_response.text) if create_response.text else "Erro desconhecido"
+                    return JsonResponse({
+                        "success": False,
+                        "error": f"Erro ao criar instância: {error_msg}"
+                    })
+            except requests.exceptions.RequestException:
+                # Se falhar ao criar, tentar conectar mesmo assim (pode já existir)
+                pass
+            
+            # Passo 2: Buscar QR Code da instância
+            connect_url = f"{api_url}/instance/connect/{instance_name}"
+            response = requests.get(connect_url, headers=headers, timeout=10)
+            
+            # Tratar resposta
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Verificar se já está conectado
+                if data.get("state") == "open" or data.get("status") == "connected":
+                    return JsonResponse({
+                        "success": True,
+                        "is_connected": True,
+                        "message": "WhatsApp já está conectado!"
+                    })
+                
+                # Extrair QR Code
+                qr_code = data.get("base64") or data.get("qrcode")
+                pairing_code = data.get("pairingCode")
+                
+                if qr_code:
+                    # Adicionar prefixo data:image se necessário
+                    if not qr_code.startswith("data:image"):
+                        qr_code = f"data:image/png;base64,{qr_code}"
+                    
+                    # Registrar auditoria
+                    AuditLog.log(
+                        action="whatsapp_qr_generated",
+                        entity="Padaria",
+                        padaria=organization,
+                        actor=request.user,
+                        entity_id=organization.id,
+                        diff={"instance": instance_name}
+                    )
+                    
+                    return JsonResponse({
+                        "success": True,
+                        "qr_code": qr_code,
+                        "pairing_code": pairing_code,
+                        "is_connected": False
+                    })
+                else:
+                    return JsonResponse({
+                        "success": False,
+                        "error": "QR Code não disponível. Tente novamente em alguns segundos."
+                    })
+                    
+            elif response.status_code == 404:
+                return JsonResponse({
+                    "success": False,
+                    "error": "Não foi possível criar ou conectar a instância. Verifique se a Evolution API está funcionando corretamente."
+                })
+            else:
+                error_data = response.json() if response.text else {}
+                error_msg = error_data.get("message", response.text)
+                return JsonResponse({
+                    "success": False,
+                    "error": f"Erro da Evolution API: {error_msg}"
+                })
+                
+        except requests.exceptions.Timeout:
+            return JsonResponse({
+                "success": False,
+                "error": "Timeout ao conectar com Evolution API. Verifique se o serviço está rodando."
+            })
+        except requests.exceptions.ConnectionError:
+            return JsonResponse({
+                "success": False,
+                "error": "Não foi possível conectar com a Evolution API. Verifique a URL configurada."
+            })
+        except Exception as e:
+            return JsonResponse({
+                "success": False,
+                "error": f"Erro inesperado: {str(e)}"
+            })
+    
+    # Renderizar página
+    return render(request, "organizations/whatsapp_connect.html", context)
