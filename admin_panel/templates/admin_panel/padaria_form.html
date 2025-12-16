@@ -12,42 +12,48 @@
 <div class="content-header">
     <div>
         <h2 class="content-title">{% if is_edit %}Editar Padaria{% else %}Nova Padaria{% endif %}</h2>
-        <p class="content-subtitle">{% if is_edit %}Atualize os dados da padaria{% else %}Cadastre uma nova padaria com o usuario dono{% endif %}</p>
+        <p class="content-subtitle">{% if is_edit %}Atualize os dados da padaria{% else %}Cadastre uma nova padaria com
+            o usuario dono{% endif %}</p>
     </div>
 </div>
 
 <form method="post">
     {% csrf_token %}
-    
+
     <div class="card" style="margin-bottom: 1.5rem;">
         <h3 class="card-title">Dados da Empresa</h3>
-        
+
         <div class="form-group">
             <label class="form-label">Nome da Padaria *</label>
-            <input type="text" name="name" class="form-input" required value="{% if is_edit %}{{ padaria.name }}{% endif %}" placeholder="Ex: Padaria Pao Quente">
+            <input type="text" name="name" class="form-input" required
+                value="{% if is_edit %}{{ padaria.name }}{% endif %}" placeholder="Ex: Padaria Pao Quente">
         </div>
-        
+
         <div class="form-group">
             <label class="form-label">CNPJ</label>
-            <input type="text" name="cnpj" class="form-input" value="{% if is_edit %}{{ padaria.cnpj }}{% endif %}" placeholder="00.000.000/0000-00" maxlength="18">
+            <input type="text" name="cnpj" class="form-input" value="{% if is_edit %}{{ padaria.cnpj }}{% endif %}"
+                placeholder="00.000.000/0000-00" maxlength="18">
         </div>
-        
+
         <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div class="form-group">
                 <label class="form-label">Telefone</label>
-                <input type="text" name="phone" class="form-input" value="{% if is_edit %}{{ padaria.phone }}{% endif %}" placeholder="(11) 99999-9999">
+                <input type="text" name="phone" class="form-input"
+                    value="{% if is_edit %}{{ padaria.phone }}{% endif %}" placeholder="(11) 99999-9999">
             </div>
             <div class="form-group">
                 <label class="form-label">E-mail da Empresa</label>
-                <input type="email" name="company_email" class="form-input" value="{% if is_edit %}{{ padaria.email }}{% endif %}" placeholder="contato@padaria.com">
+                <input type="email" name="company_email" class="form-input"
+                    value="{% if is_edit %}{{ padaria.email }}{% endif %}" placeholder="contato@padaria.com">
             </div>
         </div>
-        
+
         <div class="form-group">
             <label class="form-label">Endereco</label>
-            <textarea name="address" class="form-input" rows="2" placeholder="Rua, numero, bairro, cidade - CEP">{% if is_edit %}{{ padaria.address }}{% endif %}</textarea>
+            <textarea name="address" class="form-input" rows="2"
+                placeholder="Rua, numero, bairro, cidade - CEP">{% if is_edit %}{{ padaria.address }}{% endif %}</textarea>
         </div>
-        
+
         {% if is_edit %}
         <div class="form-group">
             <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem;">
@@ -57,32 +63,36 @@
         </div>
         {% endif %}
     </div>
-    
+
     {% if not is_edit %}
     <div class="card" style="margin-bottom: 1.5rem;">
         <h3 class="card-title">Dados do Usuario Dono</h3>
-        <p style="color: var(--gray-500); margin-bottom: 1rem;">O usuario dono tera acesso completo a padaria e podera gerenciar agentes e funcionarios.</p>
-        
+        <p style="color: var(--gray-500); margin-bottom: 1rem;">O usuario dono tera acesso completo a padaria e podera
+            gerenciar agentes e funcionarios.</p>
+
         <div class="form-group">
             <label class="form-label">Nome Completo *</label>
             <input type="text" name="owner_name" class="form-input" required placeholder="Ex: Joao da Silva">
         </div>
-        
+
         <div class="form-group">
             <label class="form-label">E-mail (para login) *</label>
             <input type="email" name="owner_email" class="form-input" required placeholder="joao@email.com">
-            <p class="form-help" style="font-size: 0.75rem; color: var(--gray-500);">O nome de usuario sera gerado automaticamente a partir do email.</p>
+            <p class="form-help" style="font-size: 0.75rem; color: var(--gray-500);">O nome de usuario sera gerado
+                automaticamente a partir do email.</p>
         </div>
-        
+
         <div class="form-group">
             <label class="form-label">Senha *</label>
-            <input type="password" name="owner_password" class="form-input" required placeholder="Minimo 6 caracteres" minlength="6">
+            <input type="password" name="owner_password" class="form-input" required placeholder="Minimo 6 caracteres"
+                minlength="6">
         </div>
     </div>
     {% endif %}
-    
+
     <div style="display: flex; gap: 1rem;">
-        <button type="submit" class="btn btn-primary">{% if is_edit %}Salvar Alteracoes{% else %}Criar Padaria{% endif %}</button>
+        <button type="submit" class="btn btn-primary">{% if is_edit %}Salvar Alteracoes{% else %}Criar Padaria{% endif
+            %}</button>
         <a href="{% url 'admin_panel:padarias_list' %}" class="btn btn-secondary">Cancelar</a>
     </div>
 </form>
@@ -90,7 +100,8 @@
 {% if is_edit %}
 <div class="card" style="margin-top: 2rem; border-left: 4px solid #ef4444;">
     <h3 class="card-title" style="color: #ef4444;">Zona de Perigo</h3>
-    <p style="color: var(--gray-500); margin-bottom: 1rem;">Deletar a padaria ira remover permanentemente todos os dados associados, incluindo agentes, membros e logs.</p>
+    <p style="color: var(--gray-500); margin-bottom: 1rem;">Deletar a padaria ira remover permanentemente todos os dados
+        associados, incluindo agentes, membros e logs.</p>
     <a href="{% url 'admin_panel:padaria_delete' padaria.slug %}" class="btn btn-danger">Deletar Padaria</a>
 </div>
 {% endif %}
