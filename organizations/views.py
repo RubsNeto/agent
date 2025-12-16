@@ -341,7 +341,7 @@ def whatsapp_connect(request, slug):
             if not api_url or not api_key:
                 return JsonResponse({
                     "success": False,
-                    "error": "Configurações da Evolution API não encontradas. Configure EVOLUTION_API_URL e EVOLUTION_API_KEY no .env"
+                    "error": "Sistema não configurado corretamente. Entre em contato com o suporte."
                 })
             
             headers = {
@@ -372,11 +372,30 @@ def whatsapp_connect(request, slug):
                         diff={"instance": instance_name}
                     )
                 elif create_response.status_code == 409:
-                    # Instância já existe, está OK
+                    # Instância já existe, está OK - continuar para gerar QR Code
+                    pass
+                elif create_response.status_code == 403:
+                    # Nome já está em uso - tentar conectar mesmo assim
                     pass
                 else:
-                    # Outro erro ao criar
-                    error_msg = create_response.json().get("message", create_response.text) if create_response.text else "Erro desconhecido"
+                    # Outro erro ao criar - extrair mensagem do JSON aninhado
+                    try:
+                        error_data = create_response.json()
+                        # Tentar extrair de response.message primeiro
+                        if isinstance(error_data.get("response"), dict):
+                            error_msg = error_data["response"].get("message", "")
+                        else:
+                            error_msg = error_data.get("message", "")
+                        
+                        # Se message é uma lista, extrair primeiro item
+                        if isinstance(error_msg, list) and len(error_msg) > 0:
+                            error_msg = error_msg[0]
+                        
+                        if not error_msg:
+                            error_msg = create_response.text
+                    except:
+                        error_msg = "Erro desconhecido ao criar instância"
+                    
                     return JsonResponse({
                         "success": False,
                         "error": f"Erro ao criar instância: {error_msg}"
@@ -393,17 +412,37 @@ def whatsapp_connect(request, slug):
             if response.status_code == 200:
                 data = response.json()
                 
-                # Verificar se já está conectado
-                if data.get("state") == "open" or data.get("status") == "connected":
+                # Verificar se já está conectado (pode estar em data.state ou data.instance.state)
+                instance_data = data.get("instance", {})
+                state = data.get("state") or instance_data.get("state")
+                status = data.get("status") or instance_data.get("status")
+                
+                if state == "open" or status == "connected":
                     return JsonResponse({
                         "success": True,
                         "is_connected": True,
                         "message": "WhatsApp já está conectado!"
                     })
                 
-                # Extrair QR Code
-                qr_code = data.get("base64") or data.get("qrcode")
-                pairing_code = data.get("pairingCode")
+                # Tentar extrair QR Code de diferentes possíveis localizações na resposta
+                qr_code = None
+                pairing_code = None
+                
+                # Verificar diferentes estruturas de resposta da Evolution API
+                if "base64" in data:
+                    qr_code = data["base64"]
+                elif "qrcode" in data:
+                    qr_code = data["qrcode"]
+                    if isinstance(qr_code, dict):
+                        qr_code = qr_code.get("base64") or qr_code.get("code")
+                elif "code" in data:
+                    qr_code = data["code"]
+                
+                # Verificar pairing code
+                if "pairingCode" in data:
+                    pairing_code = data["pairingCode"]
+                elif "code" in data and not qr_code:
+                    pairing_code = data["code"]
                 
                 if qr_code:
                     # Adicionar prefixo data:image se necessário
@@ -427,38 +466,53 @@ def whatsapp_connect(request, slug):
                         "is_connected": False
                     })
                 else:
+                    # Se não tem QR Code e não está conectado, precisa aguardar
                     return JsonResponse({
                         "success": False,
-                        "error": "QR Code não disponível. Tente novamente em alguns segundos."
+                        "error": "O WhatsApp ainda está inicializando. Por favor, aguarde alguns segundos e tente novamente."
                     })
                     
             elif response.status_code == 404:
                 return JsonResponse({
                     "success": False,
-                    "error": "Não foi possível criar ou conectar a instância. Verifique se a Evolution API está funcionando corretamente."
+                    "error": "Instância WhatsApp não encontrada. Tente recarregar a página e gerar novamente."
                 })
             else:
-                error_data = response.json() if response.text else {}
-                error_msg = error_data.get("message", response.text)
+                # Extrair mensagem de erro de forma amigável
+                try:
+                    error_data = response.json()
+                    if isinstance(error_data.get("response"), dict):
+                        error_msg = error_data["response"].get("message", "")
+                    else:
+                        error_msg = error_data.get("message", "")
+                    
+                    if isinstance(error_msg, list) and len(error_msg) > 0:
+                        error_msg = error_msg[0]
+                except:
+                    error_msg = ""
+                
+                if not error_msg:
+                    error_msg = "Ocorreu um erro inesperado. Tente novamente."
+                
                 return JsonResponse({
                     "success": False,
-                    "error": f"Erro da Evolution API: {error_msg}"
+                    "error": error_msg
                 })
                 
         except requests.exceptions.Timeout:
             return JsonResponse({
                 "success": False,
-                "error": "Timeout ao conectar com Evolution API. Verifique se o serviço está rodando."
+                "error": "A conexão demorou muito para responder. Verifique sua internet e tente novamente."
             })
         except requests.exceptions.ConnectionError:
             return JsonResponse({
                 "success": False,
-                "error": "Não foi possível conectar com a Evolution API. Verifique a URL configurada."
+                "error": "Não foi possível conectar ao serviço WhatsApp. Tente novamente em alguns instantes."
             })
         except Exception as e:
             return JsonResponse({
                 "success": False,
-                "error": f"Erro inesperado: {str(e)}"
+                "error": "Ocorreu um erro inesperado. Por favor, tente novamente."
             })
     
     # Renderizar página

@@ -5,6 +5,9 @@
 
 {% block content %}
 <div style="max-width: 700px; margin: 0 auto;">
+    <!-- Message Container -->
+    <div id="message-container" style="position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 350px; max-width: 500px;"></div>
+
     <!-- Header -->
     <div class="card"
         style="margin-bottom: 2rem; background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: white;">
@@ -181,6 +184,69 @@
     const connectedState = document.getElementById('connected-state');
     const errorState = document.getElementById('error-state');
 
+    function showMessage(message, type = 'success') {
+        const messageContainer = document.getElementById('message-container');
+        
+        const colors = {
+            success: {
+                bg: 'linear-gradient(135deg, #10b981, #059669)',
+                icon: `<svg width="24" height="24" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>`
+            },
+            warning: {
+                bg: 'linear-gradient(135deg, #f59e0b, #ea8a08)',
+                icon: `<svg width="24" height="24" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>`
+            },
+            error: {
+                bg: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                icon: `<svg width="24" height="24" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>`
+            }
+        };
+        
+        const color = colors[type] || colors.success;
+        
+        const messageEl = document.createElement('div');
+        messageEl.style.cssText = `
+            background: ${color.bg};
+            color: white;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: slideInRight 0.3s ease-out;
+        `;
+        
+        messageEl.innerHTML = `
+            <div style="flex-shrink: 0;">
+                ${color.icon}
+            </div>
+            <div style="flex: 1; font-size: 0.95rem; font-weight: 500;">
+                ${message}
+            </div>
+            <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; padding: 0; width: 24px; height: 24px; flex-shrink: 0; opacity: 0.8; transition: opacity 0.2s;">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        `;
+        
+        messageContainer.appendChild(messageEl);
+        
+        // Auto-remover após 5 segundos
+        setTimeout(() => {
+            messageEl.style.animation = 'slideOutRight 0.3s ease-out';
+            setTimeout(() => messageEl.remove(), 300);
+        }, 5000);
+    }
+
     function hideAllStates()
     {
         initialState.style.display = 'none';
@@ -213,6 +279,7 @@
                 {
                     // Já está conectado
                     connectedState.style.display = 'block';
+                    showMessage('WhatsApp já está conectado! Sua conta já está vinculada ao sistema.', 'warning');
                 } else
                 {
                     // Mostrar QR Code
@@ -225,18 +292,23 @@
                     }
 
                     qrDisplay.style.display = 'block';
+                    showMessage('QR Code gerado com sucesso! Escaneie com seu WhatsApp para conectar.', 'success');
                 }
             } else
             {
                 // Erro
-                document.getElementById('error-message').textContent = data.error || 'Erro desconhecido';
+                const errorMsg = data.error || 'Erro desconhecido ao gerar QR Code';
+                document.getElementById('error-message').textContent = errorMsg;
                 errorState.style.display = 'block';
+                showMessage(errorMsg, 'error');
             }
         } catch (error)
         {
             hideAllStates();
-            document.getElementById('error-message').textContent = 'Erro de conexão: ' + error.message;
+            const errorMsg = 'Erro de conexão: ' + error.message;
+            document.getElementById('error-message').textContent = errorMsg;
             errorState.style.display = 'block';
+            showMessage(errorMsg, 'error');
         }
     }
 
@@ -244,4 +316,27 @@
     refreshBtn.addEventListener('click', generateQRCode);
     retryBtn.addEventListener('click', generateQRCode);
 </script>
+<style>
+    @keyframes slideInRight {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+</style>
 {% endblock %}
