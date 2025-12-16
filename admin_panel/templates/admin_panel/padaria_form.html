@@ -1,4 +1,4 @@
-﻿{% extends 'admin_panel/base.html' %}
+{% extends 'admin_panel/base.html' %}
 
 {% block title %}{% if is_edit %}Editar{% else %}Nova{% endif %} Padaria{% endblock %}
 
@@ -91,8 +91,7 @@
     {% endif %}
 
     <div style="display: flex; gap: 1rem;">
-        <button type="submit" class="btn btn-primary">{% if is_edit %}Salvar Alteracoes{% else %}Criar Padaria{% endif
-            %}</button>
+        <button type="submit" class="btn btn-primary">{% if is_edit %}Salvar Alteracoes{% else %}Criar Padaria{% endif %}</button>
         <a href="{% url 'admin_panel:padarias_list' %}" class="btn btn-secondary">Cancelar</a>
     </div>
 </form>

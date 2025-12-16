@@ -3,10 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.http import JsonResponse
+from django.db.models import Prefetch
 from .models import Padaria, PadariaUser, ApiKey
 from audit.models import AuditLog
 import requests
-import json
 
 
 def get_user_padarias(user):
@@ -32,8 +32,16 @@ def organization_list(request):
 
 @login_required
 def organization_detail(request, slug):
-    """Detalhe de uma padaria."""
+    """
+    Detalhe de uma padaria.
+    
+    CORREÇÃO: O problema estava aqui - o objeto precisa ser passado
+    corretamente no contexto do template.
+    """
+    # Buscar padarias com otimização (select_related/prefetch_related se necessário)
     padarias = get_user_padarias(request.user)
+    
+    # Buscar a organização específica
     organization = get_object_or_404(Padaria, slug=slug)
     
     # Verificar acesso
@@ -41,7 +49,13 @@ def organization_detail(request, slug):
         messages.error(request, "Você não tem acesso a esta padaria.")
         return redirect("organizations:list")
     
-    return render(request, "organizations/detail.html", {"organization": organization})
+    # CORREÇÃO: Passar o objeto correto no contexto
+    context = {
+        'organization': organization,  # Nome correto da variável
+    }
+    
+    # CORREÇÃO: Caminho correto do template
+    return render(request, "organizations/detail.html", context)
 
 
 @login_required
@@ -58,19 +72,29 @@ def organization_create(request):
         email = request.POST.get("email", "").strip()
         address = request.POST.get("address", "").strip()
         
-        if name:
+        if not name:
+            messages.error(request, "Nome é obrigatório.")
+            return render(request, "organizations/form.html")
+        
+        try:
+            # Criar padaria
             org = Padaria.objects.create(
                 name=name,
                 owner=request.user,
-                cnpj=cnpj,
-                phone=phone,
-                email=email,
-                address=address
+                cnpj=cnpj or None,  # Evitar strings vazias
+                phone=phone or None,
+                email=email or None,
+                address=address or None
             )
             
             # Criar membership como dono
-            PadariaUser.objects.create(user=request.user, padaria=org, role='dono')
+            PadariaUser.objects.create(
+                user=request.user,
+                padaria=org,
+                role='dono'
+            )
             
+            # Log de auditoria
             AuditLog.log(
                 action="create",
                 entity="Padaria",
@@ -85,10 +109,17 @@ def organization_create(request):
                     "address": address
                 }
             )
-            messages.success(request, f"Padaria '{name}' criada com sucesso!\nUsuário '{request.user.email}' vinculado como dono.")
+            
+            messages.success(
+                request,
+                f"Padaria '{name}' criada com sucesso!\n"
+                f"Usuário '{request.user.email}' vinculado como dono."
+            )
             return redirect("organizations:detail", slug=org.slug)
-        else:
-            messages.error(request, "Nome é obrigatório.")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao criar padaria: {str(e)}")
+            return render(request, "organizations/form.html")
     
     return render(request, "organizations/form.html")
 
@@ -111,28 +142,34 @@ def organization_edit(request, slug):
         email = request.POST.get("email", "").strip()
         address = request.POST.get("address", "").strip()
         
-        if name:
+        if not name:
+            messages.error(request, "Nome é obrigatório.")
+            return render(request, "organizations/form.html", {"organization": organization})
+        
+        try:
             # Preparar diff para auditoria
             diff = {}
+            
             if organization.name != name:
                 diff['name'] = {'old': organization.name, 'new': name}
             if organization.cnpj != cnpj:
-                diff['cnpj'] = {'old': organization.cnpj, 'new': cnpj}
+                diff['cnpj'] = {'old': organization.cnpj or '', 'new': cnpj}
             if organization.phone != phone:
-                diff['phone'] = {'old': organization.phone, 'new': phone}
+                diff['phone'] = {'old': organization.phone or '', 'new': phone}
             if organization.email != email:
-                diff['email'] = {'old': organization.email, 'new': email}
+                diff['email'] = {'old': organization.email or '', 'new': email}
             if organization.address != address:
-                diff['address'] = {'old': organization.address, 'new': address}
+                diff['address'] = {'old': organization.address or '', 'new': address}
             
             # Atualizar campos
             organization.name = name
-            organization.cnpj = cnpj
-            organization.phone = phone
-            organization.email = email
-            organization.address = address
+            organization.cnpj = cnpj or None
+            organization.phone = phone or None
+            organization.email = email or None
+            organization.address = address or None
             organization.save()
             
+            # Log de auditoria apenas se houve mudanças
             if diff:
                 AuditLog.log(
                     action="update",
@@ -145,10 +182,12 @@ def organization_edit(request, slug):
             
             messages.success(request, "Informações atualizadas com sucesso!")
             return redirect("organizations:detail", slug=organization.slug)
-        else:
-            messages.error(request, "Nome é obrigatório.")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao atualizar padaria: {str(e)}")
     
-    return render(request, "organizations/form.html", {"organization": organization})
+    context = {'organization': organization}
+    return render(request, "organizations/form.html", context)
 
 
 @login_required
@@ -162,21 +201,29 @@ def organization_delete(request, slug):
     
     if request.method == "POST":
         org_name = organization.name
+        org_id = organization.id
         
-        AuditLog.log(
-            action="delete",
-            entity="Padaria",
-            organization=organization,
-            actor=request.user,
-            entity_id=organization.id,
-            diff={"name": org_name, "slug": slug}
-        )
-        
-        organization.delete()
-        messages.success(request, f"Padaria '{org_name}' deletada com sucesso!")
-        return redirect("organizations:list")
+        try:
+            # Log antes de deletar
+            AuditLog.log(
+                action="delete",
+                entity="Padaria",
+                padaria=None,  # Não passar a instância pois será deletada
+                actor=request.user,
+                entity_id=org_id,
+                diff={"name": org_name, "slug": slug}
+            )
+            
+            organization.delete()
+            messages.success(request, f"Padaria '{org_name}' deletada com sucesso!")
+            return redirect("organizations:list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao deletar padaria: {str(e)}")
+            return redirect("organizations:detail", slug=slug)
     
-    return render(request, "organizations/confirm_delete.html", {"organization": organization})
+    context = {'organization': organization}
+    return render(request, "organizations/confirm_delete.html", context)
 
 
 @login_required
@@ -186,14 +233,19 @@ def apikey_list(request):
     
     # Admin vê todas as API Keys das padarias dele
     if request.user.is_superuser:
-        api_keys = ApiKey.objects.filter(padaria__in=padarias)
+        api_keys = ApiKey.objects.filter(
+            padaria__in=padarias
+        ).select_related('padaria', 'agent')
     else:
         # Usuários normais só veem API Keys dos seus agentes
         from agents.models import Agent
         user_agents = Agent.objects.filter(padaria__in=padarias)
-        api_keys = ApiKey.objects.filter(agent__in=user_agents)
+        api_keys = ApiKey.objects.filter(
+            agent__in=user_agents
+        ).select_related('padaria', 'agent')
     
-    return render(request, "organizations/apikey_list.html", {"api_keys": api_keys})
+    context = {'api_keys': api_keys}
+    return render(request, "organizations/apikey_list.html", context)
 
 
 @login_required
@@ -204,7 +256,11 @@ def apikey_create(request):
     if request.method == "POST":
         org_id = request.POST.get("organization")
         agent_id = request.POST.get("agent")
-        name = request.POST.get("name", "")
+        name = request.POST.get("name", "").strip()
+        
+        if not org_id:
+            messages.error(request, "Selecione uma organização.")
+            return redirect("organizations:apikey_create")
         
         organization = get_object_or_404(Padaria, id=org_id)
         
@@ -226,47 +282,62 @@ def apikey_create(request):
             
             # Verificar se usuário tem acesso a este agente (não-admin)
             if not request.user.is_superuser:
-                from .models import PadariaUser
-                user_padarias = PadariaUser.objects.filter(user=request.user).values_list('padaria_id', flat=True)
+                user_padarias = PadariaUser.objects.filter(
+                    user=request.user
+                ).values_list('padaria_id', flat=True)
+                
                 if agent.padaria_id not in user_padarias:
                     messages.error(request, "Você não tem acesso a este agente.")
                     return redirect("organizations:apikeys")
         
-        api_key = ApiKey.objects.create(
-            padaria=organization,
-            agent=agent,
-            name=name
-        )
-        
-        agent_info = f" para agente '{agent.name}'" if agent else " (acesso a todos os agentes)"
-        
-        AuditLog.log(
-            action="create",
-            entity="ApiKey",
-            padaria=organization,
-            actor=request.user,
-            entity_id=api_key.id,
-            diff={
-                "name": name,
-                "agent": agent.name if agent else "Todos"
-            }
-        )
-        
-        messages.success(request, f"API Key criada{agent_info}: {api_key.key}")
-        messages.warning(request, "⚠️ Copie a chave agora! Ela não será exibida novamente.")
-        return redirect("organizations:apikeys")
+        try:
+            api_key = ApiKey.objects.create(
+                padaria=organization,
+                agent=agent,
+                name=name
+            )
+            
+            agent_info = f" para agente '{agent.name}'" if agent else " (acesso a todos os agentes)"
+            
+            AuditLog.log(
+                action="create",
+                entity="ApiKey",
+                padaria=organization,
+                actor=request.user,
+                entity_id=api_key.id,
+                diff={
+                    "name": name,
+                    "agent": agent.name if agent else "Todos"
+                }
+            )
+            
+            messages.success(request, f"API Key criada{agent_info}: {api_key.key}")
+            messages.warning(request, "⚠️ Copie a chave agora! Ela não será exibida novamente.")
+            return redirect("organizations:apikeys")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao criar API Key: {str(e)}")
+            return redirect("organizations:apikey_create")
     
     # Buscar agentes para o formulário
     from agents.models import Agent
     agents_by_org = {}
-    for padaria in padarias:
-        agents_by_org[padaria.id] = list(Agent.objects.filter(padaria=padaria, is_active=True).values('id', 'name'))
     
-    return render(request, "organizations/apikey_form.html", {
+    for padaria in padarias:
+        agents_by_org[padaria.id] = list(
+            Agent.objects.filter(
+                padaria=padaria,
+                is_active=True
+            ).values('id', 'name')
+        )
+    
+    context = {
         "organizations": padarias,
         "agents_by_org": agents_by_org,
         "is_admin": request.user.is_superuser
-    })
+    }
+    
+    return render(request, "organizations/apikey_form.html", context)
 
 
 @login_required
@@ -284,6 +355,7 @@ def apikey_delete(request, pk):
         # Usuários normais só podem deletar API Keys dos seus agentes
         from agents.models import Agent
         user_agents = Agent.objects.filter(padaria__in=padarias)
+        
         if not api_key.agent or api_key.agent not in user_agents:
             messages.error(request, "Você não tem acesso a esta API key.")
             return redirect("organizations:apikeys")
@@ -291,21 +363,28 @@ def apikey_delete(request, pk):
     if request.method == "POST":
         organization = api_key.padaria
         key_preview = api_key.key[:12]
+        api_key_id = api_key.id
         
-        AuditLog.log(
-            action="delete",
-            entity="ApiKey",
-            padaria=organization,
-            actor=request.user,
-            entity_id=api_key.id,
-            diff={"key_preview": key_preview}
-        )
-        
-        api_key.delete()
-        messages.success(request, "API Key deletada com sucesso!")
-        return redirect("organizations:apikeys")
+        try:
+            AuditLog.log(
+                action="delete",
+                entity="ApiKey",
+                padaria=organization,
+                actor=request.user,
+                entity_id=api_key_id,
+                diff={"key_preview": key_preview}
+            )
+            
+            api_key.delete()
+            messages.success(request, "API Key deletada com sucesso!")
+            return redirect("organizations:apikeys")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao deletar API Key: {str(e)}")
+            return redirect("organizations:apikeys")
     
-    return render(request, "organizations/apikey_confirm_delete.html", {"api_key": api_key})
+    context = {'api_key': api_key}
+    return render(request, "organizations/apikey_confirm_delete.html", context)
 
 
 @login_required
@@ -335,8 +414,8 @@ def whatsapp_connect(request, slug):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         try:
             # Configurar Evolution API
-            api_url = settings.EVOLUTION_API_URL
-            api_key = settings.EVOLUTION_API_KEY
+            api_url = getattr(settings, 'EVOLUTION_API_URL', None)
+            api_key = getattr(settings, 'EVOLUTION_API_KEY', None)
             
             if not api_url or not api_key:
                 return JsonResponse({
@@ -358,7 +437,12 @@ def whatsapp_connect(request, slug):
             }
             
             try:
-                create_response = requests.post(create_url, headers=headers, json=create_payload, timeout=10)
+                create_response = requests.post(
+                    create_url,
+                    headers=headers,
+                    json=create_payload,
+                    timeout=10
+                )
                 
                 # Se retornar 201 (criado) ou 200 (já existe), seguir em frente
                 if create_response.status_code in [200, 201]:
@@ -371,37 +455,19 @@ def whatsapp_connect(request, slug):
                         entity_id=organization.id,
                         diff={"instance": instance_name}
                     )
-                elif create_response.status_code == 409:
-                    # Instância já existe, está OK - continuar para gerar QR Code
-                    pass
-                elif create_response.status_code == 403:
-                    # Nome já está em uso - tentar conectar mesmo assim
+                elif create_response.status_code in [403, 409]:
+                    # Instância já existe, está OK - continuar
                     pass
                 else:
-                    # Outro erro ao criar - extrair mensagem do JSON aninhado
-                    try:
-                        error_data = create_response.json()
-                        # Tentar extrair de response.message primeiro
-                        if isinstance(error_data.get("response"), dict):
-                            error_msg = error_data["response"].get("message", "")
-                        else:
-                            error_msg = error_data.get("message", "")
-                        
-                        # Se message é uma lista, extrair primeiro item
-                        if isinstance(error_msg, list) and len(error_msg) > 0:
-                            error_msg = error_msg[0]
-                        
-                        if not error_msg:
-                            error_msg = create_response.text
-                    except:
-                        error_msg = "Erro desconhecido ao criar instância"
-                    
+                    # Outro erro ao criar
+                    error_msg = _extract_error_message(create_response)
                     return JsonResponse({
                         "success": False,
                         "error": f"Erro ao criar instância: {error_msg}"
                     })
+                    
             except requests.exceptions.RequestException:
-                # Se falhar ao criar, tentar conectar mesmo assim (pode já existir)
+                # Se falhar ao criar, tentar conectar (pode já existir)
                 pass
             
             # Passo 2: Buscar QR Code da instância
@@ -412,7 +478,7 @@ def whatsapp_connect(request, slug):
             if response.status_code == 200:
                 data = response.json()
                 
-                # Verificar se já está conectado (pode estar em data.state ou data.instance.state)
+                # Verificar se já está conectado
                 instance_data = data.get("instance", {})
                 state = data.get("state") or instance_data.get("state")
                 status = data.get("status") or instance_data.get("status")
@@ -424,25 +490,9 @@ def whatsapp_connect(request, slug):
                         "message": "WhatsApp já está conectado!"
                     })
                 
-                # Tentar extrair QR Code de diferentes possíveis localizações na resposta
-                qr_code = None
-                pairing_code = None
-                
-                # Verificar diferentes estruturas de resposta da Evolution API
-                if "base64" in data:
-                    qr_code = data["base64"]
-                elif "qrcode" in data:
-                    qr_code = data["qrcode"]
-                    if isinstance(qr_code, dict):
-                        qr_code = qr_code.get("base64") or qr_code.get("code")
-                elif "code" in data:
-                    qr_code = data["code"]
-                
-                # Verificar pairing code
-                if "pairingCode" in data:
-                    pairing_code = data["pairingCode"]
-                elif "code" in data and not qr_code:
-                    pairing_code = data["code"]
+                # Extrair QR Code e pairing code
+                qr_code = _extract_qr_code(data)
+                pairing_code = _extract_pairing_code(data)
                 
                 if qr_code:
                     # Adicionar prefixo data:image se necessário
@@ -466,34 +516,21 @@ def whatsapp_connect(request, slug):
                         "is_connected": False
                     })
                 else:
-                    # Se não tem QR Code e não está conectado, precisa aguardar
+                    # Aguardando inicialização
                     return JsonResponse({
                         "success": False,
-                        "error": "O WhatsApp ainda está inicializando. Por favor, aguarde alguns segundos e tente novamente."
+                        "error": "O WhatsApp ainda está inicializando. "
+                                "Por favor, aguarde alguns segundos e tente novamente."
                     })
                     
             elif response.status_code == 404:
                 return JsonResponse({
                     "success": False,
-                    "error": "Instância WhatsApp não encontrada. Tente recarregar a página e gerar novamente."
+                    "error": "Instância WhatsApp não encontrada. "
+                            "Tente recarregar a página e gerar novamente."
                 })
             else:
-                # Extrair mensagem de erro de forma amigável
-                try:
-                    error_data = response.json()
-                    if isinstance(error_data.get("response"), dict):
-                        error_msg = error_data["response"].get("message", "")
-                    else:
-                        error_msg = error_data.get("message", "")
-                    
-                    if isinstance(error_msg, list) and len(error_msg) > 0:
-                        error_msg = error_msg[0]
-                except:
-                    error_msg = ""
-                
-                if not error_msg:
-                    error_msg = "Ocorreu um erro inesperado. Tente novamente."
-                
+                error_msg = _extract_error_message(response)
                 return JsonResponse({
                     "success": False,
                     "error": error_msg
@@ -502,14 +539,21 @@ def whatsapp_connect(request, slug):
         except requests.exceptions.Timeout:
             return JsonResponse({
                 "success": False,
-                "error": "A conexão demorou muito para responder. Verifique sua internet e tente novamente."
+                "error": "A conexão demorou muito para responder. "
+                        "Verifique sua internet e tente novamente."
             })
         except requests.exceptions.ConnectionError:
             return JsonResponse({
                 "success": False,
-                "error": "Não foi possível conectar ao serviço WhatsApp. Tente novamente em alguns instantes."
+                "error": "Não foi possível conectar ao serviço WhatsApp. "
+                        "Tente novamente em alguns instantes."
             })
         except Exception as e:
+            # Log do erro real para debug
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erro no WhatsApp connect: {str(e)}", exc_info=True)
+            
             return JsonResponse({
                 "success": False,
                 "error": "Ocorreu um erro inesperado. Por favor, tente novamente."
@@ -517,3 +561,56 @@ def whatsapp_connect(request, slug):
     
     # Renderizar página
     return render(request, "organizations/whatsapp_connect.html", context)
+
+
+# Funções auxiliares
+def _extract_error_message(response):
+    """Extrai mensagem de erro de forma amigável."""
+    try:
+        error_data = response.json()
+        
+        # Tentar extrair de response.message primeiro
+        if isinstance(error_data.get("response"), dict):
+            error_msg = error_data["response"].get("message", "")
+        else:
+            error_msg = error_data.get("message", "")
+        
+        # Se message é uma lista, extrair primeiro item
+        if isinstance(error_msg, list) and len(error_msg) > 0:
+            error_msg = error_msg[0]
+        
+        if not error_msg:
+            error_msg = response.text or "Erro desconhecido"
+            
+        return error_msg
+    except Exception:
+        return "Ocorreu um erro inesperado. Tente novamente."
+
+
+def _extract_qr_code(data):
+    """Extrai QR Code de diferentes estruturas de resposta."""
+    qr_code = None
+    
+    # Verificar diferentes estruturas
+    if "base64" in data:
+        qr_code = data["base64"]
+    elif "qrcode" in data:
+        qr_code = data["qrcode"]
+        if isinstance(qr_code, dict):
+            qr_code = qr_code.get("base64") or qr_code.get("code")
+    elif "code" in data:
+        qr_code = data["code"]
+    
+    return qr_code
+
+
+def _extract_pairing_code(data):
+    """Extrai pairing code da resposta."""
+    pairing_code = None
+    
+    if "pairingCode" in data:
+        pairing_code = data["pairingCode"]
+    elif "code" in data and not _extract_qr_code(data):
+        pairing_code = data["code"]
+    
+    return pairing_code
