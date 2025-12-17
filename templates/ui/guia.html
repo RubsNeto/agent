@@ -24,298 +24,249 @@
         </div>
     </div>
 
-    <!-- Passo 1: Configurar Padaria -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <div style="display: flex; align-items: start; gap: 1rem;">
-            <div
-                style="width: 40px; height: 40px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
-                1
-            </div>
-            <div style="flex: 1;">
-                <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
-                    Configure sua Padaria
-                </h3>
-                <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
-                    A "Padaria" é sua empresa no sistema. Todos os agentes e configurações ficam organizados dentro
-                    dela.
-                </p>
-                <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
-                    <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
-                        <li>Clique em <strong>"Padaria"</strong> no menu lateral</li>
-                        <li>Preencha os dados da sua empresa (nome, CNPJ, telefone, endereço)</li>
-                        <li>Clique em "Salvar Alterações"</li>
-                    </ol>
-                </div>
-                <a href="{% url 'organizations:list' %}" class="btn btn-primary"
-                    style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    Ir para Padaria
-                </a>
-            </div>
-        </div>
-    </div>
+    <!-- SEÇÃO ADMIN -->
+    {% if user.is_superuser %}
+    <div style="margin-bottom: 2rem;">
+        <h2
+            style="font-size: 1.5rem; font-weight: 700; color: var(--gray-900); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+            <svg width="24" height="24" fill="none" stroke="#9333ea" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            Fluxo do Administrador
+        </h2>
 
-    <!-- Passo 2: Criar Agente -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <div style="display: flex; align-items: start; gap: 1rem;">
-            <div
-                style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
-                2
-            </div>
-            <div style="flex: 1;">
-                <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
-                    Crie seu Primeiro Agente
-                </h3>
-                <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
-                    O Agente é o "funcionário virtual" que vai atender seus clientes. Você configura como ele se
-                    comporta, o que ele sabe e como responde.
-                </p>
-                <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
-                    <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
-                        <li>Clique em <strong>"Agente"</strong> no menu lateral</li>
-                        <li>Clique em "Novo Agente"</li>
-                        <li>Preencha:
-                            <ul style="margin-top: 0.5rem;">
-                                <li><strong>Nome:</strong> Como o agente se apresenta (ex: "Ana")</li>
-                                <li><strong>Papel:</strong> Função dele (ex: "Atendente")</li>
-                                <li><strong>Setor:</strong> Área de atuação (ex: "Vendas")</li>
-                                <li><strong>Saudação:</strong> Como ele cumprimenta os clientes</li>
-                                <li><strong>Base de Conhecimento:</strong> Informações sobre produtos, serviços, preços
-                                </li>
-                            </ul>
-                        </li>
-                        <li>Clique em "Salvar Agente"</li>
-                    </ol>
-                </div>
+        <!-- Passo 1: Cadastrar Novo Cliente -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: start; gap: 1rem;">
                 <div
-                    style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-                    <p style="margin: 0; color: #92400e; display: flex; align-items: start; gap: 0.5rem;">
-                        <svg width="20" height="20" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24"
-                            style="flex-shrink: 0; margin-top: 2px;">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <span><strong>Dica:</strong> Quanto mais informações você colocar na Base de Conhecimento,
-                            melhor o agente vai responder!</span>
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #9333ea, #7c3aed); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
+                    1
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
+                        Cadastrar Novo Cliente
+                    </h3>
+                    <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
+                        Crie uma nova conta de padaria para o seu cliente com os dados de acesso.
                     </p>
-                </div>
-                <a href="{% url 'agents:create' %}" class="btn btn-primary"
-                    style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Criar Agente
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Passo 3: Testar no Playground -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <div style="display: flex; align-items: start; gap: 1rem;">
-            <div
-                style="width: 40px; height: 40px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
-                3
-            </div>
-            <div style="flex: 1;">
-                <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
-                    Teste seu Agente
-                </h3>
-                <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
-                    Antes de conectar com clientes reais, teste como o agente responde no Playground - um chat de testes
-                    interno.
-                </p>
-                <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
-                    <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
-                        <li>Vá em <strong>"Agente"</strong> no menu</li>
-                        <li>Clique no agente que você criou</li>
-                        <li>Clique em "Testar no Playground"</li>
-                        <li>Converse com o agente e veja como ele responde</li>
-                        <li>Se precisar ajustar, volte e edite as configurações</li>
-                    </ol>
-                </div>
-                <a href="{% url 'agents:list' %}" class="btn btn-primary"
-                    style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                    </svg>
-                    Ver Agentes
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Passo 4: Gerar API Key -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <div style="display: flex; align-items: start; gap: 1rem;">
-            <div
-                style="width: 40px; height: 40px; background: linear-gradient(135deg, #f59e0b, #ea8a08); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
-                4
-            </div>
-            <div style="flex: 1;">
-                <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
-                    Gere uma Chave API
-                </h3>
-                <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
-                    A Chave API é como uma "senha especial" que permite outros sistemas (n8n, WhatsApp, etc) se
-                    conectarem com seu agente de forma segura.
-                </p>
-                <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
-                    <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
-                        <li>Clique em <strong>"API Keys"</strong> no menu lateral</li>
-                        <li>Clique em "Nova API Key"</li>
-                        <li>Dê um nome descritivo (ex: "WhatsApp - Atendimento")</li>
-                        <li>Selecione o agente que vai usar essa chave</li>
-                        <li>Clique em "Gerar Chave"</li>
-                        <li><strong style="color: #dc2626;">IMPORTANTE:</strong> Copie e guarde a chave que aparece -
-                            ela só é mostrada uma vez!</li>
-                    </ol>
-                </div>
-                <div
-                    style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-                    <p style="margin: 0; color: #991b1b; display: flex; align-items: start; gap: 0.5rem;">
-                        <svg width="20" height="20" fill="none" stroke="#dc2626" stroke-width="2" viewBox="0 0 24 24"
-                            style="flex-shrink: 0; margin-top: 2px;">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <span><strong>Atenção:</strong> Nunca compartilhe sua API Key publicamente. Ela dá acesso ao seu
-                            agente!</span>
-                    </p>
-                </div>
-                <a href="{% url 'organizations:apikeys' %}" class="btn btn-primary"
-                    style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                    </svg>
-                    Gerar API Key
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Passo 5: Conectar com n8n ou WhatsApp -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <div style="display: flex; align-items: start; gap: 1rem;">
-            <div
-                style="width: 40px; height: 40px; background: linear-gradient(135deg, #e94560, #d63652); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
-                5
-            </div>
-            <div style="flex: 1;">
-                <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
-                    Conecte com n8n ou WhatsApp
-                </h3>
-                <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
-                    Agora é hora de conectar seu agente com os canais onde seus clientes estão (WhatsApp, Telegram,
-                    site, etc). Isso é feito através do n8n.
-                </p>
-
-                <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.75rem 0; font-weight: 600; color: var(--gray-700);">O que você vai precisar:
-                    </p>
-                    <ul style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
-                        <li><strong>API Key:</strong> A chave que você gerou no passo 4</li>
-                        <li><strong>Slug do Agente:</strong> O identificador único do seu agente (veja na lista de
-                            agentes)</li>
-                        <li><strong>Ferramenta de automação:</strong> n8n, Make ou similar</li>
-                    </ul>
-                </div>
-
-                <div
-                    style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-                    <p style="margin: 0; color: #92400e; display: flex; align-items: start; gap: 0.5rem;">
-                        <svg width="20" height="20" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24"
-                            style="flex-shrink: 0; margin-top: 2px;">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span><strong>Precisa de ajuda técnica?</strong> Entre em contato com o suporte para configurar
-                            a integração com n8n ou WhatsApp.</span>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Passo 6: Monitorar -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <div style="display: flex; align-items: start; gap: 1rem;">
-            <div
-                style="width: 40px; height: 40px; background: linear-gradient(135deg, #06b6d4, #0891b2); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
-                6
-            </div>
-            <div style="flex: 1;">
-                <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
-                    Monitore e Ajuste
-                </h3>
-                <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
-                    Acompanhe como seu agente está performando e faça ajustes quando necessário.
-                </p>
-                <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Onde acompanhar:</p>
-                    <ul style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
-                        <li><strong>Dashboard:</strong> Veja estatísticas de uso e atividade</li>
-                        <li><strong>Logs de Auditoria:</strong> Histórico completo de todas as ações</li>
-                        <li><strong>Editar Agente:</strong> Ajuste respostas e conhecimento conforme necessário</li>
-                    </ul>
-                </div>
-                <div style="display: flex; gap: 0.75rem;">
-                    <a href="{% url 'ui:dashboard' %}" class="btn btn-secondary"
+                    <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
+                        <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
+                            <li>Acesse o <strong>Admin Panel</strong></li>
+                            <li>Clique em <strong>"Novo Cliente"</strong></li>
+                            <li>Preencha o formulário com os dados do cliente (nome da padaria, usuário, senha)</li>
+                            <li>Clique em <strong>"Criar"</strong></li>
+                        </ol>
+                    </div>
+                    <a href="{% url 'admin_panel:padaria_create' %}" class="btn btn-primary"
                         style="display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
                             viewBox="0 0 24 24">
-                            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-                            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-                            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-                            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
-                        Dashboard
+                        Novo Cliente
                     </a>
-                    <a href="{% url 'audit:list' %}" class="btn btn-secondary"
+                </div>
+            </div>
+        </div>
+
+        <!-- Passo 2: Passar dados de acesso -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: start; gap: 1rem;">
+                <div
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #9333ea, #7c3aed); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
+                    2
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
+                        Passar Dados de Acesso
+                    </h3>
+                    <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
+                        Envie as credenciais de acesso para o dono da padaria.
+                    </p>
+                    <div
+                        style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 4px;">
+                        <p style="margin: 0; color: #92400e;">
+                            <strong>Envie para o cliente:</strong><br>
+                            • <strong>Usuário:</strong> (nome de usuário criado)<br>
+                            • <strong>Senha:</strong> (senha definida)<br>
+                            • <strong>URL de Acesso:</strong> link do sistema
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Passo 3: Configurar Evolution -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: start; gap: 1rem;">
+                <div
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #9333ea, #7c3aed); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
+                    3
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
+                        Configurar Instância no Evolution
+                    </h3>
+                    <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
+                        Acesse o painel do Evolution e configure a instância criada para esse novo cliente.
+                    </p>
+                    <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px;">
+                        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
+                        <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
+                            <li>Acesse o painel de administrador do <strong>Evolution API</strong></li>
+                            <li>Localize a instância criada para o novo cliente</li>
+                            <li>Configure as opções necessárias (webhooks, integração, etc.)</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- SEÇÃO DONO DA PADARIA -->
+    <div style="margin-bottom: 2rem;">
+        <h2
+            style="font-size: 1.5rem; font-weight: 700; color: var(--gray-900); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+            <svg width="24" height="24" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            Fluxo do Dono da Padaria
+        </h2>
+
+        <!-- Passo 1: Criar Agente -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: start; gap: 1rem;">
+                <div
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
+                    1
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
+                        Criar seu Agente de IA
+                    </h3>
+                    <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
+                        Configure o agente que vai responder seus clientes no WhatsApp.
+                    </p>
+                    <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
+                        <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
+                            <li>Clique em <strong>"Agente"</strong> no menu lateral</li>
+                            <li>Clique em <strong>"Criar Agente"</strong></li>
+                            <li>Selecione sua padaria</li>
+                            <li>Preencha os dados do agente:
+                                <ul style="margin-top: 0.5rem;">
+                                    <li><strong>Nome:</strong> como o agente se apresenta</li>
+                                    <li><strong>Saudação:</strong> mensagem de boas-vindas</li>
+                                    <li><strong>Base de Conhecimento:</strong> informações sobre produtos e serviços
+                                    </li>
+                                </ul>
+                            </li>
+                            <li>Clique em <strong>"Salvar"</strong></li>
+                        </ol>
+                    </div>
+                    <div
+                        style="background: #d1fae5; border-left: 4px solid #10b981; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                        <p style="margin: 0; color: #065f46;">
+                            <strong>✨ Automático:</strong> Ao salvar, sua API Key é gerada automaticamente! Copie e
+                            guarde a chave que aparece na tela.
+                        </p>
+                    </div>
+                    <a href="{% url 'agents:create' %}" class="btn btn-primary"
                         style="display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
                             viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
-                        Logs
+                        Criar Agente
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Passo 2: Salvar API Key no Supabase -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: start; gap: 1rem;">
+                <div
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
+                    2
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
+                        Salvar API Key no Supabase
+                    </h3>
+                    <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
+                        Após gerar a API Key, ela deve ser salva na tabela do Supabase para integração.
+                    </p>
+                    <div
+                        style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 4px;">
+                        <p style="margin: 0; color: #991b1b;">
+                            <strong>⚠️ Importante:</strong> A API Key só é exibida uma vez! Copie e salve imediatamente
+                            no Supabase.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Passo 3: Conectar WhatsApp -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: start; gap: 1rem;">
+                <div
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #25d366, #128c7e); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
+                    3
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
+                        Conectar Número do WhatsApp
+                    </h3>
+                    <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
+                        Conecte seu número de WhatsApp Business para começar a receber mensagens.
+                    </p>
+                    <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
+                        <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
+                            <li>Clique em <strong>"Padaria"</strong> no menu lateral</li>
+                            <li>Clique na sua padaria</li>
+                            <li>Clique em <strong>"Conectar WhatsApp"</strong></li>
+                            <li>Clique em <strong>"Gerar QR Code"</strong></li>
+                            <li>Abra o WhatsApp no seu celular</li>
+                            <li>Escaneie o QR Code com o WhatsApp</li>
+                            <li>Aguarde a confirmação de conexão ✅</li>
+                        </ol>
+                    </div>
+                    <a href="{% url 'organizations:list' %}" class="btn btn-primary"
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #25d366, #128c7e);">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                        </svg>
+                        Ir para Padaria
                     </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Suporte -->
+    <!-- Pronto! -->
     <div class="card"
-        style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border: 2px solid var(--gray-200);">
-        <div style="text-align: center;">
-            <div
-                style="width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                <svg width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 0.5rem 0; color: var(--gray-900);">
-                Precisa de Ajuda?
-            </h3>
-            <p style="color: var(--gray-600); margin-bottom: 1.5rem;">
-                Se tiver dúvidas ou precisar de suporte técnico para configurar as integrações, nossa equipe está pronta
-                para ajudar!
-            </p>
-            <a href="{% url 'ui:dashboard' %}" class="btn btn-primary">
-                Voltar ao Dashboard
-            </a>
+        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-align: center;">
+        <div
+            style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+            <svg width="32" height="32" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
         </div>
+        <h2 style="font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem 0;">Pronto!</h2>
+        <p style="margin: 0 0 1.5rem 0; opacity: 0.95;">
+            Seu agente está configurado e conectado. Agora é só esperar as mensagens chegarem! 🎉
+        </p>
+        <a href="{% url 'ui:dashboard' %}" class="btn" style="background: white; color: #059669; font-weight: 600;">
+            Voltar ao Dashboard
+        </a>
     </div>
 </div>
 {% endblock %}
