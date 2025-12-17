@@ -1,6 +1,7 @@
-Django>=5.1,<5.2
-python-dotenv==1.0.1
+Django>=5.0
+python-dotenv
 whitenoise==6.7.0
+stripe
 gunicorn==22.0.0
 PyPDF2==3.0.1
 requests==2.32.3

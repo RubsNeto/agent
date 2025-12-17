@@ -10,54 +10,61 @@
         <h2 class="content-title">Padaria</h2>
         <p class="content-subtitle">Gerencie as informações da sua padaria</p>
     </div>
-    <a href="{% url 'organizations:create' %}" class="btn btn-primary">
-        + Criar Organização
+    {% if user.is_superuser %}
+    <a href="{% url 'admin_panel:padaria_create' %}" class="btn btn-primary">
+        + Criar Padaria
     </a>
+    {% endif %}
 </div>
 
 {% if organizations %}
-    {% for org in organizations %}
-    <div class="list-item">
-        <div class="list-item-content">
-            <h3 class="list-item-title">{{ org.name }}</h3>
-            <div class="list-item-meta">
-                <span>Slug: {{ org.slug }}</span>
-                <span>Criado em {{ org.created_at|date:"d/m/Y" }}</span>
-            </div>
-        </div>
-        <div class="list-item-actions">
-            <a href="{% url 'organizations:detail' org.slug %}" class="btn-icon btn-icon-blue" title="Visualizar">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                </svg>
-            </a>
-            <a href="{% url 'organizations:edit' org.slug %}" class="btn-icon btn-icon-orange" title="Editar">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-            </a>
-            <a href="{% url 'organizations:delete' org.slug %}" class="btn-icon btn-icon-red" title="Excluir">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                </svg>
-            </a>
+{% for org in organizations %}
+<div class="list-item">
+    <div class="list-item-content">
+        <h3 class="list-item-title">{{ org.name }}</h3>
+        <div class="list-item-meta">
+            <span>Slug: {{ org.slug }}</span>
+            <span>Criado em {{ org.created_at|date:"d/m/Y" }}</span>
         </div>
     </div>
-    {% endfor %}
-{% else %}
-    <div class="empty-state">
-        <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-        <h3 class="empty-state-title">Nenhuma organização ainda</h3>
-        <p class="empty-state-text">Crie sua primeira organização para começar</p>
-        <a href="{% url 'organizations:create' %}" class="btn btn-primary">
-            + Criar Organização
+    <div class="list-item-actions">
+        <a href="{% url 'organizations:detail' org.slug %}" class="btn-icon btn-icon-blue" title="Visualizar">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+        </a>
+        <a href="{% url 'organizations:edit' org.slug %}" class="btn-icon btn-icon-orange" title="Editar">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+        </a>
+        <a href="{% url 'organizations:delete' org.slug %}" class="btn-icon btn-icon-red" title="Excluir">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
         </a>
     </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </svg>
+    <h3 class="empty-state-title">Nenhuma organização ainda</h3>
+    <p class="empty-state-text">Crie sua primeira organização para começar</p>
+    {% if user.is_superuser %}
+    <a href="{% url 'admin_panel:padaria_create' %}" class="btn btn-primary">
+        + Criar Padaria
+    </a>
+    {% endif %}
+</div>
 {% endif %}
 {% endblock %}

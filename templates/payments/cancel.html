@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Pagamento Cancelado{% endblock %}
+{% block page_title %}Pagamento Cancelado{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 3rem 1.5rem;">
+    <div class="cancel-icon">
+        <svg width="64" height="64" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    </div>
+
+    <h2 style="color: #991b1b; font-size: 1.75rem; margin: 1.5rem 0 0.75rem;">Pagamento Cancelado</h2>
+    <p style="color: #4b5563; font-size: 1.125rem;">O pagamento foi cancelado ou não foi concluído.</p>
+
+    <p style="color: #9ca3af; font-size: 0.875rem; margin-top: 2rem;">
+        Você pode tentar novamente solicitando um novo link de pagamento.
+    </p>
+</div>
+
+<style>
+    .cancel-icon {
+        width: 96px;
+        height: 96px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        box-shadow: 0 10px 40px rgba(239, 68, 68, 0.3);
+    }
+</style>
+{% endblock %}

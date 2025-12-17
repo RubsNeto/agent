@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "ui",
     "audit",
     "admin_panel",
+    # "payments",  # TODO v2: Stripe payments
 ]
 
 MIDDLEWARE = [
@@ -181,3 +182,9 @@ MESSAGE_TAGS = {
 # Evolution API Settings
 EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "http://localhost:8080")
 EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY", "")
+
+# TODO v2: Stripe Connect Settings
+# STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+# STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+# STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+

@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block title %}{% if organization %}Editar{% else %}Criar{% endif %} Padaria - PanDia{% endblock %}
-{% block page_title %}{% if organization %}Editar Informações da Padaria{% else %}Criar Nova Padaria{% endif %}{% endblock %}
+{% block page_title %}{% if organization %}Editar Informações da Padaria{% else %}Criar Nova Padaria{% endif %}{%
+endblock %}
 
 {% block content %}
 {% if organization %}
@@ -15,93 +16,66 @@
 {% endif %}
 
 <div class="card" style="max-width: 800px; margin: 0 auto;">
-    <h2 class="content-title" style="margin-bottom: 0.5rem;">{% if organization %}Editar Informações da Padaria{% else %}Criar Nova Padaria{% endif %}</h2>
-    <p class="content-subtitle" style="margin-bottom: 2rem;">{% if organization %}Atualize os dados cadastrais da sua empresa{% else %}Cadastre uma nova padaria no sistema{% endif %}</p>
-    
+    <h2 class="content-title" style="margin-bottom: 0.5rem;">{% if organization %}Editar Informações da Padaria{% else
+        %}Criar Nova Padaria{% endif %}</h2>
+    <p class="content-subtitle" style="margin-bottom: 2rem;">{% if organization %}Atualize os dados cadastrais da sua
+        empresa{% else %}Cadastre uma nova padaria no sistema{% endif %}</p>
+
     <form method="post">
         {% csrf_token %}
-        
+
         <div style="margin-bottom: 2rem;">
-            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+            <h3
+                style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
                 <svg width="20" height="20" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
                 Dados da Empresa
             </h3>
-            
+
             <div class="form-group">
                 <label class="form-label" for="name">Nome da Empresa *</label>
-                <input 
-                    type="text" 
-                    name="name" 
-                    id="name" 
-                    class="form-input"
-                    value="{{ organization.name|default:'' }}" 
-                    required 
-                    autofocus
-                    placeholder="Ex: Padaria São José"
-                >
+                <input type="text" name="name" id="name" class="form-input" value="{{ organization.name|default:'' }}"
+                    required autofocus placeholder="Ex: Padaria São José">
             </div>
 
             <div class="form-group">
                 <label class="form-label" for="cnpj">CNPJ</label>
-                <input 
-                    type="text" 
-                    name="cnpj" 
-                    id="cnpj" 
-                    class="form-input"
-                    value="{{ organization.cnpj|default:'' }}" 
-                    placeholder="00.000.000/0000-00"
-                    maxlength="18"
-                >
+                <input type="text" name="cnpj" id="cnpj" class="form-input" value="{{ organization.cnpj|default:'' }}"
+                    placeholder="00.000.000/0000-00" maxlength="18">
                 <p class="form-help">Opcional. Formato: 00.000.000/0000-00</p>
             </div>
 
             <div class="form-group">
                 <label class="form-label" for="address">Endereço Completo</label>
-                <textarea 
-                    name="address" 
-                    id="address" 
-                    class="form-textarea"
-                    rows="3"
-                    placeholder="Rua, número, bairro, cidade - UF, CEP"
-                >{{ organization.address|default:'' }}</textarea>
+                <textarea name="address" id="address" class="form-textarea" rows="3"
+                    placeholder="Rua, número, bairro, cidade - UF, CEP">{{ organization.address|default:'' }}</textarea>
                 <p class="form-help">Inclua rua, número, bairro, cidade, estado e CEP</p>
             </div>
         </div>
 
         <div style="margin-bottom: 2rem; padding-top: 2rem; border-top: 1px solid var(--gray-200);">
-            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+            <h3
+                style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
                 <svg width="20" height="20" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 Informações de Contato
             </h3>
-            
+
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
                 <div class="form-group">
                     <label class="form-label" for="email">E-mail da Empresa</label>
-                    <input 
-                        type="email" 
-                        name="email" 
-                        id="email" 
-                        class="form-input"
-                        value="{{ organization.email|default:'' }}" 
-                        placeholder="contato@suapadaria.com"
-                    >
+                    <input type="email" name="email" id="email" class="form-input"
+                        value="{{ organization.email|default:'' }}" placeholder="contato@suapadaria.com">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="phone">Telefone</label>
-                    <input 
-                        type="tel" 
-                        name="phone" 
-                        id="phone" 
-                        class="form-input"
-                        value="{{ organization.phone|default:'' }}" 
-                        placeholder="(00) 00000-0000"
-                        maxlength="20"
-                    >
+                    <input type="tel" name="phone" id="phone" class="form-input"
+                        value="{{ organization.phone|default:'' }}" placeholder="(00) 00000-0000" maxlength="20">
                 </div>
             </div>
         </div>
@@ -109,27 +83,22 @@
         <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" for="slug">Identificador (Slug)</label>
-                <input 
-                    type="text" 
-                    name="slug" 
-                    id="slug" 
-                    class="form-input"
-                    value="{{ organization.slug }}" 
-                    readonly
-                    style="background-color: var(--gray-200); cursor: not-allowed;"
-                >
+                <input type="text" name="slug" id="slug" class="form-input" value="{{ organization.slug }}" readonly
+                    style="background-color: var(--gray-200); cursor: not-allowed;">
                 <p class="form-help">Este identificador é usado nas URLs e não pode ser alterado.</p>
             </div>
         </div>
 
         <div style="display: flex; gap: 0.75rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-200);">
             <button type="submit" class="btn btn-primary" style="flex: 1;">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 0.5rem;">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                    style="margin-right: 0.5rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 {% if organization %}Salvar Alterações{% else %}Criar Padaria{% endif %}
             </button>
-            <a href="{% if organization %}{% url 'organizations:detail' organization.slug %}{% else %}{% url 'organizations:list' %}{% endif %}" class="btn btn-secondary">
+            <a href="{% if organization %}{% url 'organizations:detail' organization.slug %}{% else %}{% url 'organizations:list' %}{% endif %}"
+                class="btn btn-secondary">
                 Cancelar
             </a>
         </div>
@@ -137,26 +106,30 @@
 </div>
 
 <script>
-// Máscara para CNPJ
-document.getElementById('cnpj').addEventListener('input', function(e) {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 14) {
-        value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-        value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-        value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-        value = value.replace(/(\d{4})(\d)/, '$1-$2');
-        e.target.value = value;
-    }
-});
+    // Máscara para CNPJ
+    document.getElementById('cnpj').addEventListener('input', function (e)
+    {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 14)
+        {
+            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+            value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            e.target.value = value;
+        }
+    });
 
-// Máscara para telefone
-document.getElementById('phone').addEventListener('input', function(e) {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 11) {
-        value = value.replace(/^(\d{2})(\d)/, '($1) $2');
-        value = value.replace(/(\d{5})(\d)/, '$1-$2');
-        e.target.value = value;
-    }
-});
+    // Máscara para telefone
+    document.getElementById('phone').addEventListener('input', function (e)
+    {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11)
+        {
+            value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+            value = value.replace(/(\d{5})(\d)/, '$1-$2');
+            e.target.value = value;
+        }
+    });
 </script>
 {% endblock %}
