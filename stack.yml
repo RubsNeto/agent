@@ -18,6 +18,8 @@ services:
       - DATABASE_PATH=/app/data/db.sqlite3
       - EVOLUTION_API_URL=http://tasks.evolution_evolution_api:8080/
       - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_KEY=${SUPABASE_KEY:-}
     volumes:
       # SQLite persistente - CRÍTICO!
       - sqlite_data:/app/data
