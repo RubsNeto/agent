@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 
 {% block title %}{% if organization %}Editar{% else %}Criar{% endif %} Padaria - PanDia{% endblock %}
-{% block page_title %}{% if organization %}Editar Informações da Padaria{% else %}Criar Nova Padaria{% endif %}{%
-endblock %}
+{% block page_title %}{% if organization %}Editar Informações da Padaria{% else %}Criar Nova Padaria{% endif %}
+{% endblock %}
 
 {% block content %}
 {% if organization %}
@@ -107,11 +107,9 @@ endblock %}
 
 <script>
     // Máscara para CNPJ
-    document.getElementById('cnpj').addEventListener('input', function (e)
-    {
+    document.getElementById('cnpj').addEventListener('input', function (e) {
         let value = e.target.value.replace(/\D/g, '');
-        if (value.length <= 14)
-        {
+        if (value.length <= 14) {
             value = value.replace(/^(\d{2})(\d)/, '$1.$2');
             value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
             value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
@@ -121,11 +119,9 @@ endblock %}
     });
 
     // Máscara para telefone
-    document.getElementById('phone').addEventListener('input', function (e)
-    {
+    document.getElementById('phone').addEventListener('input', function (e) {
         let value = e.target.value.replace(/\D/g, '');
-        if (value.length <= 11)
-        {
+        if (value.length <= 11) {
             value = value.replace(/^(\d{2})(\d)/, '($1) $2');
             value = value.replace(/(\d{5})(\d)/, '$1-$2');
             e.target.value = value;

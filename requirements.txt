@@ -5,3 +5,4 @@ stripe
 gunicorn==22.0.0
 PyPDF2==3.0.1
 requests==2.32.3
+supabase>=2.0.0

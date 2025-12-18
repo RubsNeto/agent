@@ -125,10 +125,15 @@ def agent_create(request):
                     # Enviar para n8n
                     try:
                         webhook_url = "https://n8n.newcouros.com.br/webhook/memoria"
+                        
+                        # Nome da tabela RAG no Supabase (baseado na padaria)
+                        rag_table_name = f"rag_{agent.padaria.slug.replace('-', '_')}"
+                        
                         payload = {
                             "agent_id": agent.id,
                             "agent_name": agent.name,
                             "agent_slug": agent.slug,
+                            "rag_table_name": rag_table_name,
                             "pdf_filename": pdf_file.name,
                             "pdf_category": agent.knowledge_pdf_category or "Sem categoria",
                             "extracted_text": extracted_text,
@@ -165,22 +170,82 @@ def agent_create(request):
                 diff={"name": agent.name, "slug": agent.slug}
             )
             
-            # Gerar API Key automaticamente para usuários não-admin
-            if not request.user.is_superuser:
-                from organizations.models import ApiKey
-                api_key = ApiKey.objects.create(
-                    padaria=agent.padaria,
-                    agent=agent,
-                    name=f"Auto - {agent.name}"
+            # Gerar API Key automaticamente para TODOS os usuários
+            from organizations.models import ApiKey
+            api_key = ApiKey.objects.create(
+                padaria=agent.padaria,
+                agent=agent,  # Vinculada a este agente específico
+                name=f"Auto - {agent.name}"
+            )
+            
+            messages.success(
+                request, 
+                f"Agente '{agent.name}' criado com sucesso! ✨\n\n"
+                f"🔑 API Key gerada: {api_key.key}\n\n"
+                f"⚠️ Copie a chave agora! Ela não será exibida novamente."
+            )
+            
+            # Sincronizar com Supabase
+            try:
+                from integrations.supabase_client import sync_agent_to_supabase, create_rag_table
+                
+                print(f"[DEBUG] Sincronizando agente '{agent.slug}' com Supabase...")
+                
+                # Inserir na tabela agentes
+                result = sync_agent_to_supabase(
+                    slug=agent.slug,
+                    api_key=api_key.key,  # API Key correta, vinculada ao agente
+                    padaria_name=agent.padaria.name,
+                    agent_name=agent.name,
+                    phone=agent.padaria.phone or ""
                 )
-                messages.success(
-                    request, 
-                    f"Agente '{agent.name}' criado com sucesso! ✨\n\n"
-                    f"🔑 API Key gerada: {api_key.key}\n\n"
-                    f"⚠️ Copie a chave agora! Ela não será exibida novamente."
+                print(f"[DEBUG] sync_agent_to_supabase resultado: {result}")
+                
+                # Criar tabela RAG para esta padaria
+                rag_result = create_rag_table(slug=agent.padaria.slug)
+                print(f"[DEBUG] create_rag_table resultado: {rag_result}")
+                
+            except Exception as e:
+                # Log do erro mas não bloqueia criação do agente
+                import traceback
+                print(f"[ERROR] Erro ao sincronizar com Supabase: {e}")
+                print(traceback.format_exc())
+            
+            # Notificar n8n sobre novo agente
+            try:
+                webhook_url = "https://n8n.newcouros.com.br/webhook/memoria"
+                rag_table_name = f"rag_{agent.padaria.slug.replace('-', '_')}"
+                
+                payload = {
+                    "action": "agent_created",
+                    "agent_id": agent.id,
+                    "agent_name": agent.name,
+                    "agent_slug": agent.slug,
+                    "rag_table_name": rag_table_name,
+                    "api_key": api_key.key,
+                    "padaria": agent.padaria.name,
+                    "padaria_slug": agent.padaria.slug,
+                    "greeting": agent.greeting,
+                    "personality": agent.personality,
+                    "role": agent.role,
+                    "knowledge_base": agent.knowledge_base,
+                    "created_by": request.user.email
+                }
+                
+                response = requests.post(
+                    webhook_url,
+                    json=payload,
+                    headers={'Content-Type': 'application/json'},
+                    timeout=10
                 )
-            else:
-                messages.success(request, f"Agente '{agent.name}' criado com sucesso! ✨")
+                
+                if response.status_code == 200:
+                    print(f"[DEBUG] Webhook notificado sobre novo agente: {agent.slug}")
+                else:
+                    print(f"[WARNING] Webhook retornou status {response.status_code}")
+                    
+            except requests.exceptions.RequestException as webhook_error:
+                print(f"[WARNING] Erro ao notificar webhook: {str(webhook_error)}")
             
             return redirect("agents:detail", slug=agent.slug)
     else:
@@ -274,10 +339,15 @@ def agent_edit(request, slug):
             if agent.knowledge_pdf and agent.knowledge_pdf_text:
                 try:
                     webhook_url = "https://n8n.newcouros.com.br/webhook/memoria"
+                    
+                    # Nome da tabela RAG no Supabase (baseado na padaria)
+                    rag_table_name = f"rag_{agent.padaria.slug.replace('-', '_')}"
+                    
                     payload = {
                         "agent_id": agent.id,
                         "agent_name": agent.name,
                         "agent_slug": agent.slug,
+                        "rag_table_name": rag_table_name,
                         "pdf_filename": pdf_filename or agent.knowledge_pdf.name,
                         "pdf_category": agent.knowledge_pdf_category or "Sem categoria",
                         "extracted_text": extracted_text or agent.knowledge_pdf_text,
@@ -316,6 +386,41 @@ def agent_edit(request, slug):
                 entity_id=agent.id,
                 diff={"name": agent.name}
             )
+            
+            # Notificar n8n sobre atualização do agente
+            try:
+                webhook_url = "https://n8n.newcouros.com.br/webhook/memoria"
+                rag_table_name = f"rag_{agent.padaria.slug.replace('-', '_')}"
+                
+                payload = {
+                    "action": "agent_updated",
+                    "agent_id": agent.id,
+                    "agent_name": agent.name,
+                    "agent_slug": agent.slug,
+                    "rag_table_name": rag_table_name,
+                    "padaria": agent.padaria.name,
+                    "padaria_slug": agent.padaria.slug,
+                    "greeting": agent.greeting,
+                    "personality": agent.personality,
+                    "role": agent.role,
+                    "knowledge_base": agent.knowledge_base,
+                    "updated_by": request.user.email
+                }
+                
+                response = requests.post(
+                    webhook_url,
+                    json=payload,
+                    headers={'Content-Type': 'application/json'},
+                    timeout=10
+                )
+                
+                if response.status_code == 200:
+                    print(f"[DEBUG] Webhook notificado sobre update do agente: {agent.slug}")
+                else:
+                    print(f"[WARNING] Webhook retornou status {response.status_code}")
+                    
+            except requests.exceptions.RequestException as webhook_error:
+                print(f"[WARNING] Erro ao notificar webhook (edit): {str(webhook_error)}")
             
             messages.success(request, "Agente atualizado com sucesso! ✨")
             return redirect("agents:detail", slug=agent.slug)
