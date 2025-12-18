@@ -1,0 +1,68 @@
+# ============================================
+# Docker Stack para Django MVP - pandia.com.br
+# Deploy: docker stack deploy -c stack.yml agentesai
+# ============================================
+version: "3.8"
+
+services:
+  web:
+    image: agentesai:latest
+    environment:
+      - DEBUG=0
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
+      - DATABASE_PATH=/app/data/db.sqlite3
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL:-}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-}
+    volumes:
+      # SQLite persistente - CRÍTICO!
+      - sqlite_data:/app/data
+      # Media files (uploads)
+      - media_data:/app/media
+    networks:
+      - mysellerynet
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      labels:
+        # === TRAEFIK LABELS ===
+        - "traefik.enable=true"
+        # Router HTTP -> HTTPS redirect
+        - "traefik.http.routers.agentesai-http.rule=Host(`pandia.com.br`) || Host(`www.pandia.com.br`)"
+        - "traefik.http.routers.agentesai-http.entrypoints=web"
+        - "traefik.http.routers.agentesai-http.middlewares=redirect-to-https"
+        # Router HTTPS
+        - "traefik.http.routers.agentesai.rule=Host(`pandia.com.br`) || Host(`www.pandia.com.br`)"
+        - "traefik.http.routers.agentesai.entrypoints=websecure"
+        - "traefik.http.routers.agentesai.tls=true"
+        - "traefik.http.routers.agentesai.tls.certresolver=letsencrypt"
+        # Service
+        - "traefik.http.services.agentesai.loadbalancer.server.port=8000"
+        # Middleware redirect
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/accounts/login/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  sqlite_data:
+    driver: local
+  media_data:
+    driver: local
+
+networks:
+  mysellerynet:
+    external: true
