@@ -1,0 +1,35 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Permite executar manualmente
+
+jobs:
+  deploy:
+    name: Deploy to pandia.com.br
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "🚀 Iniciando deploy..."
+            cd /opt/apps/agentesai/agent
+            
+            echo "📥 Baixando alterações..."
+            git pull origin main
+            
+            echo "🔨 Fazendo build da imagem..."
+            docker build -t agentesai:latest .
+            
+            echo "📦 Fazendo deploy do stack..."
+            docker stack deploy -c stack.yml agentesai
+            
+            echo "✅ Deploy concluído!"
+            docker service ls | grep agentesai
