@@ -455,6 +455,10 @@ def whatsapp_connect(request, slug):
                         entity_id=organization.id,
                         diff={"instance": instance_name}
                     )
+                    
+                    # Configurar webhook automaticamente
+                    _configure_webhook(api_url, headers, instance_name)
+                    
                 elif create_response.status_code in [403, 409]:
                     # Instância já existe, está OK - continuar
                     pass
@@ -614,3 +618,47 @@ def _extract_pairing_code(data):
         pairing_code = data["code"]
     
     return pairing_code
+
+
+def _configure_webhook(api_url, headers, instance_name):
+    """
+    Configura webhook automaticamente para a instância.
+    
+    Configura:
+    - URL: https://n8n.newcouros.com.br/webhook/vendedorrr
+    - Enabled: True
+    - Evento: MESSAGES_UPSERT
+    """
+    try:
+        webhook_url = f"{api_url}/webhook/set/{instance_name}"
+        webhook_payload = {
+            "url": "https://n8n.newcouros.com.br/webhook/vendedorrr",
+            "enabled": True,
+            "webhookByEvents": False,
+            "webhookBase64": False,
+            "events": [
+                "MESSAGES_UPSERT"
+            ]
+        }
+        
+        response = requests.post(
+            webhook_url,
+            headers=headers,
+            json=webhook_payload,
+            timeout=10
+        )
+        
+        # Log para debug (opcional)
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        if response.status_code in [200, 201]:
+            logger.info(f"Webhook configurado com sucesso para {instance_name}")
+        else:
+            logger.warning(f"Erro ao configurar webhook para {instance_name}: {response.text}")
+            
+    except Exception as e:
+        # Não interromper o fluxo se o webhook falhar
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Exceção ao configurar webhook para {instance_name}: {str(e)}")
