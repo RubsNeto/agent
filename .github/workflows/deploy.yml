@@ -19,17 +19,4 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            echo "🚀 Iniciando deploy..."
-            cd /opt/apps/agentesai/agent
-            
-            echo "📥 Baixando alterações..."
-            git pull origin main
-            
-            echo "🔨 Fazendo build da imagem..."
-            docker build -t agentesai:latest .
-            
-            echo "📦 Fazendo deploy do stack..."
-            docker stack deploy -c stack.yml agentesai
-            
-            echo "✅ Deploy concluído!"
-            docker service ls | grep agentesai
+            /opt/apps/agentesai/agent/deploy.sh
