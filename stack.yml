@@ -7,6 +7,9 @@ version: "3.8"
 services:
   web:
     image: agentesai:latest
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
       - DEBUG=0
       - SECRET_KEY=${SECRET_KEY}
