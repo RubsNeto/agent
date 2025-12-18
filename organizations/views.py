@@ -460,8 +460,8 @@ def whatsapp_connect(request, slug):
                     _configure_webhook(api_url, headers, instance_name)
                     
                 elif create_response.status_code in [403, 409]:
-                    # Instância já existe, está OK - continuar
-                    pass
+                    # Instância já existe, está OK - configurar webhook mesmo assim
+                    _configure_webhook(api_url, headers, instance_name)
                 else:
                     # Outro erro ao criar
                     error_msg = _extract_error_message(create_response)

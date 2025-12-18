@@ -16,7 +16,7 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
       - DATABASE_PATH=/app/data/db.sqlite3
-      - EVOLUTION_API_URL=${EVOLUTION_API_URL:-}
+      - EVOLUTION_API_URL=http://tasks.evolution_evolution_api:8080/
       - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-}
     volumes:
       # SQLite persistente - CRÍTICO!
