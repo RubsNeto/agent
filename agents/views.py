@@ -201,8 +201,8 @@ def agent_create(request):
                 )
                 print(f"[DEBUG] sync_agent_to_supabase resultado: {result}")
                 
-                # Criar tabela RAG para esta padaria
-                rag_result = create_rag_table(slug=agent.padaria.slug)
+                # Criar tabela RAG para esta padaria (passa slug do agente para update)
+                rag_result = create_rag_table(slug=agent.padaria.slug, agent_slug=agent.slug)
                 print(f"[DEBUG] create_rag_table resultado: {rag_result}")
                 
             except Exception as e:

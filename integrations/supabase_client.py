@@ -73,7 +73,7 @@ def sync_agent_to_supabase(slug, api_key, padaria_name, agent_name, phone=""):
         return False
 
 
-def create_rag_table(slug):
+def create_rag_table(slug, agent_slug=None):
     """
     Cria uma tabela RAG dinâmica no Supabase para o agente.
     Nome da tabela: rag_{slug_sanitizado}
@@ -85,7 +85,8 @@ def create_rag_table(slug):
     - embedding (vector)
     
     Args:
-        slug: Slug do agente (será sanitizado para nome de tabela)
+        slug: Slug da padaria (usado para nome da tabela RAG)
+        agent_slug: Slug do agente (usado para atualizar na tabela agentes)
     
     Returns:
         str: Nome da tabela criada se sucesso, None se erro
@@ -96,6 +97,9 @@ def create_rag_table(slug):
     
     # Sanitizar slug para nome de tabela válido
     table_name = f"rag_{slugify(slug).replace('-', '_')}"
+    
+    # Usar agent_slug se fornecido, senão usar o slug normal
+    update_slug = agent_slug or slug
     
     try:
         # Usar a API de SQL do Supabase para criar a tabela
@@ -124,8 +128,8 @@ def create_rag_table(slug):
         
         if response.status_code in [200, 201]:
             logger.info(f"Tabela RAG '{table_name}' criada com sucesso!")
-            # Atualizar a referência na tabela agentes
-            update_agent_rag_table(slug, table_name)
+            # Atualizar a referência na tabela agentes usando agent_slug
+            update_agent_rag_table(update_slug, table_name)
             return table_name
         else:
             # Se RPC não existir, tentar via SQL direto (menos seguro mas funcional)
@@ -133,7 +137,7 @@ def create_rag_table(slug):
             result = create_rag_table_alternative(table_name)
             if result:
                 # Atualizar a referência na tabela agentes
-                update_agent_rag_table(slug, table_name)
+                update_agent_rag_table(update_slug, table_name)
                 return table_name
             return None
             
