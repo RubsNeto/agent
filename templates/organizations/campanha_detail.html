@@ -103,23 +103,23 @@
         <!-- Estatísticas -->
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 1.5rem;">
             <div style="text-align: center; padding: 1rem; background: var(--gray-50); border-radius: 8px;">
-                <p style="font-size: 2rem; font-weight: 700; color: var(--gray-900); margin: 0;" id="stat-total">{{
-                    campanha.total_destinatarios }}</p>
+                <p style="font-size: 2rem; font-weight: 700; color: var(--gray-900); margin: 0;" id="stat-total">
+                    {{ campanha.total_destinatarios }}</p>
                 <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Total</p>
             </div>
             <div style="text-align: center; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
-                <p style="font-size: 2rem; font-weight: 700; color: #10b981; margin: 0;" id="stat-enviados">{{
-                    campanha.enviados }}</p>
+                <p style="font-size: 2rem; font-weight: 700; color: #10b981; margin: 0;" id="stat-enviados">
+                    {{ campanha.enviados }}</p>
                 <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Enviados</p>
             </div>
             <div style="text-align: center; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
-                <p style="font-size: 2rem; font-weight: 700; color: #ef4444; margin: 0;" id="stat-falhas">{{
-                    campanha.falhas }}</p>
+                <p style="font-size: 2rem; font-weight: 700; color: #ef4444; margin: 0;" id="stat-falhas">
+                    {{ campanha.falhas }}</p>
                 <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Falhas</p>
             </div>
             <div style="text-align: center; padding: 1rem; background: rgba(107, 114, 128, 0.1); border-radius: 8px;">
-                <p style="font-size: 2rem; font-weight: 700; color: var(--gray-700); margin: 0;" id="stat-pendentes">{{
-                    campanha.total_destinatarios|add:"-"|add:campanha.enviados|add:"-"|add:campanha.falhas }}</p>
+                <p style="font-size: 2rem; font-weight: 700; color: var(--gray-700); margin: 0;" id="stat-pendentes">
+                    {{ campanha.total_destinatarios|add:"-"|add:campanha.enviados|add:"-"|add:campanha.falhas }}</p>
                 <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Pendentes</p>
             </div>
         </div>
@@ -128,8 +128,8 @@
         <div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                 <span style="font-size: 0.875rem; color: var(--gray-600);">Progresso do envio</span>
-                <span style="font-size: 0.875rem; font-weight: 600; color: var(--gray-700);" id="progresso-texto">{{
-                    campanha.get_progresso }}%</span>
+                <span style="font-size: 0.875rem; font-weight: 600; color: var(--gray-700);" id="progresso-texto">
+                    {{ campanha.get_progresso }}%</span>
             </div>
             <div style="height: 12px; background: var(--gray-100); border-radius: 6px; overflow: hidden;">
                 <div style="height: 100%; background: linear-gradient(90deg, #10b981, #059669); width: {{ campanha.get_progresso }}%; transition: width 0.5s;"
@@ -178,18 +178,18 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div style="padding: 0.75rem; background: var(--gray-50); border-radius: 6px;">
                     <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Delay entre mensagens</p>
-                    <p style="font-weight: 600; color: var(--gray-900); margin: 0.25rem 0 0 0;">{{ campanha.delay_minimo
-                        }}-{{ campanha.delay_maximo }}s</p>
+                    <p style="font-weight: 600; color: var(--gray-900); margin: 0.25rem 0 0 0;">
+                        {{ campanha.delay_minimo }}-{{ campanha.delay_maximo }}s</p>
                 </div>
                 <div style="padding: 0.75rem; background: var(--gray-50); border-radius: 6px;">
                     <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Tamanho do lote</p>
-                    <p style="font-weight: 600; color: var(--gray-900); margin: 0.25rem 0 0 0;">{{ campanha.lote_tamanho
-                        }} mensagens</p>
+                    <p style="font-weight: 600; color: var(--gray-900); margin: 0.25rem 0 0 0;">
+                        {{ campanha.lote_tamanho }} mensagens</p>
                 </div>
                 <div style="padding: 0.75rem; background: var(--gray-50); border-radius: 6px; grid-column: span 2;">
                     <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Pausa entre lotes</p>
-                    <p style="font-weight: 600; color: var(--gray-900); margin: 0.25rem 0 0 0;">{{
-                        campanha.pausa_entre_lotes }}s</p>
+                    <p style="font-weight: 600; color: var(--gray-900); margin: 0.25rem 0 0 0;">
+                        {{ campanha.pausa_entre_lotes }}s</p>
                 </div>
             </div>
 
@@ -301,12 +301,10 @@
 {% if campanha.status == 'enviando' %}
 <script>
     // Atualização automática do status
-    function atualizarStatus()
-    {
+    function atualizarStatus() {
         fetch('{% url "organizations:campanha_status_ajax" campanha.pk %}')
             .then(response => response.json())
-            .then(data =>
-            {
+            .then(data => {
                 document.getElementById('stat-enviados').textContent = data.enviados;
                 document.getElementById('stat-falhas').textContent = data.falhas;
                 document.getElementById('stat-pendentes').textContent = data.total - data.enviados - data.falhas;
@@ -314,8 +312,7 @@
                 document.getElementById('progresso-bar').style.width = data.progresso + '%';
 
                 // Se não está mais enviando, recarregar a página
-                if (data.status !== 'enviando')
-                {
+                if (data.status !== 'enviando') {
                     location.reload();
                 }
             })

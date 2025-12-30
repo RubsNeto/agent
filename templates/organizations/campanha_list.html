@@ -108,8 +108,8 @@
             <!-- Estatísticas -->
             <div style="display: flex; gap: 1.5rem; text-align: center;">
                 <div>
-                    <p style="font-size: 1.5rem; font-weight: 700; color: var(--gray-900); margin: 0;">{{
-                        campanha.total_destinatarios }}</p>
+                    <p style="font-size: 1.5rem; font-weight: 700; color: var(--gray-900); margin: 0;">
+                        {{ campanha.total_destinatarios }}</p>
                     <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Destinatários</p>
                 </div>
                 <div>
@@ -146,12 +146,12 @@
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--gray-100);">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                 <span style="font-size: 0.75rem; color: var(--gray-500);">Progresso</span>
-                <span style="font-size: 0.75rem; font-weight: 600; color: var(--gray-700);">{{ campanha.get_progresso
-                    }}%</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: var(--gray-700);">
+                    {{ campanha.get_progresso }}%</span>
             </div>
             <div style="height: 8px; background: var(--gray-100); border-radius: 4px; overflow: hidden;">
                 <div
-                    style="height: 100%; background: linear-gradient(90deg, #10b981, #059669); width: {{ campanha.get_progresso }}%; transition: width 0.3s;">
+                    style="height: 100%; background: linear-gradient(90deg, #10b981, #059669); width: {{ campanha.get_progresso }} %; transition: width 0.3s;">
                 </div>
             </div>
         </div>

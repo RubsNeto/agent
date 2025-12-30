@@ -192,9 +192,9 @@ class CampaignService:
                 imagem_bytes = f.read()
                 imagem_base64 = base64.b64encode(imagem_bytes).decode('utf-8')
             
-            # Retornar no formato data URI
-            data_uri = f"data:{mimetype};base64,{imagem_base64}"
-            return data_uri, mimetype
+            # Retornar base64 puro (sem prefixo data URI)
+            # A Evolution API espera base64 puro, não data URI
+            return imagem_base64, mimetype
             
         except Exception as e:
             logger.error(f"Erro ao converter imagem para base64: {e}")
