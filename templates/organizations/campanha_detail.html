@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ campanha.nome }} - PanDia{% endblock %}
+{% block page_title %}Detalhes da Campanha{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 2rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #25D366, #128C7E); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="content-title" style="margin: 0;">{{ campanha.nome }}</h1>
+                <p class="content-subtitle" style="margin: 0.25rem 0 0 0;">
+                    Criada em {{ campanha.created_at|date:"d/m/Y H:i" }}
+                </p>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 0.75rem;">
+            {% if campanha.status == 'rascunho' or campanha.status == 'pausada' %}
+            <form method="post" action="{% url 'organizations:campanha_iniciar' campanha.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 0.5rem;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {% if campanha.status == 'pausada' %}Retomar Envio{% else %}Iniciar Envio{% endif %}
+                </button>
+            </form>
+            {% elif campanha.status == 'enviando' %}
+            <form method="post" action="{% url 'organizations:campanha_pausar' campanha.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="background: #f59e0b; color: white; border: none;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 0.5rem;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Pausar
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'organizations:campanha_list' %}" class="btn btn-secondary">
+                Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Card -->
+    <div class="card" style="margin-bottom: 1.5rem;" id="status-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <h3 style="font-size: 1.125rem; font-weight: 600; margin: 0;">Status da Campanha</h3>
+                
+                <!-- Status badge -->
+                {% if campanha.status == 'rascunho' %}
+                <span id="status-badge" style="padding: 0.25rem 0.75rem; background: rgba(107, 114, 128, 0.1); color: #6b7280; font-size: 0.75rem; font-weight: 600; border-radius: 9999px;">
+                    Rascunho
+                </span>
+                {% elif campanha.status == 'enviando' %}
+                <span id="status-badge" style="padding: 0.25rem 0.75rem; background: rgba(59, 130, 246, 0.1); color: #3b82f6; font-size: 0.75rem; font-weight: 600; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.25rem;">
+                    <span style="width: 6px; height: 6px; background: #3b82f6; border-radius: 50%; animation: pulse 1s infinite;"></span>
+                    Em Envio
+                </span>
+                {% elif campanha.status == 'concluida' %}
+                <span id="status-badge" style="padding: 0.25rem 0.75rem; background: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 0.75rem; font-weight: 600; border-radius: 9999px;">
+                    ✓ Concluída
+                </span>
+                {% elif campanha.status == 'pausada' %}
+                <span id="status-badge" style="padding: 0.25rem 0.75rem; background: rgba(245, 158, 11, 0.1); color: #f59e0b; font-size: 0.75rem; font-weight: 600; border-radius: 9999px;">
+                    Pausada
+                </span>
+                {% elif campanha.status == 'erro' %}
+                <span id="status-badge" style="padding: 0.25rem 0.75rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.75rem; font-weight: 600; border-radius: 9999px;">
+                    Erro
+                </span>
+                {% endif %}
+            </div>
+            
+            {% if campanha.status == 'enviando' %}
+            <span style="font-size: 0.75rem; color: var(--gray-500);">
+                Atualizando automaticamente...
+            </span>
+            {% endif %}
+        </div>
+        
+        <!-- Estatísticas -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div style="text-align: center; padding: 1rem; background: var(--gray-50); border-radius: 8px;">
+                <p style="font-size: 2rem; font-weight: 700; color: var(--gray-900); margin: 0;" id="stat-total">{{ campanha.total_destinatarios }}</p>
+                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Total</p>
+            </div>
+            <div style="text-align: center; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+                <p style="font-size: 2rem; font-weight: 700; color: #10b981; margin: 0;" id="stat-enviados">{{ campanha.enviados }}</p>
+                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Enviados</p>
+            </div>
+            <div style="text-align: center; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                <p style="font-size: 2rem; font-weight: 700; color: #ef4444; margin: 0;" id="stat-falhas">{{ campanha.falhas }}</p>
+                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Falhas</p>
+            </div>
+            <div style="text-align: center; padding: 1rem; background: rgba(107, 114, 128, 0.1); border-radius: 8px;">
+                <p style="font-size: 2rem; font-weight: 700; color: var(--gray-700); margin: 0;" id="stat-pendentes">{{ campanha.total_destinatarios|add:"-"|add:campanha.enviados|add:"-"|add:campanha.falhas }}</p>
+                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Pendentes</p>
+            </div>
+        </div>
+        
+        <!-- Barra de progresso -->
+        <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.875rem; color: var(--gray-600);">Progresso do envio</span>
+                <span style="font-size: 0.875rem; font-weight: 600; color: var(--gray-700);" id="progresso-texto">{{ campanha.get_progresso }}%</span>
+            </div>
+            <div style="height: 12px; background: var(--gray-100); border-radius: 6px; overflow: hidden;">
+                <div style="height: 100%; background: linear-gradient(90deg, #10b981, #059669); width: {{ campanha.get_progresso }}%; transition: width 0.5s;" id="progresso-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid de informações -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+        <!-- Mensagem -->
+        <div class="card">
+            <h3 style="font-size: 1rem; font-weight: 600; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="18" height="18" fill="none" stroke="#25D366" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Mensagem
+            </h3>
+            <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; white-space: pre-wrap; font-size: 0.875rem; line-height: 1.6; max-height: 200px; overflow-y: auto;">{{ campanha.mensagem }}</div>
+            
+            {% if campanha.imagem %}
+            <div style="margin-top: 1rem;">
+                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0 0 0.5rem 0;">Imagem anexada:</p>
+                <img src="{{ campanha.imagem.url }}" alt="Imagem da campanha" style="max-width: 100%; border-radius: 8px;">
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Configurações -->
+        <div class="card">
+            <h3 style="font-size: 1rem; font-weight: 600; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="18" height="18" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Configurações Anti-Ban
+            </h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="padding: 0.75rem; background: var(--gray-50); border-radius: 6px;">
+                    <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Delay entre mensagens</p>
+                    <p style="font-weight: 600; color: var(--gray-900); margin: 0.25rem 0 0 0;">{{ campanha.delay_minimo }}-{{ campanha.delay_maximo }}s</p>
+                </div>
+                <div style="padding: 0.75rem; background: var(--gray-50); border-radius: 6px;">
+                    <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Tamanho do lote</p>
+                    <p style="font-weight: 600; color: var(--gray-900); margin: 0.25rem 0 0 0;">{{ campanha.lote_tamanho }} mensagens</p>
+                </div>
+                <div style="padding: 0.75rem; background: var(--gray-50); border-radius: 6px; grid-column: span 2;">
+                    <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Pausa entre lotes</p>
+                    <p style="font-weight: 600; color: var(--gray-900); margin: 0.25rem 0 0 0;">{{ campanha.pausa_entre_lotes }}s</p>
+                </div>
+            </div>
+            
+            {% if campanha.promocao %}
+            <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(139, 92, 246, 0.1); border-radius: 6px;">
+                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0;">Promoção vinculada</p>
+                <p style="font-weight: 600; color: #8b5cf6; margin: 0.25rem 0 0 0;">{{ campanha.promocao.titulo }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Lista de Mensagens -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">
+                Destinatários ({{ total_mensagens }})
+            </h3>
+        </div>
+        
+        {% if mensagens %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--gray-200);">
+                        <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase;">Cliente</th>
+                        <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase;">Telefone</th>
+                        <th style="padding: 0.75rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase;">Status</th>
+                        <th style="padding: 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase;">Enviado em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for msg in mensagens %}
+                    <tr style="border-bottom: 1px solid var(--gray-100);">
+                        <td style="padding: 0.75rem; font-weight: 500;">{{ msg.cliente.nome }}</td>
+                        <td style="padding: 0.75rem; color: var(--gray-600);">{{ msg.cliente.telefone }}</td>
+                        <td style="padding: 0.75rem; text-align: center;">
+                            {% if msg.status == 'pendente' %}
+                            <span style="padding: 0.25rem 0.5rem; background: rgba(107, 114, 128, 0.1); color: #6b7280; font-size: 0.75rem; font-weight: 500; border-radius: 4px;">
+                                Pendente
+                            </span>
+                            {% elif msg.status == 'enviando' %}
+                            <span style="padding: 0.25rem 0.5rem; background: rgba(59, 130, 246, 0.1); color: #3b82f6; font-size: 0.75rem; font-weight: 500; border-radius: 4px;">
+                                Enviando...
+                            </span>
+                            {% elif msg.status == 'enviado' %}
+                            <span style="padding: 0.25rem 0.5rem; background: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 0.75rem; font-weight: 500; border-radius: 4px;">
+                                ✓ Enviado
+                            </span>
+                            {% elif msg.status == 'falha' %}
+                            <span style="padding: 0.25rem 0.5rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.75rem; font-weight: 500; border-radius: 4px;" title="{{ msg.erro_mensagem }}">
+                                ✗ Falha
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.75rem; color: var(--gray-500); font-size: 0.875rem;">
+                            {% if msg.enviado_em %}
+                            {{ msg.enviado_em|date:"d/m/Y H:i" }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if total_mensagens > 50 %}
+        <p style="text-align: center; padding: 1rem; color: var(--gray-500); font-size: 0.875rem;">
+            Mostrando 50 de {{ total_mensagens }} destinatários
+        </p>
+        {% endif %}
+        {% else %}
+        <p style="text-align: center; padding: 2rem; color: var(--gray-500);">
+            Nenhum destinatário na campanha.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+</style>
+
+{% if campanha.status == 'enviando' %}
+<script>
+    // Atualização automática do status
+    function atualizarStatus() {
+        fetch('{% url "organizations:campanha_status_ajax" campanha.pk %}')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('stat-enviados').textContent = data.enviados;
+                document.getElementById('stat-falhas').textContent = data.falhas;
+                document.getElementById('stat-pendentes').textContent = data.total - data.enviados - data.falhas;
+                document.getElementById('progresso-texto').textContent = data.progresso + '%';
+                document.getElementById('progresso-bar').style.width = data.progresso + '%';
+                
+                // Se não está mais enviando, recarregar a página
+                if (data.status !== 'enviando') {
+                    location.reload();
+                }
+            })
+            .catch(error => console.error('Erro ao atualizar status:', error));
+    }
+    
+    // Atualizar a cada 3 segundos
+    setInterval(atualizarStatus, 3000);
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if promocao %}Editar{% else %}Nova{% endif %} Promoção - PanDia{% endblock %}
+{% block page_title %}{% if promocao %}Editar Promoção{% else %}Nova Promoção{% endif %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1 class="content-title" style="margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.75rem;">
+                <div
+                    style="width: 48px; height: 48px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                    </svg>
+                </div>
+                {% if promocao %}Editar Promoção{% else %}Nova Promoção{% endif %}
+            </h1>
+            <p class="content-subtitle" style="margin-left: 60px;">{% if promocao %}Atualize as informações da
+                promoção{% else %}Crie uma nova promoção para o chatbot{% endif %}</p>
+        </div>
+        <a href="{% url 'organizations:promocao_list' %}" class="btn btn-secondary">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                style="margin-right: 0.5rem;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Voltar
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3
+                style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" fill="none" stroke="#8b5cf6" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Informações Básicas
+            </h3>
+
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <!-- Título -->
+                <div>
+                    <label for="titulo"
+                        style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem;">
+                        Título da Promoção *
+                    </label>
+                    <input type="text" id="titulo" name="titulo"
+                        value="{% if promocao %}{{ promocao.titulo }}{% endif %}"
+                        placeholder="Ex: Pão Francês em Promoção" required
+                        style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 1rem; transition: all 0.2s;">
+                </div>
+
+                <!-- Descrição -->
+                <div>
+                    <label for="descricao"
+                        style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem;">
+                        Descrição
+                    </label>
+                    <textarea id="descricao" name="descricao" rows="3" placeholder="Descreva os detalhes da promoção..."
+                        style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 1rem; resize: vertical; transition: all 0.2s;">{% if promocao %}{{ promocao.descricao }}{% endif %}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3
+                style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Preços
+            </h3>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+                <!-- Preço Promocional -->
+                <div>
+                    <label for="preco"
+                        style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem;">
+                        Preço Promocional (R$)
+                    </label>
+                    <input type="text" id="preco" name="preco"
+                        value="{% if promocao.preco %}{{ promocao.preco }}{% endif %}" placeholder="Ex: 5,90"
+                        style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 1rem;">
+                </div>
+
+                <!-- Preço Original -->
+                <div>
+                    <label for="preco_original"
+                        style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem;">
+                        Preço Original (R$) <span style="font-weight: 400; color: var(--gray-400);">- opcional</span>
+                    </label>
+                    <input type="text" id="preco_original" name="preco_original"
+                        value="{% if promocao.preco_original %}{{ promocao.preco_original }}{% endif %}"
+                        placeholder="Ex: 8,90"
+                        style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 1rem;">
+                    <p style="font-size: 0.75rem; color: var(--gray-400); margin-top: 0.25rem;">
+                        Será exibido riscado ao lado do preço promocional
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3
+                style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Imagem
+            </h3>
+
+            {% if promocao and promocao.imagem %}
+            <div style="margin-bottom: 1rem;">
+                <p style="font-size: 0.875rem; font-weight: 500; color: var(--gray-700); margin-bottom: 0.5rem;">Imagem
+                    atual:</p>
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <img src="{{ promocao.imagem.url }}" alt="{{ promocao.titulo }}"
+                        style="width: 150px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid var(--gray-200);">
+                    <label
+                        style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;">
+                        <input type="checkbox" name="remover_imagem" style="width: 16px; height: 16px;">
+                        Remover imagem
+                    </label>
+                </div>
+            </div>
+            {% endif %}
+
+            <div>
+                <label for="imagem"
+                    style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem;">
+                    {% if promocao and promocao.imagem %}Nova imagem (substituir){% else %}Imagem da promoção{% endif %}
+                </label>
+                <input type="file" id="imagem" name="imagem" accept="image/*"
+                    style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 1rem; background: white;">
+                <p style="font-size: 0.75rem; color: var(--gray-400); margin-top: 0.25rem;">
+                    Formatos aceitos: JPG, PNG, GIF. Tamanho recomendado: 800x600px
+                </p>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3
+                style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Validade
+            </h3>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+                <!-- Data Início -->
+                <div>
+                    <label for="data_inicio"
+                        style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem;">
+                        Data de Início
+                    </label>
+                    <input type="date" id="data_inicio" name="data_inicio"
+                        value="{% if promocao.data_inicio %}{{ promocao.data_inicio|date:'Y-m-d' }}{% endif %}"
+                        style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 1rem;">
+                </div>
+
+                <!-- Data Fim -->
+                <div>
+                    <label for="data_fim"
+                        style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem;">
+                        Data de Validade
+                    </label>
+                    <input type="date" id="data_fim" name="data_fim"
+                        value="{% if promocao.data_fim %}{{ promocao.data_fim|date:'Y-m-d' }}{% endif %}"
+                        style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 1rem;">
+                </div>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--gray-400); margin-top: 0.5rem;">
+                Deixe em branco para não definir período de validade
+            </p>
+        </div>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <h3
+                style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Status
+            </h3>
+
+            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                <input type="checkbox" name="is_active" {% if not promocao or promocao.is_active %}checked{% endif %}
+                    style="width: 20px; height: 20px; accent-color: #10b981;">
+                <span style="font-size: 1rem; color: var(--gray-700);">
+                    Promoção ativa
+                </span>
+            </label>
+            <p style="font-size: 0.75rem; color: var(--gray-400); margin-top: 0.25rem; margin-left: 2rem;">
+                Promoções inativas não aparecem no chatbot
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                    style="margin-right: 0.5rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                {% if promocao %}Salvar Alterações{% else %}Criar Promoção{% endif %}
+            </button>
+            <a href="{% url 'organizations:promocao_list' %}" class="btn btn-secondary"
+                style="justify-content: center;">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+    input:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #8b5cf6;
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+</style>
+{% endblock %}

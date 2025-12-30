@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Excluir Promoção - PanDia{% endblock %}
+{% block page_title %}Excluir Promoção{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+    <div class="card" style="text-align: center; padding: 2.5rem;">
+        <div
+            style="width: 80px; height: 80px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+            <svg width="40" height="40" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+        </div>
+
+        <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--gray-900); margin: 0 0 0.75rem 0;">
+            Excluir Promoção?
+        </h2>
+
+        <p style="font-size: 1rem; color: var(--gray-500); margin: 0 0 0.5rem 0;">
+            Você está prestes a excluir a promoção:
+        </p>
+
+        <p style="font-size: 1.25rem; font-weight: 600; color: var(--gray-900); margin: 0 0 1.5rem 0;">
+            "{{ promocao.titulo }}"
+        </p>
+
+        {% if promocao.imagem %}
+        <div style="margin-bottom: 1.5rem;">
+            <img src="{{ promocao.imagem.url }}" alt="{{ promocao.titulo }}"
+                style="max-width: 200px; height: auto; border-radius: 8px; border: 1px solid var(--gray-200);">
+        </div>
+        {% endif %}
+
+        <div
+            style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+            <p
+                style="font-size: 0.875rem; color: #ef4444; margin: 0; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Esta ação não pode ser desfeita!
+            </p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div style="display: flex; gap: 1rem;">
+                <a href="{% url 'organizations:promocao_list' %}" class="btn btn-secondary"
+                    style="flex: 1; justify-content: center;">
+                    Cancelar
+                </a>
+                <button type="submit" class="btn"
+                    style="flex: 1; justify-content: center; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                        style="margin-right: 0.5rem;">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Excluir Promoção
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

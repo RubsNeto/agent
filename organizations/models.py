@@ -161,6 +161,284 @@ class ApiKey(models.Model):
         # Se tem agente específico, só acessa esse
         return self.agent == agent
 
-
 # Alias para compatibilidade durante migração
 Organization = Padaria
+
+
+class Promocao(models.Model):
+    """
+    Promoção ou aviso para exibir no chatbot.
+    Cada padaria pode ter múltiplas promoções.
+    """
+    padaria = models.ForeignKey(
+        Padaria,
+        on_delete=models.CASCADE,
+        related_name="promocoes",
+        verbose_name="Padaria"
+    )
+    titulo = models.CharField(max_length=200, verbose_name="Título")
+    descricao = models.TextField(blank=True, verbose_name="Descrição")
+    preco = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Preço Promocional"
+    )
+    preco_original = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Preço Original"
+    )
+    imagem = models.ImageField(
+        upload_to='promocoes/',
+        null=True,
+        blank=True,
+        verbose_name="Imagem"
+    )
+    data_inicio = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Data de Início"
+    )
+    data_fim = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Data de Validade"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Ativa")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Promoção"
+        verbose_name_plural = "Promoções"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.titulo} - {self.padaria.name}"
+    
+    def is_valid(self):
+        """Verifica se a promoção está dentro do período de validade."""
+        from django.utils import timezone
+        today = timezone.now().date()
+        
+        if not self.is_active:
+            return False
+        
+        if self.data_inicio and today < self.data_inicio:
+            return False
+        
+        if self.data_fim and today > self.data_fim:
+            return False
+        
+        return True
+    
+    def get_discount_percentage(self):
+        """Calcula a porcentagem de desconto."""
+        if self.preco and self.preco_original and self.preco_original > 0:
+            discount = ((self.preco_original - self.preco) / self.preco_original) * 100
+            return round(discount, 0)
+        return None
+
+
+class Cliente(models.Model):
+    """
+    Cliente cadastrado de uma padaria.
+    Armazena informações de contato para envio de promoções via WhatsApp.
+    """
+    padaria = models.ForeignKey(
+        Padaria,
+        on_delete=models.CASCADE,
+        related_name="clientes",
+        verbose_name="Padaria"
+    )
+    nome = models.CharField(max_length=200, verbose_name="Nome")
+    telefone = models.CharField(
+        max_length=20,
+        verbose_name="Telefone/WhatsApp",
+        help_text="Número com DDD, ex: (11) 99999-9999"
+    )
+    email = models.EmailField(blank=True, verbose_name="E-mail")
+    observacoes = models.TextField(blank=True, verbose_name="Observações")
+    aceita_promocoes = models.BooleanField(
+        default=True,
+        verbose_name="Aceita receber promoções",
+        help_text="Cliente autoriza receber mensagens de promoções"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Ativo")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Cadastrado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Cliente"
+        verbose_name_plural = "Clientes"
+        ordering = ["nome"]
+        unique_together = [("padaria", "telefone")]
+
+    def __str__(self):
+        return f"{self.nome} - {self.telefone}"
+    
+    def get_telefone_formatado(self):
+        """Retorna telefone apenas com números para envio."""
+        import re
+        return re.sub(r'\D', '', self.telefone)
+    
+    def get_telefone_whatsapp(self):
+        """Retorna telefone no formato WhatsApp (com 55 se necessário)."""
+        telefone = self.get_telefone_formatado()
+        if not telefone.startswith('55'):
+            telefone = '55' + telefone
+        return telefone
+
+
+class CampanhaWhatsApp(models.Model):
+    """
+    Campanha de envio de promoções via WhatsApp.
+    Implementa delay entre mensagens para evitar ban (estilo Astra Campaign).
+    """
+    STATUS_CHOICES = [
+        ('rascunho', 'Rascunho'),
+        ('agendada', 'Agendada'),
+        ('enviando', 'Em Envio'),
+        ('pausada', 'Pausada'),
+        ('concluida', 'Concluída'),
+        ('cancelada', 'Cancelada'),
+        ('erro', 'Erro'),
+    ]
+    
+    padaria = models.ForeignKey(
+        Padaria,
+        on_delete=models.CASCADE,
+        related_name="campanhas",
+        verbose_name="Padaria"
+    )
+    promocao = models.ForeignKey(
+        Promocao,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="campanhas",
+        verbose_name="Promoção vinculada"
+    )
+    nome = models.CharField(max_length=200, verbose_name="Nome da Campanha")
+    mensagem = models.TextField(
+        verbose_name="Mensagem",
+        help_text="Use {{nome_cliente}} para personalizar"
+    )
+    imagem = models.ImageField(
+        upload_to='campanhas/',
+        null=True,
+        blank=True,
+        verbose_name="Imagem (opcional)"
+    )
+    
+    # Configurações de envio (estilo Astra Campaign)
+    delay_minimo = models.IntegerField(
+        default=10,
+        verbose_name="Delay mínimo (segundos)",
+        help_text="Tempo mínimo entre cada mensagem"
+    )
+    delay_maximo = models.IntegerField(
+        default=30,
+        verbose_name="Delay máximo (segundos)",
+        help_text="Tempo máximo entre cada mensagem"
+    )
+    lote_tamanho = models.IntegerField(
+        default=10,
+        verbose_name="Tamanho do lote",
+        help_text="Quantidade de mensagens por lote antes de pausa maior"
+    )
+    pausa_entre_lotes = models.IntegerField(
+        default=60,
+        verbose_name="Pausa entre lotes (segundos)",
+        help_text="Tempo de pausa após cada lote"
+    )
+    
+    # Agendamento
+    data_agendamento = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Data de agendamento"
+    )
+    
+    # Status e estatísticas
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='rascunho',
+        verbose_name="Status"
+    )
+    total_destinatarios = models.IntegerField(default=0, verbose_name="Total de destinatários")
+    enviados = models.IntegerField(default=0, verbose_name="Enviados")
+    falhas = models.IntegerField(default=0, verbose_name="Falhas")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+    iniciado_em = models.DateTimeField(null=True, blank=True, verbose_name="Iniciado em")
+    concluido_em = models.DateTimeField(null=True, blank=True, verbose_name="Concluído em")
+
+    class Meta:
+        verbose_name = "Campanha WhatsApp"
+        verbose_name_plural = "Campanhas WhatsApp"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.nome} - {self.padaria.name}"
+    
+    def get_progresso(self):
+        """Retorna porcentagem de progresso."""
+        if self.total_destinatarios > 0:
+            return round((self.enviados / self.total_destinatarios) * 100, 1)
+        return 0
+    
+    def get_delay_aleatorio(self):
+        """Retorna um delay aleatório entre mínimo e máximo."""
+        import random
+        return random.randint(self.delay_minimo, self.delay_maximo)
+
+
+class MensagemCampanha(models.Model):
+    """
+    Registro de cada mensagem enviada em uma campanha.
+    """
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('enviando', 'Enviando'),
+        ('enviado', 'Enviado'),
+        ('falha', 'Falha'),
+    ]
+    
+    campanha = models.ForeignKey(
+        CampanhaWhatsApp,
+        on_delete=models.CASCADE,
+        related_name="mensagens",
+        verbose_name="Campanha"
+    )
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        related_name="mensagens_recebidas",
+        verbose_name="Cliente"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pendente',
+        verbose_name="Status"
+    )
+    erro_mensagem = models.TextField(blank=True, verbose_name="Mensagem de erro")
+    enviado_em = models.DateTimeField(null=True, blank=True, verbose_name="Enviado em")
+    
+    class Meta:
+        verbose_name = "Mensagem de Campanha"
+        verbose_name_plural = "Mensagens de Campanha"
+        ordering = ["id"]
+        unique_together = [("campanha", "cliente")]
+
+    def __str__(self):
+        return f"{self.campanha.nome} -> {self.cliente.nome}"
+

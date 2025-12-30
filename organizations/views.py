@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.conf import settings
 from django.http import JsonResponse
 from django.db.models import Prefetch
-from .models import Padaria, PadariaUser, ApiKey
+from .models import Padaria, PadariaUser, ApiKey, Promocao, Cliente, CampanhaWhatsApp, MensagemCampanha
 from audit.models import AuditLog
 import requests
 
@@ -614,3 +614,751 @@ def _extract_pairing_code(data):
         pairing_code = data["code"]
     
     return pairing_code
+
+
+# =====================================================
+# PROMOÇÕES E AVISOS
+# =====================================================
+
+@login_required
+def promocao_list(request):
+    """Lista de promoções da padaria."""
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.warning(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    # Para usuários normais, pegar a primeira padaria
+    # Para admin, mostrar todas as promoções
+    if request.user.is_superuser:
+        promocoes = Promocao.objects.filter(
+            padaria__in=padarias
+        ).select_related('padaria').order_by('-created_at')
+    else:
+        padaria = padarias.first()
+        promocoes = Promocao.objects.filter(
+            padaria=padaria
+        ).order_by('-created_at')
+    
+    context = {
+        'promocoes': promocoes,
+        'padarias': padarias,
+    }
+    return render(request, "organizations/promocao_list.html", context)
+
+
+@login_required
+def promocao_create(request):
+    """Criar nova promoção."""
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.error(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    # Pegar a primeira padaria do usuário (ou a única)
+    padaria = padarias.first()
+    
+    if request.method == "POST":
+        titulo = request.POST.get("titulo", "").strip()
+        descricao = request.POST.get("descricao", "").strip()
+        preco = request.POST.get("preco", "").strip()
+        preco_original = request.POST.get("preco_original", "").strip()
+        data_inicio = request.POST.get("data_inicio", "").strip()
+        data_fim = request.POST.get("data_fim", "").strip()
+        is_active = request.POST.get("is_active") == "on"
+        imagem = request.FILES.get("imagem")
+        
+        if not titulo:
+            messages.error(request, "O título é obrigatório.")
+            return render(request, "organizations/promocao_form.html", {
+                "padarias": padarias,
+            })
+        
+        try:
+            promocao = Promocao.objects.create(
+                padaria=padaria,
+                titulo=titulo,
+                descricao=descricao,
+                preco=float(preco.replace(",", ".")) if preco else None,
+                preco_original=float(preco_original.replace(",", ".")) if preco_original else None,
+                data_inicio=data_inicio if data_inicio else None,
+                data_fim=data_fim if data_fim else None,
+                is_active=is_active,
+                imagem=imagem
+            )
+            
+            AuditLog.log(
+                action="create",
+                entity="Promocao",
+                padaria=padaria,
+                actor=request.user,
+                entity_id=promocao.id,
+                diff={"titulo": titulo}
+            )
+            
+            messages.success(request, f"Promoção '{titulo}' criada com sucesso!")
+            return redirect("organizations:promocao_list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao criar promoção: {str(e)}")
+            return render(request, "organizations/promocao_form.html", {
+                "padarias": padarias,
+            })
+    
+    context = {
+        "padarias": padarias,
+    }
+    return render(request, "organizations/promocao_form.html", context)
+
+
+@login_required
+def promocao_edit(request, pk):
+    """Editar promoção existente."""
+    padarias = get_user_padarias(request.user)
+    promocao = get_object_or_404(Promocao, pk=pk)
+    
+    # Verificar acesso
+    if not request.user.is_superuser and promocao.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a esta promoção.")
+        return redirect("organizations:promocao_list")
+    
+    if request.method == "POST":
+        titulo = request.POST.get("titulo", "").strip()
+        descricao = request.POST.get("descricao", "").strip()
+        preco = request.POST.get("preco", "").strip()
+        preco_original = request.POST.get("preco_original", "").strip()
+        data_inicio = request.POST.get("data_inicio", "").strip()
+        data_fim = request.POST.get("data_fim", "").strip()
+        is_active = request.POST.get("is_active") == "on"
+        imagem = request.FILES.get("imagem")
+        remover_imagem = request.POST.get("remover_imagem") == "on"
+        
+        if not titulo:
+            messages.error(request, "O título é obrigatório.")
+            return render(request, "organizations/promocao_form.html", {
+                "promocao": promocao,
+                "padarias": padarias,
+            })
+        
+        try:
+            # Preparar diff para auditoria
+            diff = {}
+            if promocao.titulo != titulo:
+                diff['titulo'] = {'old': promocao.titulo, 'new': titulo}
+            
+            # Atualizar campos
+            promocao.titulo = titulo
+            promocao.descricao = descricao
+            promocao.preco = float(preco.replace(",", ".")) if preco else None
+            promocao.preco_original = float(preco_original.replace(",", ".")) if preco_original else None
+            promocao.data_inicio = data_inicio if data_inicio else None
+            promocao.data_fim = data_fim if data_fim else None
+            promocao.is_active = is_active
+            
+            if remover_imagem:
+                promocao.imagem = None
+            elif imagem:
+                promocao.imagem = imagem
+            
+            promocao.save()
+            
+            if diff:
+                AuditLog.log(
+                    action="update",
+                    entity="Promocao",
+                    padaria=promocao.padaria,
+                    actor=request.user,
+                    entity_id=promocao.id,
+                    diff=diff
+                )
+            
+            messages.success(request, "Promoção atualizada com sucesso!")
+            return redirect("organizations:promocao_list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao atualizar promoção: {str(e)}")
+    
+    context = {
+        "promocao": promocao,
+        "padarias": padarias,
+    }
+    return render(request, "organizations/promocao_form.html", context)
+
+
+@login_required
+def promocao_delete(request, pk):
+    """Deletar promoção."""
+    padarias = get_user_padarias(request.user)
+    promocao = get_object_or_404(Promocao, pk=pk)
+    
+    # Verificar acesso
+    if not request.user.is_superuser and promocao.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a esta promoção.")
+        return redirect("organizations:promocao_list")
+    
+    if request.method == "POST":
+        titulo = promocao.titulo
+        promocao_id = promocao.id
+        padaria = promocao.padaria
+        
+        try:
+            AuditLog.log(
+                action="delete",
+                entity="Promocao",
+                padaria=padaria,
+                actor=request.user,
+                entity_id=promocao_id,
+                diff={"titulo": titulo}
+            )
+            
+            promocao.delete()
+            messages.success(request, f"Promoção '{titulo}' excluída com sucesso!")
+            return redirect("organizations:promocao_list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao excluir promoção: {str(e)}")
+            return redirect("organizations:promocao_list")
+    
+    context = {'promocao': promocao}
+    return render(request, "organizations/promocao_confirm_delete.html", context)
+
+
+# =====================================================
+# CLIENTES
+# =====================================================
+
+@login_required
+def cliente_list(request):
+    """Lista de clientes da padaria."""
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.warning(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    if request.user.is_superuser:
+        clientes = Cliente.objects.filter(
+            padaria__in=padarias
+        ).select_related('padaria').order_by('nome')
+    else:
+        padaria = padarias.first()
+        clientes = Cliente.objects.filter(
+            padaria=padaria
+        ).order_by('nome')
+    
+    context = {
+        'clientes': clientes,
+        'padarias': padarias,
+        'total_clientes': clientes.count(),
+        'clientes_ativos': clientes.filter(is_active=True, aceita_promocoes=True).count(),
+    }
+    return render(request, "organizations/cliente_list.html", context)
+
+
+@login_required
+def cliente_create(request):
+    """Criar novo cliente."""
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.error(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    padaria = padarias.first()
+    
+    if request.method == "POST":
+        nome = request.POST.get("nome", "").strip()
+        telefone = request.POST.get("telefone", "").strip()
+        email = request.POST.get("email", "").strip()
+        observacoes = request.POST.get("observacoes", "").strip()
+        aceita_promocoes = request.POST.get("aceita_promocoes") == "on"
+        
+        if not nome:
+            messages.error(request, "O nome é obrigatório.")
+            return render(request, "organizations/cliente_form.html", {"padarias": padarias})
+        
+        if not telefone:
+            messages.error(request, "O telefone/WhatsApp é obrigatório.")
+            return render(request, "organizations/cliente_form.html", {"padarias": padarias})
+        
+        try:
+            cliente = Cliente.objects.create(
+                padaria=padaria,
+                nome=nome,
+                telefone=telefone,
+                email=email,
+                observacoes=observacoes,
+                aceita_promocoes=aceita_promocoes
+            )
+            
+            AuditLog.log(
+                action="create",
+                entity="Cliente",
+                padaria=padaria,
+                actor=request.user,
+                entity_id=cliente.id,
+                diff={"nome": nome, "telefone": telefone}
+            )
+            
+            messages.success(request, f"Cliente '{nome}' cadastrado com sucesso!")
+            return redirect("organizations:cliente_list")
+            
+        except Exception as e:
+            if "unique" in str(e).lower():
+                messages.error(request, "Já existe um cliente com este telefone cadastrado.")
+            else:
+                messages.error(request, f"Erro ao cadastrar cliente: {str(e)}")
+            return render(request, "organizations/cliente_form.html", {"padarias": padarias})
+    
+    return render(request, "organizations/cliente_form.html", {"padarias": padarias})
+
+
+@login_required
+def cliente_edit(request, pk):
+    """Editar cliente existente."""
+    padarias = get_user_padarias(request.user)
+    cliente = get_object_or_404(Cliente, pk=pk)
+    
+    if not request.user.is_superuser and cliente.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a este cliente.")
+        return redirect("organizations:cliente_list")
+    
+    if request.method == "POST":
+        nome = request.POST.get("nome", "").strip()
+        telefone = request.POST.get("telefone", "").strip()
+        email = request.POST.get("email", "").strip()
+        observacoes = request.POST.get("observacoes", "").strip()
+        aceita_promocoes = request.POST.get("aceita_promocoes") == "on"
+        is_active = request.POST.get("is_active") == "on"
+        
+        if not nome or not telefone:
+            messages.error(request, "Nome e telefone são obrigatórios.")
+            return render(request, "organizations/cliente_form.html", {
+                "cliente": cliente,
+                "padarias": padarias,
+            })
+        
+        try:
+            cliente.nome = nome
+            cliente.telefone = telefone
+            cliente.email = email
+            cliente.observacoes = observacoes
+            cliente.aceita_promocoes = aceita_promocoes
+            cliente.is_active = is_active
+            cliente.save()
+            
+            AuditLog.log(
+                action="update",
+                entity="Cliente",
+                padaria=cliente.padaria,
+                actor=request.user,
+                entity_id=cliente.id,
+                diff={"nome": nome}
+            )
+            
+            messages.success(request, "Cliente atualizado com sucesso!")
+            return redirect("organizations:cliente_list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao atualizar cliente: {str(e)}")
+    
+    return render(request, "organizations/cliente_form.html", {
+        "cliente": cliente,
+        "padarias": padarias,
+    })
+
+
+@login_required
+def cliente_delete(request, pk):
+    """Deletar cliente."""
+    padarias = get_user_padarias(request.user)
+    cliente = get_object_or_404(Cliente, pk=pk)
+    
+    if not request.user.is_superuser and cliente.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a este cliente.")
+        return redirect("organizations:cliente_list")
+    
+    if request.method == "POST":
+        nome = cliente.nome
+        
+        try:
+            AuditLog.log(
+                action="delete",
+                entity="Cliente",
+                padaria=cliente.padaria,
+                actor=request.user,
+                entity_id=cliente.id,
+                diff={"nome": nome}
+            )
+            
+            cliente.delete()
+            messages.success(request, f"Cliente '{nome}' excluído com sucesso!")
+            return redirect("organizations:cliente_list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao excluir cliente: {str(e)}")
+    
+    return render(request, "organizations/cliente_confirm_delete.html", {"cliente": cliente})
+
+
+@login_required
+def cliente_import(request):
+    """Importar clientes via CSV."""
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.error(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    padaria = padarias.first()
+    
+    if request.method == "POST":
+        csv_file = request.FILES.get("csv_file")
+        
+        if not csv_file:
+            messages.error(request, "Selecione um arquivo CSV.")
+            return render(request, "organizations/cliente_import.html")
+        
+        if not csv_file.name.endswith('.csv'):
+            messages.error(request, "O arquivo deve ser um CSV.")
+            return render(request, "organizations/cliente_import.html")
+        
+        try:
+            import csv
+            import io
+            
+            decoded_file = csv_file.read().decode('utf-8')
+            io_string = io.StringIO(decoded_file)
+            reader = csv.DictReader(io_string)
+            
+            importados = 0
+            erros = 0
+            
+            for row in reader:
+                nome = row.get('nome', '').strip()
+                telefone = row.get('telefone', '').strip()
+                email = row.get('email', '').strip()
+                
+                if nome and telefone:
+                    try:
+                        Cliente.objects.get_or_create(
+                            padaria=padaria,
+                            telefone=telefone,
+                            defaults={
+                                'nome': nome,
+                                'email': email,
+                                'aceita_promocoes': True
+                            }
+                        )
+                        importados += 1
+                    except Exception:
+                        erros += 1
+                else:
+                    erros += 1
+            
+            messages.success(request, f"Importação concluída! {importados} clientes importados, {erros} erros.")
+            return redirect("organizations:cliente_list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao importar: {str(e)}")
+    
+    return render(request, "organizations/cliente_import.html")
+
+
+# =====================================================
+# CAMPANHAS WHATSAPP
+# =====================================================
+
+@login_required
+def campanha_list(request):
+    """Lista de campanhas da padaria."""
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.warning(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    if request.user.is_superuser:
+        campanhas = CampanhaWhatsApp.objects.filter(
+            padaria__in=padarias
+        ).select_related('padaria', 'promocao').order_by('-created_at')
+    else:
+        padaria = padarias.first()
+        campanhas = CampanhaWhatsApp.objects.filter(
+            padaria=padaria
+        ).select_related('promocao').order_by('-created_at')
+    
+    context = {
+        'campanhas': campanhas,
+        'padarias': padarias,
+    }
+    return render(request, "organizations/campanha_list.html", context)
+
+
+@login_required
+def campanha_create(request):
+    """Criar nova campanha."""
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.error(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    padaria = padarias.first()
+    promocoes = Promocao.objects.filter(padaria=padaria, is_active=True)
+    clientes_disponiveis = Cliente.objects.filter(
+        padaria=padaria,
+        is_active=True,
+        aceita_promocoes=True
+    ).count()
+    
+    if request.method == "POST":
+        nome = request.POST.get("nome", "").strip()
+        mensagem = request.POST.get("mensagem", "").strip()
+        promocao_id = request.POST.get("promocao")
+        imagem = request.FILES.get("imagem")
+        delay_minimo = int(request.POST.get("delay_minimo", 15))
+        delay_maximo = int(request.POST.get("delay_maximo", 45))
+        lote_tamanho = int(request.POST.get("lote_tamanho", 10))
+        pausa_entre_lotes = int(request.POST.get("pausa_entre_lotes", 120))
+        
+        if not nome or not mensagem:
+            messages.error(request, "Nome e mensagem são obrigatórios.")
+            return render(request, "organizations/campanha_form.html", {
+                "padarias": padarias,
+                "promocoes": promocoes,
+                "clientes_disponiveis": clientes_disponiveis,
+            })
+        
+        try:
+            promocao = None
+            if promocao_id:
+                promocao = Promocao.objects.get(pk=promocao_id)
+            
+            campanha = CampanhaWhatsApp.objects.create(
+                padaria=padaria,
+                promocao=promocao,
+                nome=nome,
+                mensagem=mensagem,
+                imagem=imagem,
+                delay_minimo=delay_minimo,
+                delay_maximo=delay_maximo,
+                lote_tamanho=lote_tamanho,
+                pausa_entre_lotes=pausa_entre_lotes,
+                status='rascunho'
+            )
+            
+            # Adicionar clientes à campanha
+            clientes = Cliente.objects.filter(
+                padaria=padaria,
+                is_active=True,
+                aceita_promocoes=True
+            )
+            
+            for cliente in clientes:
+                MensagemCampanha.objects.create(
+                    campanha=campanha,
+                    cliente=cliente,
+                    status='pendente'
+                )
+            
+            campanha.total_destinatarios = clientes.count()
+            campanha.save()
+            
+            AuditLog.log(
+                action="create",
+                entity="CampanhaWhatsApp",
+                padaria=padaria,
+                actor=request.user,
+                entity_id=campanha.id,
+                diff={"nome": nome, "destinatarios": clientes.count()}
+            )
+            
+            messages.success(request, f"Campanha '{nome}' criada com {clientes.count()} destinatários!")
+            return redirect("organizations:campanha_detail", pk=campanha.pk)
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao criar campanha: {str(e)}")
+    
+    context = {
+        "padarias": padarias,
+        "promocoes": promocoes,
+        "clientes_disponiveis": clientes_disponiveis,
+    }
+    return render(request, "organizations/campanha_form.html", context)
+
+
+@login_required
+def campanha_detail(request, pk):
+    """Detalhes da campanha."""
+    padarias = get_user_padarias(request.user)
+    campanha = get_object_or_404(CampanhaWhatsApp, pk=pk)
+    
+    if not request.user.is_superuser and campanha.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a esta campanha.")
+        return redirect("organizations:campanha_list")
+    
+    mensagens = campanha.mensagens.select_related('cliente').order_by('id')[:50]
+    
+    context = {
+        'campanha': campanha,
+        'mensagens': mensagens,
+        'total_mensagens': campanha.mensagens.count(),
+    }
+    return render(request, "organizations/campanha_detail.html", context)
+
+
+@login_required
+def campanha_iniciar(request, pk):
+    """Iniciar envio da campanha."""
+    padarias = get_user_padarias(request.user)
+    campanha = get_object_or_404(CampanhaWhatsApp, pk=pk)
+    
+    if not request.user.is_superuser and campanha.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a esta campanha.")
+        return redirect("organizations:campanha_list")
+    
+    if request.method != "POST":
+        return redirect("organizations:campanha_detail", pk=pk)
+    
+    if campanha.status not in ['rascunho', 'pausada']:
+        messages.error(request, "Esta campanha não pode ser iniciada.")
+        return redirect("organizations:campanha_detail", pk=pk)
+    
+    from .campaign_service import CampaignService
+    
+    service = CampaignService(campanha)
+    
+    # Verificar conexão WhatsApp
+    conectado, msg = service.verificar_conexao()
+    if not conectado:
+        messages.error(request, f"WhatsApp não conectado: {msg}")
+        return redirect("organizations:campanha_detail", pk=pk)
+    
+    # Iniciar envio em background
+    service.executar_campanha(async_mode=True)
+    
+    AuditLog.log(
+        action="campanha_iniciada",
+        entity="CampanhaWhatsApp",
+        padaria=campanha.padaria,
+        actor=request.user,
+        entity_id=campanha.id,
+        diff={"status": "enviando"}
+    )
+    
+    messages.success(request, "Campanha iniciada! O envio está sendo processado em segundo plano.")
+    return redirect("organizations:campanha_detail", pk=pk)
+
+
+@login_required
+def campanha_pausar(request, pk):
+    """Pausar campanha em andamento."""
+    padarias = get_user_padarias(request.user)
+    campanha = get_object_or_404(CampanhaWhatsApp, pk=pk)
+    
+    if not request.user.is_superuser and campanha.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a esta campanha.")
+        return redirect("organizations:campanha_list")
+    
+    if request.method != "POST":
+        return redirect("organizations:campanha_detail", pk=pk)
+    
+    if campanha.status != 'enviando':
+        messages.error(request, "Esta campanha não está em envio.")
+        return redirect("organizations:campanha_detail", pk=pk)
+    
+    from .campaign_service import pausar_campanha
+    
+    if pausar_campanha(campanha.id):
+        messages.success(request, "Solicitação de pausa enviada. A campanha será pausada após a mensagem atual.")
+    else:
+        messages.warning(request, "Não foi possível pausar. A campanha pode já ter sido concluída.")
+    
+    return redirect("organizations:campanha_detail", pk=pk)
+
+
+@login_required
+def campanha_status_ajax(request, pk):
+    """Retorna status atualizado da campanha (para atualização em tempo real)."""
+    campanha = get_object_or_404(CampanhaWhatsApp, pk=pk)
+    
+    return JsonResponse({
+        'status': campanha.status,
+        'status_display': campanha.get_status_display(),
+        'enviados': campanha.enviados,
+        'falhas': campanha.falhas,
+        'total': campanha.total_destinatarios,
+        'progresso': campanha.get_progresso(),
+    })
+
+
+@login_required
+def campanha_delete(request, pk):
+    """Deletar campanha."""
+    padarias = get_user_padarias(request.user)
+    campanha = get_object_or_404(CampanhaWhatsApp, pk=pk)
+    
+    if not request.user.is_superuser and campanha.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a esta campanha.")
+        return redirect("organizations:campanha_list")
+    
+    if campanha.status == 'enviando':
+        messages.error(request, "Não é possível excluir uma campanha em andamento. Pause primeiro.")
+        return redirect("organizations:campanha_detail", pk=pk)
+    
+    if request.method == "POST":
+        nome = campanha.nome
+        
+        try:
+            AuditLog.log(
+                action="delete",
+                entity="CampanhaWhatsApp",
+                padaria=campanha.padaria,
+                actor=request.user,
+                entity_id=campanha.id,
+                diff={"nome": nome}
+            )
+            
+            campanha.delete()
+            messages.success(request, f"Campanha '{nome}' excluída com sucesso!")
+            return redirect("organizations:campanha_list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao excluir campanha: {str(e)}")
+    
+    return render(request, "organizations/campanha_confirm_delete.html", {"campanha": campanha})
+
+
+@login_required
+def campanha_criar_de_promocao(request, promocao_pk):
+    """Criar campanha rapidamente a partir de uma promoção."""
+    padarias = get_user_padarias(request.user)
+    promocao = get_object_or_404(Promocao, pk=promocao_pk)
+    
+    if not request.user.is_superuser and promocao.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a esta promoção.")
+        return redirect("organizations:promocao_list")
+    
+    from .campaign_service import criar_campanha_promocao
+    
+    try:
+        campanha = criar_campanha_promocao(promocao)
+        
+        AuditLog.log(
+            action="create",
+            entity="CampanhaWhatsApp",
+            padaria=promocao.padaria,
+            actor=request.user,
+            entity_id=campanha.id,
+            diff={"nome": campanha.nome, "promocao_id": promocao.id}
+        )
+        
+        messages.success(request, f"Campanha criada com {campanha.total_destinatarios} destinatários!")
+        return redirect("organizations:campanha_detail", pk=campanha.pk)
+        
+    except Exception as e:
+        messages.error(request, f"Erro ao criar campanha: {str(e)}")
+        return redirect("organizations:promocao_list")
