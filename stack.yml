@@ -12,14 +12,14 @@ services:
       - 8.8.4.4
     environment:
       - DEBUG=0
-      - SECRET_KEY=${SECRET_KEY}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
+      - SECRET_KEY=${SECRET_KEY:-4L8Cmt9aUTMvF9bdrfDXAu8TZX9q8AJO21xVOa6x7BUbUZ2OPCSR7b1AZw-tHAmFPBg}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-pandia.com.br,www.pandia.com.br,localhost}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-https://pandia.com.br,https://www.pandia.com.br}
       - DATABASE_PATH=/app/data/db.sqlite3
       - EVOLUTION_API_URL=http://tasks.evolution_evolution_api:8080/
-      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-}
-      - SUPABASE_URL=${SUPABASE_URL:-}
-      - SUPABASE_KEY=${SUPABASE_KEY:-}
+      - EVOLUTION_API_KEY=e0e8335cb513568d996403d5556035f5
+      - SUPABASE_URL=https://medfozkannrtcvaytdnr.supabase.co
+      - SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZGZvemthbm5ydGN2YXl0ZG5yIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDEzNzk4OCwiZXhwIjoyMDc5NzEzOTg4fQ.VxwJUvbUcMsPKPavXMniCczvzWU8PWEhpWua3owngAw
     volumes:
       # SQLite persistente - CRÍTICO!
       - sqlite_data:/app/data
