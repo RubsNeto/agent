@@ -436,6 +436,8 @@ def whatsapp_connect(request, slug):
                 "integration": "WHATSAPP-BAILEYS"
             }
             
+            evolution_hash = None  # Variável para armazenar o hash
+            
             try:
                 create_response = requests.post(
                     create_url,
@@ -446,6 +448,31 @@ def whatsapp_connect(request, slug):
                 
                 # Se retornar 201 (criado) ou 200 (já existe), seguir em frente
                 if create_response.status_code in [200, 201]:
+                    # Extrair hash da resposta
+                    try:
+                        create_data = create_response.json()
+                        evolution_hash = (
+                            create_data.get("hash") or 
+                            create_data.get("token") or
+                            create_data.get("instance", {}).get("token") or
+                            create_data.get("instance", {}).get("hash")
+                        )
+                        
+                        # Salvar hash no Supabase se capturado
+                        if evolution_hash:
+                            from integrations.supabase_client import update_agent_evolution_hash
+                            # O slug da padaria é usado para encontrar o agente
+                            update_agent_evolution_hash(organization.slug, evolution_hash)
+                            
+                            # Log para debug
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.info(f"Hash Evolution capturado: {evolution_hash[:20]}... para {organization.slug}")
+                    except Exception as e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Não foi possível extrair hash da Evolution API: {str(e)}")
+                    
                     # Registrar criação da instância
                     AuditLog.log(
                         action="whatsapp_instance_created",
@@ -453,7 +480,7 @@ def whatsapp_connect(request, slug):
                         padaria=organization,
                         actor=request.user,
                         entity_id=organization.id,
-                        diff={"instance": instance_name}
+                        diff={"instance": instance_name, "hash_captured": bool(evolution_hash)}
                     )
                     
                     # Configurar webhook automaticamente

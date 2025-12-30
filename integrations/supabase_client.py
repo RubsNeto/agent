@@ -202,3 +202,45 @@ def delete_agent_from_supabase(slug):
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao remover agente: {str(e)}")
         return False
+
+
+def update_agent_evolution_hash(slug, evolution_hash):
+    """
+    Atualiza a coluna 'evo' na tabela 'agentes' do Supabase.
+    
+    Args:
+        slug: Slug do agente (correspondente ao slug no Supabase)
+        evolution_hash: Hash/token da instância Evolution API
+    
+    Returns:
+        bool: True se sucesso, False se erro
+    """
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        logger.warning("Supabase não configurado. Pulando atualização do hash Evolution.")
+        return False
+    
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/agentes?slug=eq.{slug}"
+        
+        data = {"evo": evolution_hash}
+        
+        headers = get_headers()
+        headers["Prefer"] = "return=representation"
+        
+        response = requests.patch(
+            url,
+            json=data,
+            headers=headers,
+            timeout=10
+        )
+        
+        if response.status_code in [200, 204]:
+            logger.info(f"Hash Evolution atualizado para agente '{slug}'!")
+            return True
+        else:
+            logger.error(f"Erro ao atualizar hash Evolution: {response.status_code} - {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro de conexão ao atualizar hash Evolution: {str(e)}")
+        return False
