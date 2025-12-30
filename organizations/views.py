@@ -428,6 +428,12 @@ def whatsapp_connect(request, slug):
                 "Content-Type": "application/json"
             }
             
+            # Log debug da URL sendo usada
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"[Evolution API] URL base: {api_url}")
+            logger.info(f"[Evolution API] Tentando criar/conectar instância: {instance_name}")
+            
             # Passo 1: Tentar criar a instância (se não existir)
             create_url = f"{api_url}/instance/create"
             create_payload = {
@@ -573,11 +579,16 @@ def whatsapp_connect(request, slug):
                 "error": "A conexão demorou muito para responder. "
                         "Verifique sua internet e tente novamente."
             })
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.ConnectionError as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[Evolution API] ConnectionError: {str(e)}")
+            logger.error(f"[Evolution API] URL usada: {api_url}")
+            
             return JsonResponse({
                 "success": False,
-                "error": "Não foi possível conectar ao serviço WhatsApp. "
-                        "Tente novamente em alguns instantes."
+                "error": f"Não foi possível conectar ao serviço WhatsApp. "
+                        f"Verifique se a Evolution API está acessível em: {api_url}"
             })
         except Exception as e:
             # Log do erro real para debug
