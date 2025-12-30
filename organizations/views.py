@@ -428,6 +428,12 @@ def whatsapp_connect(request, slug):
                 "Content-Type": "application/json"
             }
             
+            # Log debug da URL sendo usada
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"[Evolution API] URL base: {api_url}")
+            logger.info(f"[Evolution API] Tentando criar/conectar instância: {instance_name}")
+            
             # Passo 1: Tentar criar a instância (se não existir)
             create_url = f"{api_url}/instance/create"
             create_payload = {
@@ -435,6 +441,8 @@ def whatsapp_connect(request, slug):
                 "qrcode": True,
                 "integration": "WHATSAPP-BAILEYS"
             }
+            
+            evolution_hash = None  # Variável para armazenar o hash
             
             try:
                 create_response = requests.post(
@@ -446,6 +454,31 @@ def whatsapp_connect(request, slug):
                 
                 # Se retornar 201 (criado) ou 200 (já existe), seguir em frente
                 if create_response.status_code in [200, 201]:
+                    # Extrair hash da resposta
+                    try:
+                        create_data = create_response.json()
+                        evolution_hash = (
+                            create_data.get("hash") or 
+                            create_data.get("token") or
+                            create_data.get("instance", {}).get("token") or
+                            create_data.get("instance", {}).get("hash")
+                        )
+                        
+                        # Salvar hash no Supabase se capturado
+                        if evolution_hash:
+                            from integrations.supabase_client import update_agent_evolution_hash
+                            # O slug da padaria é usado para encontrar o agente
+                            update_agent_evolution_hash(organization.slug, evolution_hash)
+                            
+                            # Log para debug
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.info(f"Hash Evolution capturado: {evolution_hash[:20]}... para {organization.slug}")
+                    except Exception as e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Não foi possível extrair hash da Evolution API: {str(e)}")
+                    
                     # Registrar criação da instância
                     AuditLog.log(
                         action="whatsapp_instance_created",
@@ -453,11 +486,15 @@ def whatsapp_connect(request, slug):
                         padaria=organization,
                         actor=request.user,
                         entity_id=organization.id,
-                        diff={"instance": instance_name}
+                        diff={"instance": instance_name, "hash_captured": bool(evolution_hash)}
                     )
+                    
+                    # Configurar webhook automaticamente
+                    _configure_webhook(api_url, headers, instance_name)
+                    
                 elif create_response.status_code in [403, 409]:
-                    # Instância já existe, está OK - continuar
-                    pass
+                    # Instância já existe, está OK - configurar webhook mesmo assim
+                    _configure_webhook(api_url, headers, instance_name)
                 else:
                     # Outro erro ao criar
                     error_msg = _extract_error_message(create_response)
@@ -542,11 +579,16 @@ def whatsapp_connect(request, slug):
                 "error": "A conexão demorou muito para responder. "
                         "Verifique sua internet e tente novamente."
             })
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.ConnectionError as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[Evolution API] ConnectionError: {str(e)}")
+            logger.error(f"[Evolution API] URL usada: {api_url}")
+            
             return JsonResponse({
                 "success": False,
-                "error": "Não foi possível conectar ao serviço WhatsApp. "
-                        "Tente novamente em alguns instantes."
+                "error": f"Não foi possível conectar ao serviço WhatsApp. "
+                        f"Verifique se a Evolution API está acessível em: {api_url}"
             })
         except Exception as e:
             # Log do erro real para debug
@@ -1362,3 +1404,48 @@ def campanha_criar_de_promocao(request, promocao_pk):
     except Exception as e:
         messages.error(request, f"Erro ao criar campanha: {str(e)}")
         return redirect("organizations:promocao_list")
+
+
+
+def _configure_webhook(api_url, headers, instance_name):
+    """
+    Configura webhook automaticamente para a instância.
+    
+    Configura:
+    - URL: https://n8n.newcouros.com.br/webhook/vendedorrr
+    - Enabled: True
+    - Evento: MESSAGES_UPSERT
+    """
+    try:
+        webhook_url = f"{api_url}/webhook/set/{instance_name}"
+        webhook_payload = {
+            "url": "https://n8n.newcouros.com.br/webhook/vendedorrr",
+            "enabled": True,
+            "webhookByEvents": False,
+            "webhookBase64": False,
+            "events": [
+                "MESSAGES_UPSERT"
+            ]
+        }
+        
+        response = requests.post(
+            webhook_url,
+            headers=headers,
+            json=webhook_payload,
+            timeout=10
+        )
+        
+        # Log para debug (opcional)
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        if response.status_code in [200, 201]:
+            logger.info(f"Webhook configurado com sucesso para {instance_name}")
+        else:
+            logger.warning(f"Erro ao configurar webhook para {instance_name}: {response.text}")
+            
+    except Exception as e:
+        # Não interromper o fluxo se o webhook falhar
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Exceção ao configurar webhook para {instance_name}: {str(e)}")

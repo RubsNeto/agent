@@ -170,6 +170,13 @@ class AgentSimpleForm(forms.ModelForm):
         self.fields['knowledge_pdf_category'].required = False
         self.fields['transfer_keywords'].required = False
         
+        # Make advanced fields optional
+        self.fields['personality'].required = False
+        self.fields['tone'].required = False
+        self.fields['style_guidelines'].required = False
+        self.fields['escalation_rule'].required = False
+        self.fields['max_response_time'].required = False
+        
         # Filtrar padarias do usuário (onde é dono ou funcionário)
         if self.user:
             if self.user.is_superuser:
