@@ -1179,6 +1179,10 @@ def campanha_create(request):
             if promocao_id:
                 promocao = Promocao.objects.get(pk=promocao_id)
             
+            # Se não enviou imagem nova, mas tem promoção com imagem, usar a da promoção
+            if not imagem and promocao and promocao.imagem:
+                imagem = promocao.imagem
+            
             campanha = CampanhaWhatsApp.objects.create(
                 padaria=padaria,
                 promocao=promocao,
