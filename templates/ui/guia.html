@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
-{% block title %}Guia de Implementação - PanDia{% endblock %}
+{% block title %}Guia de Implementação - InnoTalk Agent{% endblock %}
 {% block page_title %}Guia de Implementação{% endblock %}
 
 {% block content %}
@@ -17,9 +17,8 @@
                 </svg>
             </div>
             <div>
-                <h2 style="font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem 0;">Bem-vindo ao PanDia!</h2>
-                <p style="margin: 0; opacity: 0.95;">Siga este guia passo a passo para configurar e começar a usar seus
-                    agentes de IA.</p>
+                <h2 style="font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem 0;">Bem-vindo ao InnoTalk Agent!</h2>
+                <p style="margin: 0; opacity: 0.95;">Siga este guia passo a passo para configurar agentes de IA, promoções, clientes e campanhas de WhatsApp.</p>
             </div>
         </div>
     </div>
@@ -45,7 +44,7 @@
                 </div>
                 <div style="flex: 1;">
                     <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
-                        Cadastrar Novo Cliente
+                        Cadastrar Nova Padaria
                     </h3>
                     <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
                         Crie uma nova conta de padaria para o seu cliente com os dados de acesso.
@@ -54,10 +53,16 @@
                         <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
                         <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
                             <li>Acesse o <strong>Admin Panel</strong></li>
-                            <li>Clique em <strong>"Novo Cliente"</strong></li>
-                            <li>Preencha o formulário com os dados do cliente (nome da padaria, usuário, senha)</li>
+                            <li>Clique em <strong>"Nova Padaria"</strong></li>
+                            <li>Preencha os dados da empresa (nome, CNPJ, telefone, endereço)</li>
+                            <li>Preencha os dados do usuário dono (nome, email, senha)</li>
                             <li>Clique em <strong>"Criar"</strong></li>
                         </ol>
+                    </div>
+                    <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                        <p style="margin: 0; color: #065f46;">
+                            <strong> Automático:</strong> O sistema cria o usuário, a padaria, gera o slug único e cria uma API Key inicial.
+                        </p>
                     </div>
                     <a href="{% url 'admin_panel:padaria_create' %}" class="btn btn-primary"
                         style="display: inline-flex; align-items: center; gap: 0.5rem;">
@@ -65,7 +70,7 @@
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
-                        Novo Cliente
+                        Nova Padaria
                     </a>
                 </div>
             </div>
@@ -89,9 +94,9 @@
                         style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 4px;">
                         <p style="margin: 0; color: #92400e;">
                             <strong>Envie para o cliente:</strong><br>
-                            • <strong>Usuário:</strong> (nome de usuário criado)<br>
-                            • <strong>Senha:</strong> (senha definida)<br>
-                            • <strong>URL de Acesso:</strong> link do sistema
+                             <strong>Usuário:</strong> (gerado a partir do email)<br>
+                             <strong>Senha:</strong> (senha definida)<br>
+                             <strong>URL de Acesso:</strong> link do sistema
                         </p>
                     </div>
                 </div>
@@ -107,17 +112,18 @@
                 </div>
                 <div style="flex: 1;">
                     <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
-                        Configurar Instância no Evolution
+                        Configurar Evolution API e n8n
                     </h3>
                     <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
-                        Acesse o painel do Evolution e configure a instância criada para esse novo cliente.
+                        Configure a instância no Evolution e o workflow no n8n para o novo cliente.
                     </p>
                     <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px;">
                         <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
                         <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
-                            <li>Acesse o painel de administrador do <strong>Evolution API</strong></li>
-                            <li>Localize a instância criada para o novo cliente</li>
-                            <li>Configure as opções necessárias (webhooks, integração, etc.)</li>
+                            <li>Acesse o painel do <strong>Evolution API</strong></li>
+                            <li>Crie uma nova instância para a padaria</li>
+                            <li>Configure o webhook para apontar para o n8n</li>
+                            <li>No n8n, configure as credenciais e endpoints da API</li>
                         </ol>
                     </div>
                 </div>
@@ -156,13 +162,14 @@
                         <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
                             <li>Clique em <strong>"Agente"</strong> no menu lateral</li>
                             <li>Clique em <strong>"Criar Agente"</strong></li>
-                            <li>Selecione sua padaria</li>
                             <li>Preencha os dados do agente:
                                 <ul style="margin-top: 0.5rem;">
-                                    <li><strong>Nome:</strong> como o agente se apresenta</li>
+                                    <li><strong>Nome:</strong> como o agente se apresenta (ex: Maria)</li>
+                                    <li><strong>Função:</strong> Atendente, Vendedor, Suporte, etc.</li>
+                                    <li><strong>Tom de Voz:</strong> Amigável, Profissional, Casual, etc.</li>
                                     <li><strong>Saudação:</strong> mensagem de boas-vindas</li>
-                                    <li><strong>Base de Conhecimento:</strong> informações sobre produtos e serviços
-                                    </li>
+                                    <li><strong>Base de Conhecimento:</strong> produtos, preços, políticas</li>
+                                    <li><strong>PDF (opcional):</strong> cardápio ou FAQ</li>
                                 </ul>
                             </li>
                             <li>Clique em <strong>"Salvar"</strong></li>
@@ -171,7 +178,7 @@
                     <div
                         style="background: #d1fae5; border-left: 4px solid #10b981; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
                         <p style="margin: 0; color: #065f46;">
-                            <strong>✨ Automático:</strong> Ao salvar, sua API Key é gerada automaticamente! Copie e
+                            <strong> Automático:</strong> Ao salvar, sua API Key é gerada automaticamente! Copie e
                             guarde a chave que aparece na tela.
                         </p>
                     </div>
@@ -187,44 +194,144 @@
             </div>
         </div>
 
-        <!-- Passo 2: Salvar API Key no Supabase -->
+        <!-- Passo 2: Cadastrar Promoções -->
         <div class="card" style="margin-bottom: 1.5rem;">
             <div style="display: flex; align-items: start; gap: 1rem;">
                 <div
-                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
                     2
                 </div>
                 <div style="flex: 1;">
                     <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
-                        Salvar API Key no Supabase
+                        Cadastrar Promoções
                     </h3>
                     <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
-                        Após gerar a API Key, ela deve ser salva na tabela do Supabase para integração.
+                        Crie promoções para divulgar aos seus clientes via WhatsApp.
                     </p>
-                    <div
-                        style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 4px;">
-                        <p style="margin: 0; color: #991b1b;">
-                            <strong>⚠️ Importante:</strong> A API Key só é exibida uma vez! Copie e salve imediatamente
-                            no Supabase.
-                        </p>
+                    <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Campos disponíveis:</p>
+                        <ul style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
+                            <li><strong>Título:</strong> Nome da promoção</li>
+                            <li><strong>Descrição:</strong> Detalhes da oferta</li>
+                            <li><strong>Preço Promocional:</strong> Valor com desconto</li>
+                            <li><strong>Preço Original:</strong> Valor original (para mostrar o desconto)</li>
+                            <li><strong>Imagem:</strong> Foto do produto</li>
+                            <li><strong>Data de Validade:</strong> Quando a promoção expira</li>
+                        </ul>
                     </div>
+                    <a href="{% url 'organizations:promocao_list' %}" class="btn btn-primary"
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #f59e0b, #d97706);">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Ver Promoções
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Passo 3: Conectar WhatsApp -->
+        <!-- Passo 3: Cadastrar Clientes -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: start; gap: 1rem;">
+                <div
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
+                    3
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
+                        Cadastrar Clientes
+                    </h3>
+                    <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
+                        Cadastre seus clientes para enviar promoções e campanhas via WhatsApp.
+                    </p>
+                    <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
+                        <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
+                            <li>Clique em <strong>"Clientes"</strong> no menu</li>
+                            <li>Clique em <strong>"Novo Cliente"</strong></li>
+                            <li>Preencha: Nome, Telefone/WhatsApp, E-mail (opcional)</li>
+                            <li>Marque se o cliente <strong>aceita receber promoções</strong></li>
+                            <li>Clique em <strong>"Salvar"</strong></li>
+                        </ol>
+                    </div>
+                    <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                        <p style="margin: 0; color: #1e40af;">
+                            <strong> Dica:</strong> Você também pode importar clientes em massa via arquivo CSV!
+                        </p>
+                    </div>
+                    <a href="{% url 'organizations:cliente_list' %}" class="btn btn-primary"
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Ver Clientes
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Passo 4: Criar Campanhas -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: start; gap: 1rem;">
+                <div
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #ec4899, #db2777); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
+                    4
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
+                        Criar Campanhas de WhatsApp
+                    </h3>
+                    <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
+                        Envie promoções para seus clientes via WhatsApp com delays inteligentes para evitar bloqueios.
+                    </p>
+                    <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como funciona:</p>
+                        <ol style="margin: 0; padding-left: 1.5rem; color: var(--gray-600); line-height: 1.8;">
+                            <li>Clique em <strong>"Campanhas"</strong> no menu</li>
+                            <li>Clique em <strong>"Nova Campanha"</strong></li>
+                            <li>Selecione uma promoção (opcional) ou escreva a mensagem</li>
+                            <li>Configure os delays entre mensagens:
+                                <ul style="margin-top: 0.5rem;">
+                                    <li><strong>Delay mínimo/máximo:</strong> tempo entre cada mensagem</li>
+                                    <li><strong>Tamanho do lote:</strong> mensagens por grupo</li>
+                                    <li><strong>Pausa entre lotes:</strong> descanso maior</li>
+                                </ul>
+                            </li>
+                            <li>Clique em <strong>"Iniciar Campanha"</strong></li>
+                        </ol>
+                    </div>
+                    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                        <p style="margin: 0; color: #92400e;">
+                            <strong> Anti-ban:</strong> O sistema usa delays aleatórios entre mensagens para evitar que seu número seja bloqueado pelo WhatsApp.
+                        </p>
+                    </div>
+                    <a href="{% url 'organizations:campanha_list' %}" class="btn btn-primary"
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #ec4899, #db2777);">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Ver Campanhas
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Passo 5: Conectar WhatsApp -->
         <div class="card" style="margin-bottom: 1.5rem;">
             <div style="display: flex; align-items: start; gap: 1rem;">
                 <div
                     style="width: 40px; height: 40px; background: linear-gradient(135deg, #25d366, #128c7e); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
-                    3
+                    5
                 </div>
                 <div style="flex: 1;">
                     <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
                         Conectar Número do WhatsApp
                     </h3>
                     <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
-                        Conecte seu número de WhatsApp Business para começar a receber mensagens.
+                        Conecte seu número de WhatsApp Business para receber mensagens e enviar campanhas.
                     </p>
                     <div style="background: var(--gray-50); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
                         <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--gray-700);">Como fazer:</p>
@@ -234,8 +341,9 @@
                             <li>Clique em <strong>"Conectar WhatsApp"</strong></li>
                             <li>Clique em <strong>"Gerar QR Code"</strong></li>
                             <li>Abra o WhatsApp no seu celular</li>
-                            <li>Escaneie o QR Code com o WhatsApp</li>
-                            <li>Aguarde a confirmação de conexão ✅</li>
+                            <li>Vá em <strong>Configurações > Aparelhos Conectados</strong></li>
+                            <li>Escaneie o QR Code</li>
+                            <li>Aguarde a confirmação de conexão </li>
                         </ol>
                     </div>
                     <a href="{% url 'organizations:list' %}" class="btn btn-primary"
@@ -247,6 +355,56 @@
                         Ir para Padaria
                     </a>
                 </div>
+            </div>
+        </div>
+
+        <!-- Passo 6: Salvar API Key -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: start; gap: 1rem;">
+                <div
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-weight: 700; font-size: 1.25rem;">
+                    6
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
+                        Salvar API Key no Supabase
+                    </h3>
+                    <p style="color: var(--gray-600); line-height: 1.6; margin-bottom: 1rem;">
+                        A API Key gerada ao criar o agente deve ser salva no Supabase para integração com o n8n.
+                    </p>
+                    <div
+                        style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 4px;">
+                        <p style="margin: 0; color: #991b1b;">
+                            <strong> Importante:</strong> A API Key só é exibida uma vez! Copie e salve imediatamente
+                            no Supabase para que o n8n possa buscar as configurações do agente.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumo de Funcionalidades -->
+    <div class="card" style="margin-bottom: 2rem; background: var(--gray-50);">
+        <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--gray-900);">
+             Resumo das Funcionalidades
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid var(--gray-200);">
+                <strong style="color: #10b981;"> Agentes de IA</strong>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: var(--gray-600);">Crie agentes personalizados com nome, tom de voz e base de conhecimento.</p>
+            </div>
+            <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid var(--gray-200);">
+                <strong style="color: #f59e0b;"> Promoções</strong>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: var(--gray-600);">Cadastre ofertas com preço, imagem e validade.</p>
+            </div>
+            <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid var(--gray-200);">
+                <strong style="color: #8b5cf6;"> Clientes</strong>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: var(--gray-600);">Cadastre clientes e importe em massa via CSV.</p>
+            </div>
+            <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid var(--gray-200);">
+                <strong style="color: #ec4899;"> Campanhas</strong>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: var(--gray-600);">Envie mensagens em massa com delays anti-ban.</p>
             </div>
         </div>
     </div>
@@ -262,7 +420,7 @@
         </div>
         <h2 style="font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem 0;">Pronto!</h2>
         <p style="margin: 0 0 1.5rem 0; opacity: 0.95;">
-            Seu agente está configurado e conectado. Agora é só esperar as mensagens chegarem! 🎉
+            Seu sistema está configurado. Crie agentes, promoções, cadastre clientes e envie campanhas! 
         </p>
         <a href="{% url 'ui:dashboard' %}" class="btn" style="background: white; color: #059669; font-weight: 600;">
             Voltar ao Dashboard

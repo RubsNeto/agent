@@ -150,13 +150,11 @@ def agent_create(request):
                         )
                         
                         if response.status_code == 200:
-                            messages.success(request, f"PDF processado e enviado para n8n! {len(extracted_text)} caracteres extraídos.")
+                            print(f"[DEBUG] PDF enviado para n8n com sucesso! {len(extracted_text)} caracteres.")
                         else:
-                            messages.success(request, f"PDF processado! {len(extracted_text)} caracteres extraídos.")
-                            messages.warning(request, f"Webhook n8n retornou status {response.status_code}")
+                            print(f"[DEBUG] Webhook n8n retornou status {response.status_code}")
                     except requests.exceptions.RequestException as webhook_error:
-                        messages.success(request, f"PDF processado! {len(extracted_text)} caracteres extraídos.")
-                        messages.warning(request, f"Erro ao enviar para n8n: {str(webhook_error)}")
+                        print(f"[DEBUG] Erro ao enviar para n8n: {str(webhook_error)}")
                         
                 except Exception as e:
                     messages.warning(request, f"Erro ao processar PDF: {str(e)}")
@@ -178,12 +176,7 @@ def agent_create(request):
                 name=f"Auto - {agent.name}"
             )
             
-            messages.success(
-                request, 
-                f"Agente '{agent.name}' criado com sucesso! ✨\n\n"
-                f"🔑 API Key gerada: {api_key.key}\n\n"
-                f"⚠️ Copie a chave agora! Ela não será exibida novamente."
-            )
+            messages.success(request, f"Agente '{agent.name}' criado com sucesso! ✨")
             
             # Sincronizar com Supabase
             try:
@@ -365,18 +358,11 @@ def agent_edit(request, slug):
                     )
                     
                     if response.status_code == 200:
-                        if pdf_updated:
-                            messages.success(request, f"PDF atualizado e enviado para n8n! {len(extracted_text)} caracteres extraídos.")
-                        else:
-                            messages.success(request, "Agente e conhecimento atualizados no n8n! ✨")
+                        print(f"[DEBUG] PDF {'atualizado' if pdf_updated else 'sincronizado'} com n8n com sucesso!")
                     else:
-                        if pdf_updated:
-                            messages.success(request, f"PDF atualizado! {len(extracted_text)} caracteres extraídos.")
-                        messages.warning(request, f"Webhook n8n retornou status {response.status_code}")
+                        print(f"[WARNING] Webhook n8n retornou status {response.status_code}")
                 except requests.exceptions.RequestException as webhook_error:
-                    if pdf_updated:
-                        messages.success(request, f"PDF atualizado! {len(extracted_text)} caracteres extraídos.")
-                    messages.warning(request, f"Erro ao enviar para n8n: {str(webhook_error)}")
+                    print(f"[WARNING] Erro ao enviar para n8n: {str(webhook_error)}")
             
             AuditLog.log(
                 action="update",
