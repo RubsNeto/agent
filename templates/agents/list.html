@@ -23,9 +23,10 @@
             <select name="organization" id="organization" class="form-select"
                 onchange="document.getElementById('filterForm').submit();">
                 <option value="">Todas as Organizações</option>
-                {% for org in user.organizations.all %}
-                <option value="{{ org.slug }}" {% if request.GET.organization==org.slug %}selected{% endif %}>
-                    {{ org.name }}
+                {% for membership in user.padaria_memberships.all %}
+                <option value="{{ membership.padaria.slug }}" {% if request.GET.organization==membership.padaria.slug
+                    %}selected{% endif %}>
+                    {{ membership.padaria.name }}
                 </option>
                 {% endfor %}
             </select>
