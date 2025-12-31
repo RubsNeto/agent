@@ -257,9 +257,11 @@
                 <div class="status-toggle-container">
                     {% for value, label in form.status_toggle.field.choices %}
                     <div class="status-option {% if value == 'inativo' %}inactive{% endif %}">
-                        <input type="radio" name="status_toggle" id="status_{{ value }}" value="{{ value }}" {% if
-                            form.status_toggle.value==value or value=='ativo' and not form.status_toggle.value
-                            %}checked{% endif %}>
+                        <input type="radio" 
+                            name="status_toggle" 
+                            id="status_{{ value }}" 
+                            value="{{ value }}" 
+                            {% if form.status_toggle.value|default:'ativo' == value %}checked{% endif %}>
                         <label for="status_{{ value }}">{{ label }}</label>
                     </div>
                     {% endfor %}
@@ -357,8 +359,7 @@
                     </summary>
                     <div
                         style="background: white; padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.875rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap;">
-                        {{ agent.knowledge_pdf_text|slice:":1000" }}{% if agent.knowledge_pdf_text|length > 1000 %}...{%
-                        endif %}</div>
+                        {{ agent.knowledge_pdf_text|slice:":1000" }}{% if agent.knowledge_pdf_text|length > 1000 %}...{% endif %}</div>
                 </details>
                 {% endif %}
             </div>
