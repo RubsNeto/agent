@@ -155,7 +155,9 @@
                 {% for value, label in form.status_toggle.field.choices %}
                 <div class="status-option {% if value == 'inativo' %}inactive{% endif %}">
                     <input type="radio" name="status_toggle_display" id="status_{{ value }}_top" value="{{ value }}"
-                        onchange="document.getElementById('status_toggle_hidden').value = this.value" {% if form.status_toggle.value == value or value == 'ativo' and not form.status_toggle.value %}checked{% endif %}>
+                        onchange="document.getElementById('status_toggle_hidden').value = this.value" {% if
+                        form.status_toggle.value==value or value=='ativo' and not form.status_toggle.value %}checked{%
+                        endif %}>
                     <label for="status_{{ value }}_top">{{ label }}</label>
                 </div>
                 {% endfor %}
@@ -255,7 +257,9 @@
                 <div class="status-toggle-container">
                     {% for value, label in form.status_toggle.field.choices %}
                     <div class="status-option {% if value == 'inativo' %}inactive{% endif %}">
-                        <input type="radio" name="status_toggle" id="status_{{ value }}" value="{{ value }}" {% if form.status_toggle.value == value or value == 'ativo' and not form.status_toggle.value %}checked{% endif %}>
+                        <input type="radio" name="status_toggle" id="status_{{ value }}" value="{{ value }}" {% if
+                            form.status_toggle.value==value or value=='ativo' and not form.status_toggle.value
+                            %}checked{% endif %}>
                         <label for="status_{{ value }}">{{ label }}</label>
                     </div>
                     {% endfor %}
@@ -353,7 +357,8 @@
                     </summary>
                     <div
                         style="background: white; padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.875rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap;">
-                        {{ agent.knowledge_pdf_text|slice:":1000" }}{% if agent.knowledge_pdf_text|length > 1000 %}...{% endif %}</div>
+                        {{ agent.knowledge_pdf_text|slice:":1000" }}{% if agent.knowledge_pdf_text|length > 1000 %}...{%
+                        endif %}</div>
                 </details>
                 {% endif %}
             </div>
@@ -386,11 +391,13 @@
         <!-- SEÇÃO 4: ATENDIMENTO HUMANO (EM BREVE) -->
         <div style="margin-bottom: 2rem; position: relative;">
             <!-- Overlay "Em Breve" -->
-            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.85); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; backdrop-filter: blur(2px);">
-                <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 0.75rem 2rem; border-radius: 50px; font-weight: 700; font-size: 1.125rem; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); display: flex; align-items: center; gap: 0.5rem;">
+            <div
+                style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.85); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; backdrop-filter: blur(2px);">
+                <div
+                    style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 0.75rem 2rem; border-radius: 50px; font-weight: 700; font-size: 1.125rem; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); display: flex; align-items: center; gap: 0.5rem;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12,6 12,12 16,14"/>
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12,6 12,12 16,14" />
                     </svg>
                     Em Breve
                 </div>
@@ -398,7 +405,7 @@
                     Transferência para atendimento humano<br>será implementada em breve
                 </p>
             </div>
-            
+
             <!-- Conteúdo original (desfocado) -->
             <div style="filter: blur(2px); pointer-events: none; opacity: 0.6;">
                 <h3
@@ -417,8 +424,10 @@
                         style="display: flex; align-items: center; gap: 0.75rem; cursor: default; padding: 1rem; border: 2px solid var(--gray-300); border-radius: 8px;">
                         <input type="checkbox" disabled>
                         <div>
-                            <div style="font-weight: 600; color: var(--gray-900);">Habilitar transferência para humano</div>
-                            <div style="font-size: 0.875rem; color: var(--gray-600);">Permite que o cliente solicite falar
+                            <div style="font-weight: 600; color: var(--gray-900);">Habilitar transferência para humano
+                            </div>
+                            <div style="font-size: 0.875rem; color: var(--gray-600);">Permite que o cliente solicite
+                                falar
                                 com uma pessoa</div>
                         </div>
                     </label>
@@ -427,7 +436,8 @@
                 <div class="transfer-fields">
                     <div class="form-group">
                         <label class="form-label">Palavras-chave de Transferência</label>
-                        <input type="text" class="form-input" disabled placeholder="falar com atendente, pessoa real, humano">
+                        <input type="text" class="form-input" disabled
+                            placeholder="falar com atendente, pessoa real, humano">
                     </div>
 
                     <div class="form-group">
@@ -459,14 +469,18 @@
                     <script>
                         // Sincronizar campo sector visível com hidden
                         {% if is_create %}
-                        document.addEventListener('DOMContentLoaded', function () {
+                        document.addEventListener('DOMContentLoaded', function ()
+                        {
                             const sectorField = document.querySelector('input[name="sector"]:not([type="hidden"]), select[name="sector"]');
                             const sectorHidden = document.getElementById('sector_hidden');
-                            if (sectorField && sectorHidden) {
-                                sectorField.addEventListener('change', function () {
+                            if (sectorField && sectorHidden)
+                            {
+                                sectorField.addEventListener('change', function ()
+                                {
                                     sectorHidden.value = this.value || 'geral';
                                 });
-                                sectorField.addEventListener('input', function () {
+                                sectorField.addEventListener('input', function ()
+                                {
                                     sectorHidden.value = this.value || 'geral';
                                 });
                             }
@@ -530,36 +544,45 @@
 </div>
 
 <script>
-    function selectPreset(key) {
+    function selectPreset(key)
+    {
         // Atualizar campo hidden
         document.querySelector('select[name="agent_preset"]').value = key;
 
         // Atualizar visual
-        document.querySelectorAll('.preset-card').forEach(card => {
+        document.querySelectorAll('.preset-card').forEach(card =>
+        {
             card.classList.remove('selected');
         });
         event.currentTarget.classList.add('selected');
     }
 
-    function toggleTransferFields() {
+    function toggleTransferFields()
+    {
         const checkbox = document.querySelector('input[name="enable_human_transfer"]');
         const fields = document.getElementById('transferFields');
 
-        if (checkbox.checked) {
+        if (checkbox.checked)
+        {
             fields.style.display = 'block';
-        } else {
+        } else
+        {
             fields.style.display = 'none';
         }
     }
 
     // Inicializar preset selecionado
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function ()
+    {
         const selectedPreset = document.querySelector('select[name="agent_preset"]').value;
-        if (selectedPreset) {
+        if (selectedPreset)
+        {
             const cards = document.querySelectorAll('.preset-card');
-            cards.forEach((card, index) => {
+            cards.forEach((card, index) =>
+            {
                 const presetKeys = ['sales', 'reception', 'support', 'neutral'];
-                if (presetKeys[index] === selectedPreset) {
+                if (presetKeys[index] === selectedPreset)
+                {
                     card.classList.add('selected');
                 }
             });
@@ -567,7 +590,8 @@
 
         // Toggle transfer fields
         const checkbox = document.querySelector('input[name="enable_human_transfer"]');
-        if (checkbox) {
+        if (checkbox)
+        {
             checkbox.addEventListener('change', toggleTransferFields);
         }
     });
