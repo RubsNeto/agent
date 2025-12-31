@@ -38,6 +38,12 @@
             <form method="post" action="{% url 'accounts:login' %}">
                 {% csrf_token %}
 
+                {% if form.errors %}
+                <div class="alert alert-error">
+                    Usuário ou senha inválidos.
+                </div>
+                {% endif %}
+
                 <div class="form-group">
                     <label class="form-label" for="username">Usuário</label>
                     <input type="text" id="username" name="username" class="form-input" placeholder="seu_usuario"
