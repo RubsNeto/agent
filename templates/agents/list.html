@@ -24,10 +24,7 @@
                 onchange="document.getElementById('filterForm').submit();">
                 <option value="">Todas as Organizações</option>
                 {% for membership in user.padaria_memberships.all %}
-                <option value="{{ membership.padaria.slug }}" {% if request.GET.organization==membership.padaria.slug
-                    %}selected{% endif %}>
-                    {{ membership.padaria.name }}
-                </option>
+                <option value="{{ membership.padaria.slug }}" {% if request.GET.organization == membership.padaria.slug %}selected{% endif %}>{{ membership.padaria.name }}</option>
                 {% endfor %}
             </select>
         </div>
