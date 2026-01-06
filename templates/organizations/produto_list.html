@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}Produtos - PanDia{% endblock %}
+{% block page_title %}Produtos{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+        <h1 class="content-title" style="margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.75rem;">
+            <div
+                style="width: 48px; height: 48px; background: linear-gradient(135deg, #f59e0b, #ea580c); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+            Produtos
+        </h1>
+        <p class="content-subtitle" style="margin-left: 60px;">Gerencie o catálogo de produtos da padaria</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="{% url 'organizations:produto_import' %}" class="btn btn-secondary">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                style="margin-right: 0.5rem;">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Importar do PDF
+        </a>
+        <a href="{% url 'organizations:produto_create' %}" class="btn btn-primary">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                style="margin-right: 0.5rem;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Novo Produto
+        </a>
+    </div>
+</div>
+
+{% if produtos %}
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+    {% for produto in produtos %}
+    <div class="card" style="overflow: hidden; transition: all 0.2s;">
+        <!-- Imagem do produto -->
+        <div
+            style="height: 160px; background: linear-gradient(135deg, #f3f4f6, #e5e7eb); display: flex; align-items: center; justify-content: center; margin: -1.5rem -1.5rem 1rem -1.5rem;">
+            {% if produto.imagem %}
+            <img src="{{ produto.imagem.url }}" alt="{{ produto.nome }}"
+                style="width: 100%; height: 100%; object-fit: cover;">
+            {% else %}
+            <svg width="48" height="48" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            {% endif %}
+        </div>
+
+        <!-- Status badge e categoria -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            {% if produto.ativo %}
+            <span
+                style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.75rem; background: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 0.75rem; font-weight: 600; border-radius: 9999px;">
+                <span style="width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></span>
+                Ativo
+            </span>
+            {% else %}
+            <span
+                style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.75rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.75rem; font-weight: 600; border-radius: 9999px;">
+                <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%;"></span>
+                Inativo
+            </span>
+            {% endif %}
+
+            {% if produto.categoria %}
+            <span
+                style="padding: 0.25rem 0.5rem; background: var(--gray-100); color: var(--gray-600); font-size: 0.75rem; font-weight: 500; border-radius: 6px;">
+                {{ produto.categoria }}
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- Nome -->
+        <h3
+            style="font-size: 1.125rem; font-weight: 600; color: var(--gray-900); margin: 0 0 0.5rem 0; line-height: 1.3;">
+            {{ produto.nome }}
+        </h3>
+
+        <!-- Descrição -->
+        {% if produto.descricao %}
+        <p
+            style="font-size: 0.875rem; color: var(--gray-500); margin: 0 0 1rem 0; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+            {{ produto.descricao }}
+        </p>
+        {% endif %}
+
+        <!-- Preço -->
+        {% if produto.preco %}
+        <div style="margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem; font-weight: 700; color: #10b981;">
+                R$ {{ produto.preco|floatformat:2 }}
+            </span>
+        </div>
+        {% endif %}
+
+        <!-- Ações -->
+        <div style="display: flex; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--gray-100);">
+            <a href="{% url 'organizations:produto_edit' produto.pk %}" class="btn btn-secondary"
+                style="flex: 1; justify-content: center;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                    style="margin-right: 0.25rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Editar
+            </a>
+            <a href="{% url 'organizations:produto_delete' produto.pk %}" class="btn"
+                style="color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05);">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align: center; padding: 4rem 2rem;">
+    <div
+        style="width: 80px; height: 80px; background: linear-gradient(135deg, #f59e0b, #ea580c); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+        <svg width="40" height="40" fill="none" stroke="white" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+    </div>
+    <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--gray-900); margin: 0 0 0.5rem 0;">
+        Nenhum produto cadastrado
+    </h3>
+    <p style="color: var(--gray-500); margin: 0 0 1.5rem 0;">
+        Importe produtos do PDF do catálogo ou adicione manualmente
+    </p>
+    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+        <a href="{% url 'organizations:produto_import' %}" class="btn btn-primary" style="display: inline-flex;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                style="margin-right: 0.5rem;">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Importar do PDF
+        </a>
+        <a href="{% url 'organizations:produto_create' %}" class="btn btn-secondary" style="display: inline-flex;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                style="margin-right: 0.5rem;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Adicionar Manualmente
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

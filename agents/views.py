@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Agent
-from .utils import extract_text_from_pdf
+from .utils import extract_text_from_pdf, extract_products_from_text
 from .forms import AgentSimpleForm
 from .presets import get_preset_defaults, AGENT_PRESETS
 from organizations.models import Padaria, PadariaUser

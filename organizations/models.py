@@ -244,6 +244,51 @@ class Promocao(models.Model):
         return None
 
 
+class Produto(models.Model):
+    """
+    Produto cadastrado de uma padaria.
+    Pode ser adicionado manualmente ou extraído do PDF do agente.
+    """
+    padaria = models.ForeignKey(
+        Padaria,
+        on_delete=models.CASCADE,
+        related_name="produtos",
+        verbose_name="Padaria"
+    )
+    nome = models.CharField(max_length=200, verbose_name="Nome")
+    descricao = models.TextField(blank=True, verbose_name="Descrição")
+    preco = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Preço"
+    )
+    imagem = models.ImageField(
+        upload_to='produtos/',
+        null=True,
+        blank=True,
+        verbose_name="Imagem"
+    )
+    categoria = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Categoria",
+        help_text="Ex: Pães, Doces, Salgados, Bebidas"
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Produto"
+        verbose_name_plural = "Produtos"
+        ordering = ["categoria", "nome"]
+
+    def __str__(self):
+        return f"{self.nome} - {self.padaria.name}"
+
+
 class Cliente(models.Model):
     """
     Cliente cadastrado de uma padaria.

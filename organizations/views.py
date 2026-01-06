@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.conf import settings
 from django.http import JsonResponse
 from django.db.models import Prefetch
-from .models import Padaria, PadariaUser, ApiKey, Promocao, Cliente, CampanhaWhatsApp, MensagemCampanha
+from .models import Padaria, PadariaUser, ApiKey, Promocao, Produto, Cliente, CampanhaWhatsApp, MensagemCampanha
 from audit.models import AuditLog
 import requests
 
@@ -865,6 +865,295 @@ def promocao_delete(request, pk):
     
     context = {'promocao': promocao}
     return render(request, "organizations/promocao_confirm_delete.html", context)
+
+
+# =====================================================
+# PRODUTOS
+# =====================================================
+
+@login_required
+def produto_list(request):
+    """Lista de produtos da padaria."""
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.warning(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    # Para usuários normais, pegar a primeira padaria
+    # Para admin, mostrar todos os produtos
+    if request.user.is_superuser:
+        produtos = Produto.objects.filter(
+            padaria__in=padarias
+        ).select_related('padaria').order_by('categoria', 'nome')
+    else:
+        padaria = padarias.first()
+        produtos = Produto.objects.filter(
+            padaria=padaria
+        ).order_by('categoria', 'nome')
+    
+    context = {
+        'produtos': produtos,
+        'padarias': padarias,
+    }
+    return render(request, "organizations/produto_list.html", context)
+
+
+@login_required
+def produto_create(request):
+    """Criar novo produto."""
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.error(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    # Pegar a primeira padaria do usuário (ou a única)
+    padaria = padarias.first()
+    
+    if request.method == "POST":
+        nome = request.POST.get("nome", "").strip()
+        descricao = request.POST.get("descricao", "").strip()
+        preco = request.POST.get("preco", "").strip()
+        categoria = request.POST.get("categoria", "").strip()
+        ativo = request.POST.get("ativo") == "on"
+        imagem = request.FILES.get("imagem")
+        
+        if not nome:
+            messages.error(request, "O nome é obrigatório.")
+            return render(request, "organizations/produto_form.html", {
+                "padarias": padarias,
+            })
+        
+        try:
+            produto = Produto.objects.create(
+                padaria=padaria,
+                nome=nome,
+                descricao=descricao,
+                preco=float(preco.replace(",", ".")) if preco else None,
+                categoria=categoria,
+                ativo=ativo,
+                imagem=imagem
+            )
+            
+            AuditLog.log(
+                action="create",
+                entity="Produto",
+                padaria=padaria,
+                actor=request.user,
+                entity_id=produto.id,
+                diff={"nome": nome}
+            )
+            
+            messages.success(request, f"Produto '{nome}' criado com sucesso!")
+            return redirect("organizations:produto_list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao criar produto: {str(e)}")
+            return render(request, "organizations/produto_form.html", {
+                "padarias": padarias,
+            })
+    
+    context = {
+        "padarias": padarias,
+    }
+    return render(request, "organizations/produto_form.html", context)
+
+
+@login_required
+def produto_edit(request, pk):
+    """Editar produto existente."""
+    padarias = get_user_padarias(request.user)
+    produto = get_object_or_404(Produto, pk=pk)
+    
+    # Verificar acesso
+    if not request.user.is_superuser and produto.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a este produto.")
+        return redirect("organizations:produto_list")
+    
+    if request.method == "POST":
+        nome = request.POST.get("nome", "").strip()
+        descricao = request.POST.get("descricao", "").strip()
+        preco = request.POST.get("preco", "").strip()
+        categoria = request.POST.get("categoria", "").strip()
+        ativo = request.POST.get("ativo") == "on"
+        imagem = request.FILES.get("imagem")
+        remover_imagem = request.POST.get("remover_imagem") == "on"
+        
+        if not nome:
+            messages.error(request, "O nome é obrigatório.")
+            return render(request, "organizations/produto_form.html", {
+                "produto": produto,
+                "padarias": padarias,
+            })
+        
+        try:
+            # Preparar diff para auditoria
+            diff = {}
+            if produto.nome != nome:
+                diff['nome'] = {'old': produto.nome, 'new': nome}
+            
+            # Atualizar campos
+            produto.nome = nome
+            produto.descricao = descricao
+            produto.preco = float(preco.replace(",", ".")) if preco else None
+            produto.categoria = categoria
+            produto.ativo = ativo
+            
+            # Gerenciar imagem
+            if remover_imagem and produto.imagem:
+                produto.imagem.delete(save=False)
+                produto.imagem = None
+            elif imagem:
+                if produto.imagem:
+                    produto.imagem.delete(save=False)
+                produto.imagem = imagem
+            
+            produto.save()
+            
+            if diff:
+                AuditLog.log(
+                    action="update",
+                    entity="Produto",
+                    padaria=produto.padaria,
+                    actor=request.user,
+                    entity_id=produto.id,
+                    diff=diff
+                )
+            
+            messages.success(request, f"Produto '{nome}' atualizado com sucesso!")
+            return redirect("organizations:produto_list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao atualizar produto: {str(e)}")
+    
+    context = {
+        "produto": produto,
+        "padarias": padarias,
+    }
+    return render(request, "organizations/produto_form.html", context)
+
+
+@login_required
+def produto_delete(request, pk):
+    """Deletar produto."""
+    padarias = get_user_padarias(request.user)
+    produto = get_object_or_404(Produto, pk=pk)
+    
+    # Verificar acesso
+    if not request.user.is_superuser and produto.padaria not in padarias:
+        messages.error(request, "Você não tem acesso a este produto.")
+        return redirect("organizations:produto_list")
+    
+    if request.method == "POST":
+        nome = produto.nome
+        produto_id = produto.id
+        padaria = produto.padaria
+        
+        try:
+            AuditLog.log(
+                action="delete",
+                entity="Produto",
+                padaria=padaria,
+                actor=request.user,
+                entity_id=produto_id,
+                diff={"nome": nome}
+            )
+            
+            produto.delete()
+            messages.success(request, f"Produto '{nome}' excluído com sucesso!")
+            return redirect("organizations:produto_list")
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao excluir produto: {str(e)}")
+            return redirect("organizations:produto_list")
+    
+    context = {'produto': produto}
+    return render(request, "organizations/produto_confirm_delete.html", context)
+
+
+@login_required
+def produto_import(request):
+    """Importar produtos de PDF."""
+    from agents.utils import extract_text_from_pdf, extract_products_from_text
+    
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.error(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    # Pegar a primeira padaria do usuário
+    padaria = padarias.first()
+    
+    if request.method == "POST":
+        pdf_file = request.FILES.get("pdf_file")
+        
+        print(f"[DEBUG] produto_import POST recebido")
+        print(f"[DEBUG] pdf_file: {pdf_file}")
+        
+        if not pdf_file:
+            messages.error(request, "Por favor, selecione um arquivo PDF.")
+            return render(request, "organizations/produto_import.html", {"padarias": padarias})
+        
+        # Verificar se é PDF
+        if not pdf_file.name.lower().endswith('.pdf'):
+            messages.error(request, "O arquivo deve ser um PDF.")
+            return render(request, "organizations/produto_import.html", {"padarias": padarias})
+        
+        try:
+            print(f"[DEBUG] Extraindo texto do PDF: {pdf_file.name}")
+            
+            # Extrair texto do PDF
+            extracted_text = extract_text_from_pdf(pdf_file)
+            
+            print(f"[DEBUG] Texto extraído: {len(extracted_text)} caracteres")
+            print(f"[DEBUG] Preview: {extracted_text[:500]}")
+            
+            if not extracted_text.strip():
+                messages.warning(request, "Não foi possível extrair texto do PDF. Verifique se o PDF contém texto legível.")
+                return render(request, "organizations/produto_import.html", {"padarias": padarias})
+            
+            print(f"[DEBUG] Chamando extract_products_from_text para padaria: {padaria.name}")
+            
+            # Extrair produtos do texto
+            produtos_criados = extract_products_from_text(extracted_text, padaria)
+            
+            print(f"[DEBUG] Produtos criados: {len(produtos_criados) if produtos_criados else 0}")
+            
+            if produtos_criados:
+                AuditLog.log(
+                    action="import_pdf",
+                    entity="Produto",
+                    padaria=padaria,
+                    actor=request.user,
+                    entity_id=None,
+                    diff={
+                        "pdf_filename": pdf_file.name,
+                        "produtos_importados": len(produtos_criados)
+                    }
+                )
+                
+                messages.success(request, f"✅ {len(produtos_criados)} produtos foram importados do PDF!")
+            else:
+                messages.warning(request, 
+                    "Nenhum produto foi encontrado no PDF. "
+                    "Certifique-se de que o PDF contém produtos no formato: 'Nome - R$ 00,00'"
+                )
+            
+            return redirect("organizations:produto_list")
+            
+        except Exception as e:
+            import traceback
+            print(f"[ERROR] Erro ao processar PDF: {str(e)}")
+            print(traceback.format_exc())
+            messages.error(request, f"Erro ao processar PDF: {str(e)}")
+            return render(request, "organizations/produto_import.html", {"padarias": padarias})
+    
+    context = {
+        "padarias": padarias,
+    }
+    return render(request, "organizations/produto_import.html", context)
 
 
 # =====================================================

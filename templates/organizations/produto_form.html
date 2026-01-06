@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if produto %}Editar{% else %}Novo{% endif %} Produto - PanDia{% endblock %}
+{% block page_title %}{% if produto %}Editar{% else %}Novo{% endif %} Produto{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
+        <a href="{% url 'organizations:produto_list' %}" class="btn btn-secondary"
+            style="padding: 0.5rem; border-radius: 8px;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+        </a>
+        <div>
+            <h1 class="content-title" style="margin: 0;">{% if produto %}Editar Produto{% else %}Novo Produto{% endif %}
+            </h1>
+            <p class="content-subtitle" style="margin: 0.25rem 0 0 0;">
+                {% if produto %}Atualize as informações do produto{% else %}Preencha os dados do novo produto{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="card">
+        {% csrf_token %}
+
+        <!-- Nome -->
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="nome" class="form-label" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                Nome do Produto *
+            </label>
+            <input type="text" name="nome" id="nome" class="form-input"
+                value="{% if produto %}{{ produto.nome }}{% endif %}" required
+                style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 1rem;"
+                placeholder="Ex: Pão Francês">
+        </div>
+
+        <!-- Descrição -->
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="descricao" class="form-label" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                Descrição
+            </label>
+            <textarea name="descricao" id="descricao" rows="3" class="form-input"
+                style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 1rem; resize: vertical;"
+                placeholder="Descrição detalhada do produto...">{% if produto %}{{ produto.descricao }}{% endif %}</textarea>
+        </div>
+
+        <!-- Preço e Categoria -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div class="form-group">
+                <label for="preco" class="form-label" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                    Preço (R$)
+                </label>
+                <input type="text" name="preco" id="preco" class="form-input"
+                    value="{% if produto.preco %}{{ produto.preco|floatformat:2 }}{% endif %}"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 1rem;"
+                    placeholder="0,00">
+            </div>
+
+            <div class="form-group">
+                <label for="categoria" class="form-label"
+                    style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                    Categoria
+                </label>
+                <input type="text" name="categoria" id="categoria" class="form-input"
+                    value="{% if produto %}{{ produto.categoria }}{% endif %}"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 1rem;"
+                    placeholder="Ex: Pães, Doces, Salgados" list="categorias-list">
+                <datalist id="categorias-list">
+                    <option value="Pães">
+                    <option value="Doces">
+                    <option value="Salgados">
+                    <option value="Bebidas">
+                    <option value="Bolos">
+                    <option value="Confeitaria">
+                </datalist>
+            </div>
+        </div>
+
+        <!-- Imagem -->
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="imagem" class="form-label" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                Imagem do Produto
+            </label>
+            {% if produto and produto.imagem %}
+            <div
+                style="margin-bottom: 1rem; padding: 1rem; background: var(--gray-50); border-radius: 8px; display: flex; align-items: center; gap: 1rem;">
+                <img src="{{ produto.imagem.url }}" alt="{{ produto.nome }}"
+                    style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+                <div style="flex: 1;">
+                    <p style="margin: 0; font-weight: 500; color: var(--gray-900);">Imagem atual</p>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; color: var(--gray-500);">
+                        {{ produto.imagem.name|truncatechars:40 }}
+                    </p>
+                </div>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="remover_imagem" value="on">
+                    <span style="font-size: 0.875rem; color: #ef4444;">Remover</span>
+                </label>
+            </div>
+            {% endif %}
+            <input type="file" name="imagem" id="imagem" accept="image/*"
+                style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 1rem;">
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: var(--gray-500);">
+                Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB
+            </p>
+        </div>
+
+        <!-- Ativo -->
+        <div class="form-group" style="margin-bottom: 2rem;">
+            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                <input type="checkbox" name="ativo" id="ativo" {% if not produto or produto.ativo %}checked{% endif %}
+                    style="width: 1.25rem; height: 1.25rem; accent-color: #10b981;">
+                <span style="font-weight: 600;">Produto ativo</span>
+            </label>
+            <p style="margin: 0.5rem 0 0 2rem; font-size: 0.875rem; color: var(--gray-500);">
+                Produtos inativos não aparecem no catálogo
+            </p>
+        </div>
+
+        <!-- Botões -->
+        <div style="display: flex; gap: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-100);">
+            <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                    style="margin-right: 0.5rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                {% if produto %}Salvar Alterações{% else %}Criar Produto{% endif %}
+            </button>
+            <a href="{% url 'organizations:produto_list' %}" class="btn btn-secondary" style="justify-content: center;">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

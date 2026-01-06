@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Padaria, PadariaUser, ApiKey, Promocao, Cliente, CampanhaWhatsApp, MensagemCampanha
+from .models import Padaria, PadariaUser, ApiKey, Promocao, Produto, Cliente, CampanhaWhatsApp, MensagemCampanha
 
 
 class PadariaUserInline(admin.TabularInline):
@@ -66,6 +66,14 @@ class PromocaoAdmin(admin.ModelAdmin):
     list_display = ['titulo', 'padaria', 'preco', 'is_active', 'data_inicio', 'data_fim']
     list_filter = ['is_active', 'padaria', 'created_at']
     search_fields = ['titulo', 'descricao', 'padaria__name']
+    date_hierarchy = 'created_at'
+
+
+@admin.register(Produto)
+class ProdutoAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'padaria', 'categoria', 'preco', 'ativo', 'created_at']
+    list_filter = ['ativo', 'categoria', 'padaria', 'created_at']
+    search_fields = ['nome', 'descricao', 'categoria', 'padaria__name']
     date_hierarchy = 'created_at'
 
 

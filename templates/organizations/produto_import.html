@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Produtos do PDF - PanDia{% endblock %}
+{% block page_title %}Importar Produtos{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; margin: 0 auto;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
+        <a href="{% url 'organizations:produto_list' %}" class="btn btn-secondary"
+            style="padding: 0.5rem; border-radius: 8px;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+        </a>
+        <div>
+            <h1 class="content-title" style="margin: 0;">Importar Produtos do PDF</h1>
+            <p class="content-subtitle" style="margin: 0.25rem 0 0 0;">
+                Faça upload do mesmo PDF usado na criação do agente
+            </p>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="card">
+        {% csrf_token %}
+
+        <div
+            style="text-align: center; padding: 2rem; background: var(--gray-50); border-radius: 12px; margin-bottom: 1.5rem;">
+            <div
+                style="width: 80px; height: 80px; background: linear-gradient(135deg, #f59e0b, #ea580c); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+                <svg width="40" height="40" fill="none" stroke="white" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+
+            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--gray-900); margin: 0 0 0.5rem 0;">
+                Selecione o PDF do Catálogo
+            </h3>
+            <p style="color: var(--gray-500); margin: 0 0 1.5rem 0; font-size: 0.875rem;">
+                O sistema irá extrair automaticamente os produtos e preços do PDF
+            </p>
+
+            <input type="file" name="pdf_file" id="pdf_file" accept=".pdf" required style="display: none;"
+                onchange="updateFileName(this)">
+            <label for="pdf_file" class="btn btn-primary" style="cursor: pointer; display: inline-flex;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                    style="margin-right: 0.5rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Escolher arquivo PDF
+            </label>
+
+            <p id="file-name" style="margin: 1rem 0 0 0; font-size: 0.875rem; color: var(--gray-600); display: none;">
+                <span style="font-weight: 600;">📄 Arquivo selecionado:</span> <span id="file-name-text"></span>
+            </p>
+        </div>
+
+        <div
+            style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+            <h4 style="font-size: 0.875rem; font-weight: 600; color: #3b82f6; margin: 0 0 0.5rem 0;">
+                💡 Formatos de produtos suportados:
+            </h4>
+            <ul
+                style="margin: 0; padding-left: 1.25rem; color: var(--gray-600); font-size: 0.875rem; line-height: 1.6;">
+                <li><code>- Pão Francês - R$ 0,50</code></li>
+                <li><code>Croissant: R$ 5,00</code></li>
+                <li><code>**Bolo de Chocolate** - R$ 35,00</code></li>
+                <li><code>Café Expresso R$ 4,00</code></li>
+            </ul>
+        </div>
+
+        <div
+            style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+            <p style="color: #b45309; font-size: 0.875rem; margin: 0;">
+                ⚠️ <strong>Atenção:</strong> Se um produto com o mesmo nome já existir, ele será atualizado com os novos
+                dados do PDF.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--gray-100);">
+            <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                    style="margin-right: 0.5rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Importar Produtos
+            </button>
+            <a href="{% url 'organizations:produto_list' %}" class="btn btn-secondary" style="justify-content: center;">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    function updateFileName(input)
+    {
+        const fileNameDisplay = document.getElementById('file-name');
+        const fileNameText = document.getElementById('file-name-text');
+
+        if (input.files && input.files[0])
+        {
+            fileNameText.textContent = input.files[0].name;
+            fileNameDisplay.style.display = 'block';
+        } else
+        {
+            fileNameDisplay.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}
