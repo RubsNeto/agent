@@ -55,6 +55,10 @@ services:
         # Middleware redirect
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+        # Headers middleware - essential for login/CSRF
+        - "traefik.http.middlewares.agentesai-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+        - "traefik.http.middlewares.agentesai-headers.headers.stsSeconds=31536000"
+        - "traefik.http.routers.agentesai.middlewares=agentesai-headers"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/accounts/login/', timeout=5)"]
       interval: 30s
