@@ -1,5 +1,7 @@
 /* Reset */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -10,11 +12,11 @@
     --orange-500: #f59e0b;
     --orange-600: #ea8a08;
     --orange-700: #d97706;
-    
+
     --navy-900: #1e293b;
     --navy-800: #2d3748;
     --navy-700: #334155;
-    
+
     --gray-50: #f9fafb;
     --gray-100: #f3f4f6;
     --gray-200: #e5e7eb;
@@ -25,13 +27,13 @@
     --gray-700: #374151;
     --gray-800: #1f2937;
     --gray-900: #111827;
-    
+
     --green-100: #d1fae5;
     --green-500: #10b981;
-    
+
     --red-500: #ef4444;
     --red-600: #dc2626;
-    
+
     --blue-500: #3b82f6;
     --blue-600: #2563eb;
 }
@@ -65,7 +67,7 @@ body {
 }
 
 .sidebar-logo {
-    padding: 1.5rem 1.25rem;
+    padding: 1rem 1.25rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -689,15 +691,15 @@ body {
     .sidebar {
         transform: translateX(-100%);
     }
-    
+
     .main-content {
         margin-left: 0;
     }
-    
+
     .stats-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .form-row {
         grid-template-columns: 1fr;
     }

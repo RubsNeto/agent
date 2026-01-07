@@ -702,6 +702,9 @@ def promocao_create(request):
     # Pegar a primeira padaria do usuário (ou a única)
     padaria = padarias.first()
     
+    # Buscar produtos da padaria para o dropdown
+    produtos = Produto.objects.filter(padaria=padaria, ativo=True).order_by('nome')
+    
     if request.method == "POST":
         titulo = request.POST.get("titulo", "").strip()
         descricao = request.POST.get("descricao", "").strip()
@@ -711,16 +714,27 @@ def promocao_create(request):
         data_fim = request.POST.get("data_fim", "").strip()
         is_active = request.POST.get("is_active") == "on"
         imagem = request.FILES.get("imagem")
+        produto_id = request.POST.get("produto", "").strip()
         
         if not titulo:
             messages.error(request, "O título é obrigatório.")
             return render(request, "organizations/promocao_form.html", {
                 "padarias": padarias,
+                "produtos": produtos,
             })
         
         try:
+            # Buscar produto vinculado se informado
+            produto_vinculado = None
+            if produto_id:
+                try:
+                    produto_vinculado = Produto.objects.get(pk=produto_id, padaria=padaria)
+                except Produto.DoesNotExist:
+                    pass
+            
             promocao = Promocao.objects.create(
                 padaria=padaria,
+                produto=produto_vinculado,
                 titulo=titulo,
                 descricao=descricao,
                 preco=float(preco.replace(",", ".")) if preco else None,
@@ -747,10 +761,12 @@ def promocao_create(request):
             messages.error(request, f"Erro ao criar promoção: {str(e)}")
             return render(request, "organizations/promocao_form.html", {
                 "padarias": padarias,
+                "produtos": produtos,
             })
     
     context = {
         "padarias": padarias,
+        "produtos": produtos,
     }
     return render(request, "organizations/promocao_form.html", context)
 
@@ -766,6 +782,9 @@ def promocao_edit(request, pk):
         messages.error(request, "Você não tem acesso a esta promoção.")
         return redirect("organizations:promocao_list")
     
+    # Buscar produtos da padaria para o dropdown
+    produtos = Produto.objects.filter(padaria=promocao.padaria, ativo=True).order_by('nome')
+    
     if request.method == "POST":
         titulo = request.POST.get("titulo", "").strip()
         descricao = request.POST.get("descricao", "").strip()
@@ -776,12 +795,14 @@ def promocao_edit(request, pk):
         is_active = request.POST.get("is_active") == "on"
         imagem = request.FILES.get("imagem")
         remover_imagem = request.POST.get("remover_imagem") == "on"
+        produto_id = request.POST.get("produto", "").strip()
         
         if not titulo:
             messages.error(request, "O título é obrigatório.")
             return render(request, "organizations/promocao_form.html", {
                 "promocao": promocao,
                 "padarias": padarias,
+                "produtos": produtos,
             })
         
         try:
@@ -798,6 +819,15 @@ def promocao_edit(request, pk):
             promocao.data_inicio = data_inicio if data_inicio else None
             promocao.data_fim = data_fim if data_fim else None
             promocao.is_active = is_active
+            
+            # Atualizar produto vinculado
+            if produto_id:
+                try:
+                    promocao.produto = Produto.objects.get(pk=produto_id, padaria=promocao.padaria)
+                except Produto.DoesNotExist:
+                    promocao.produto = None
+            else:
+                promocao.produto = None
             
             if remover_imagem:
                 promocao.imagem = None
@@ -825,6 +855,7 @@ def promocao_edit(request, pk):
     context = {
         "promocao": promocao,
         "padarias": padarias,
+        "produtos": produtos,
     }
     return render(request, "organizations/promocao_form.html", context)
 
@@ -886,14 +917,39 @@ def produto_list(request):
         produtos = Produto.objects.filter(
             padaria__in=padarias
         ).select_related('padaria').order_by('categoria', 'nome')
+        # Buscar promoções ativas de todas as padarias
+        promocoes_ativas = Promocao.objects.filter(
+            padaria__in=padarias,
+            produto__isnull=False,
+            is_active=True
+        ).select_related('produto')
     else:
         padaria = padarias.first()
         produtos = Produto.objects.filter(
             padaria=padaria
         ).order_by('categoria', 'nome')
+        # Buscar promoções ativas da padaria
+        promocoes_ativas = Promocao.objects.filter(
+            padaria=padaria,
+            produto__isnull=False,
+            is_active=True
+        ).select_related('produto')
+    
+    # Criar dicionário de produto_id -> promocao para lookup rápido
+    promocao_por_produto = {}
+    for promo in promocoes_ativas:
+        if promo.is_valid() and promo.produto_id:
+            # Se já tem uma promoção para este produto, manter a com maior desconto
+            if promo.produto_id not in promocao_por_produto:
+                promocao_por_produto[promo.produto_id] = promo
+    
+    # Anexar promoção ativa a cada produto
+    produtos_list = list(produtos)
+    for produto in produtos_list:
+        produto.promocao_ativa = promocao_por_produto.get(produto.id)
     
     context = {
-        'produtos': produtos,
+        'produtos': produtos_list,
         'padarias': padarias,
     }
     return render(request, "organizations/produto_list.html", context)
@@ -1154,6 +1210,174 @@ def produto_import(request):
         "padarias": padarias,
     }
     return render(request, "organizations/produto_import.html", context)
+
+
+@login_required
+def produto_import_excel(request):
+    """Importar produtos de planilha Excel."""
+    from openpyxl import load_workbook
+    
+    padarias = get_user_padarias(request.user)
+    
+    if not padarias.exists():
+        messages.error(request, "Você não tem acesso a nenhuma padaria.")
+        return redirect("organizations:list")
+    
+    # Pegar a primeira padaria do usuário
+    padaria = padarias.first()
+    
+    if request.method == "POST":
+        excel_file = request.FILES.get("excel_file")
+        
+        if not excel_file:
+            messages.error(request, "Por favor, selecione um arquivo Excel.")
+            return render(request, "organizations/produto_import_excel.html", {"padarias": padarias})
+        
+        # Verificar se é Excel
+        if not excel_file.name.lower().endswith(('.xlsx', '.xls')):
+            messages.error(request, "O arquivo deve ser uma planilha Excel (.xlsx ou .xls).")
+            return render(request, "organizations/produto_import_excel.html", {"padarias": padarias})
+        
+        try:
+            # Carregar a planilha
+            wb = load_workbook(excel_file, read_only=True)
+            ws = wb.active
+            
+            # Ler cabeçalhos da primeira linha
+            headers = []
+            for cell in ws[1]:
+                if cell.value:
+                    headers.append(str(cell.value).strip().lower())
+                else:
+                    headers.append("")
+            
+            # Mapear índices das colunas
+            nome_idx = None
+            descricao_idx = None
+            preco_idx = None
+            categoria_idx = None
+            
+            for i, h in enumerate(headers):
+                h_lower = h.lower()
+                # Usar 'in' para matching flexível de headers
+                if any(keyword in h_lower for keyword in ['nome', 'name', 'produto', 'product']):
+                    nome_idx = i
+                elif any(keyword in h_lower for keyword in ['descrição', 'descricao', 'description', 'desc']):
+                    descricao_idx = i
+                elif any(keyword in h_lower for keyword in ['preço', 'preco', 'price', 'valor', 'value', 'r$']):
+                    preco_idx = i
+                elif any(keyword in h_lower for keyword in ['categoria', 'category', 'tipo', 'type']):
+                    categoria_idx = i
+            
+            if nome_idx is None:
+                messages.error(request, "Coluna 'Nome' não encontrada na planilha. Verifique o cabeçalho.")
+                return render(request, "organizations/produto_import_excel.html", {"padarias": padarias})
+            
+            # Processar linhas (a partir da segunda)
+            produtos_importados = 0
+            produtos_atualizados = 0
+            erros = 0
+            
+            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                try:
+                    # Pegar valores das colunas
+                    nome = str(row[nome_idx]).strip() if row[nome_idx] else None
+                    
+                    if not nome or nome == "None":
+                        continue
+                    
+                    descricao = ""
+                    if descricao_idx is not None and len(row) > descricao_idx and row[descricao_idx]:
+                        descricao = str(row[descricao_idx]).strip()
+                    
+                    preco = None
+                    if preco_idx is not None and len(row) > preco_idx and row[preco_idx]:
+                        preco_val = row[preco_idx]
+                        if isinstance(preco_val, (int, float)):
+                            preco = float(preco_val)
+                        else:
+                            # Tentar converter string (suporta R$ 1,20 ou 1.20)
+                            preco_str = str(preco_val).replace("R$", "").replace(" ", "").replace(",", ".").strip()
+                            try:
+                                preco = float(preco_str)
+                            except ValueError:
+                                preco = None
+                    
+                    categoria = ""
+                    if categoria_idx is not None and len(row) > categoria_idx and row[categoria_idx]:
+                        categoria = str(row[categoria_idx]).strip()
+                    
+                    # Criar ou atualizar produto
+                    defaults = {
+                        'descricao': descricao,
+                        'preco': preco,
+                        'ativo': True
+                    }
+                    if categoria:
+                        defaults['categoria'] = categoria
+                    
+                    produto, created = Produto.objects.update_or_create(
+                        padaria=padaria,
+                        nome=nome,
+                        defaults=defaults
+                    )
+                    
+                    if created:
+                        produtos_importados += 1
+                    else:
+                        produtos_atualizados += 1
+                        
+                except Exception as e:
+                    print(f"[ERROR] Erro na linha {row_num}: {str(e)}")
+                    erros += 1
+            
+            wb.close()
+            
+            # Registrar auditoria
+            if produtos_importados > 0 or produtos_atualizados > 0:
+                AuditLog.log(
+                    action="import_excel",
+                    entity="Produto",
+                    padaria=padaria,
+                    actor=request.user,
+                    entity_id=None,
+                    diff={
+                        "excel_filename": excel_file.name,
+                        "produtos_importados": produtos_importados,
+                        "produtos_atualizados": produtos_atualizados,
+                        "erros": erros
+                    }
+                )
+            
+            # Mensagem de resultado
+            if produtos_importados > 0 or produtos_atualizados > 0:
+                msg = f"✅ Importação concluída! "
+                if produtos_importados > 0:
+                    msg += f"{produtos_importados} produtos novos"
+                if produtos_atualizados > 0:
+                    if produtos_importados > 0:
+                        msg += f", {produtos_atualizados} atualizados"
+                    else:
+                        msg += f"{produtos_atualizados} produtos atualizados"
+                if erros > 0:
+                    msg += f" ({erros} erros)"
+                messages.success(request, msg)
+            else:
+                messages.warning(request, "Nenhum produto foi encontrado na planilha.")
+            
+            return redirect("organizations:produto_list")
+            
+        except Exception as e:
+            import traceback
+            print(f"[ERROR] Erro ao processar Excel: {str(e)}")
+            print(traceback.format_exc())
+            messages.error(request, f"Erro ao processar planilha: {str(e)}")
+            return render(request, "organizations/produto_import_excel.html", {"padarias": padarias})
+    
+    context = {
+        "padarias": padarias,
+    }
+    return render(request, "organizations/produto_import_excel.html", context)
 
 
 # =====================================================

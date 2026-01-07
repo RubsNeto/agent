@@ -4,7 +4,7 @@
 {% block page_title %}{% if promocao %}Editar Promoção{% else %}Nova Promoção{% endif %}{% endblock %}
 
 {% block content %}
-<div style="max-width: 800px;">
+<div style="max-width: 900px; margin: 0 auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <div>
             <h1 class="content-title" style="margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.75rem;">
@@ -63,6 +63,26 @@
                     </label>
                     <textarea id="descricao" name="descricao" rows="3" placeholder="Descreva os detalhes da promoção..."
                         style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 1rem; resize: vertical; transition: all 0.2s;">{% if promocao %}{{ promocao.descricao }}{% endif %}</textarea>
+                </div>
+
+                <!-- Produto Vinculado -->
+                <div>
+                    <label for="produto"
+                        style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem;">
+                        Produto Vinculado <span style="font-weight: 400; color: var(--gray-400);">- opcional</span>
+                    </label>
+                    <select id="produto" name="produto"
+                        style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 1rem; background: white; transition: all 0.2s;">
+                        <option value="">-- Nenhum produto vinculado --</option>
+                        {% for produto in produtos %}
+                        <option value="{{ produto.pk }}" {% if promocao.produto_id == produto.pk %}selected{% endif %}>
+                            {{ produto.nome }}{% if produto.preco %} - R$ {{ produto.preco|floatformat:2 }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p style="font-size: 0.75rem; color: var(--gray-400); margin-top: 0.25rem;">
+                        Se vinculado, a imagem do produto será usada quando a promoção não tiver imagem própria
+                    </p>
                 </div>
             </div>
         </div>

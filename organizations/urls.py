@@ -21,6 +21,7 @@ urlpatterns = [
     path("produtos/", views.produto_list, name="produto_list"),
     path("produtos/create/", views.produto_create, name="produto_create"),
     path("produtos/import/", views.produto_import, name="produto_import"),
+    path("produtos/import-excel/", views.produto_import_excel, name="produto_import_excel"),
     path("produtos/<int:pk>/edit/", views.produto_edit, name="produto_edit"),
     path("produtos/<int:pk>/delete/", views.produto_delete, name="produto_delete"),
     

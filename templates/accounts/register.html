@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,7 +18,7 @@
             font-weight: 500;
             font-size: 14px;
         }
-        
+
         .help-text {
             font-size: 12px;
             color: var(--gray-500);
@@ -26,70 +27,70 @@
         }
     </style>
 </head>
+
 <body>
     <div class="login-container">
         <div class="login-card">
             <div class="login-logo">
-                <div class="login-logo-icon">
-                    <svg width="32" height="32" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
-                </div>
-                <h1>PanDia</h1>
+                <img src="{% static 'logo.png' %}" alt="Pandia" style="height: 80px; width: auto;">
             </div>
 
             <h2 class="login-title">Crie sua conta</h2>
             <p class="login-subtitle">Cadastre-se para começar a gerenciar seus agentes de IA</p>
 
             {% if messages %}
-                {% for message in messages %}
-                    <div class="register-error">{{ message }}</div>
-                {% endfor %}
+            {% for message in messages %}
+            <div class="register-error">{{ message }}</div>
+            {% endfor %}
             {% endif %}
 
             {% if form.errors %}
-                <div class="register-error">
-                    <strong>Erro:</strong>
-                    {% for field in form %}
-                        {% for error in field.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
-                    {% endfor %}
-                    {% for error in form.non_field_errors %}
-                        <p>{{ error }}</p>
-                    {% endfor %}
-                </div>
+            <div class="register-error">
+                <strong>Erro:</strong>
+                {% for field in form %}
+                {% for error in field.errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
             {% endif %}
 
             <form method="post">
                 {% csrf_token %}
-                
+
                 <div class="form-group">
                     <label class="form-label" for="id_first_name">Nome Completo</label>
-                    <input type="text" name="first_name" id="id_first_name" class="form-input" placeholder="Digite seu nome completo" required autofocus>
+                    <input type="text" name="first_name" id="id_first_name" class="form-input"
+                        placeholder="Digite seu nome completo" required autofocus>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label" for="id_email">Email</label>
-                    <input type="email" name="email" id="id_email" class="form-input" placeholder="seu@email.com" required>
+                    <input type="email" name="email" id="id_email" class="form-input" placeholder="seu@email.com"
+                        required>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label" for="id_birth_date">Data de Nascimento</label>
                     <input type="date" name="birth_date" id="id_birth_date" class="form-input" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label" for="id_password1">Senha</label>
-                    <input type="password" name="password1" id="id_password1" class="form-input" placeholder="••••••••" required>
+                    <input type="password" name="password1" id="id_password1" class="form-input" placeholder="••••••••"
+                        required>
                     <div class="help-text">Mínimo 8 caracteres</div>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label" for="id_password2">Confirmação de Senha</label>
-                    <input type="password" name="password2" id="id_password2" class="form-input" placeholder="••••••••" required>
+                    <input type="password" name="password2" id="id_password2" class="form-input" placeholder="••••••••"
+                        required>
                 </div>
-                
+
                 <button type="submit" class="btn btn-primary" style="width: 100%;">Criar Conta</button>
             </form>
 
@@ -99,4 +100,5 @@
         </div>
     </div>
 </body>
+
 </html>

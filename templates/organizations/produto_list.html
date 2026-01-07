@@ -19,6 +19,14 @@
         <p class="content-subtitle" style="margin-left: 60px;">Gerencie o catálogo de produtos da padaria</p>
     </div>
     <div style="display: flex; gap: 0.75rem;">
+        <a href="{% url 'organizations:produto_import_excel' %}" class="btn btn-secondary">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                style="margin-right: 0.5rem;">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Importar do Excel
+        </a>
         <a href="{% url 'organizations:produto_import' %}" class="btn btn-secondary">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
                 style="margin-right: 0.5rem;">
@@ -96,9 +104,34 @@
         <!-- Preço -->
         {% if produto.preco %}
         <div style="margin-bottom: 1rem;">
+            {% if produto.promocao_ativa %}
+            <!-- Produto em promoção -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span
+                    style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-size: 0.75rem; font-weight: 700; border-radius: 6px;">
+                    🔥 Em Promoção
+                </span>
+                {% if produto.promocao_ativa.get_discount_percentage %}
+                <span
+                    style="padding: 0.25rem 0.5rem; background: rgba(239, 68, 68, 0.1); color: #dc2626; font-size: 0.75rem; font-weight: 700; border-radius: 6px;">
+                    -{{ produto.promocao_ativa.get_discount_percentage|floatformat:0 }}%
+                </span>
+                {% endif %}
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                <span style="font-size: 1.5rem; font-weight: 700; color: #ef4444;">
+                    R$ {{ produto.promocao_ativa.preco|floatformat:2 }}
+                </span>
+                <span style="font-size: 1rem; color: var(--gray-400); text-decoration: line-through;">
+                    R$ {{ produto.preco|floatformat:2 }}
+                </span>
+            </div>
+            {% else %}
+            <!-- Preço normal -->
             <span style="font-size: 1.5rem; font-weight: 700; color: #10b981;">
                 R$ {{ produto.preco|floatformat:2 }}
             </span>
+            {% endif %}
         </div>
         {% endif %}
 

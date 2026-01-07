@@ -4,6 +4,25 @@ from django.contrib.auth.models import User
 from django.utils.text import slugify
 
 
+# =============================================================================
+# Funções de upload dinâmico (organiza por padaria para isolamento de tenant)
+# =============================================================================
+
+def get_produto_upload_path(instance, filename):
+    """Gera caminho de upload para imagens de produtos: padarias/{slug}/produtos/{filename}"""
+    return f'padarias/{instance.padaria.slug}/produtos/{filename}'
+
+
+def get_promocao_upload_path(instance, filename):
+    """Gera caminho de upload para imagens de promoções: padarias/{slug}/promocoes/{filename}"""
+    return f'padarias/{instance.padaria.slug}/promocoes/{filename}'
+
+
+def get_campanha_upload_path(instance, filename):
+    """Gera caminho de upload para imagens de campanhas: padarias/{slug}/campanhas/{filename}"""
+    return f'padarias/{instance.padaria.slug}/campanhas/{filename}'
+
+
 class Padaria(models.Model):
     """
     Padaria (tenant principal do sistema).
@@ -169,12 +188,22 @@ class Promocao(models.Model):
     """
     Promoção ou aviso para exibir no chatbot.
     Cada padaria pode ter múltiplas promoções.
+    Pode ser vinculada a um produto específico.
     """
     padaria = models.ForeignKey(
         Padaria,
         on_delete=models.CASCADE,
         related_name="promocoes",
         verbose_name="Padaria"
+    )
+    produto = models.ForeignKey(
+        'Produto',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="promocoes",
+        verbose_name="Produto vinculado",
+        help_text="Se vinculado, a promoção usará a imagem do produto quando não tiver imagem própria"
     )
     titulo = models.CharField(max_length=200, verbose_name="Título")
     descricao = models.TextField(blank=True, verbose_name="Descrição")
@@ -193,7 +222,7 @@ class Promocao(models.Model):
         verbose_name="Preço Original"
     )
     imagem = models.ImageField(
-        upload_to='promocoes/',
+        upload_to=get_promocao_upload_path,
         null=True,
         blank=True,
         verbose_name="Imagem"
@@ -242,6 +271,14 @@ class Promocao(models.Model):
             discount = ((self.preco_original - self.preco) / self.preco_original) * 100
             return round(discount, 0)
         return None
+    
+    def get_imagem(self):
+        """Retorna a imagem da promoção ou do produto vinculado."""
+        if self.imagem:
+            return self.imagem
+        if self.produto and self.produto.imagem:
+            return self.produto.imagem
+        return None
 
 
 class Produto(models.Model):
@@ -265,7 +302,7 @@ class Produto(models.Model):
         verbose_name="Preço"
     )
     imagem = models.ImageField(
-        upload_to='produtos/',
+        upload_to=get_produto_upload_path,
         null=True,
         blank=True,
         verbose_name="Imagem"
@@ -374,7 +411,7 @@ class CampanhaWhatsApp(models.Model):
         help_text="Use {{nome_cliente}} para personalizar"
     )
     imagem = models.ImageField(
-        upload_to='campanhas/',
+        upload_to=get_campanha_upload_path,
         null=True,
         blank=True,
         verbose_name="Imagem (opcional)"
