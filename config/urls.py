@@ -16,7 +16,7 @@ urlpatterns = [
     path("api/", include("api.urls")),
     path("webhooks/", include("webhooks.urls")),
     path("audit/", include("audit.urls")),
-    # path("payments/", include("payments.urls")),  # TODO v2: Stripe payments
+    path("payments/", include("payments.urls")),  # Asaas + Mercado Pago
 ]
 
 # Servir arquivos de media em desenvolvimento

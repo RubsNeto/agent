@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Assinaturas - Admin{% endblock %}
+
+{% block page_title %}Gerenciar Assinaturas{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Header -->
+    <div class="page-header" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <nav class="breadcrumb">
+            <a href="{% url 'ui:dashboard' %}">Dashboard</a>
+            <span>/</span>
+            <span>Assinaturas</span>
+        </nav>
+        <a href="{% url 'payments:create_padaria_subscription' %}" class="btn-primary">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nova Padaria + Assinatura
+        </a>
+    </div>
+
+    <!-- Cards de resumo -->
+    <div class="summary-cards">
+        <div class="summary-card">
+            <div class="summary-icon total">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+            </div>
+            <div class="summary-content">
+                <span class="summary-value">{{ total_padarias|default:"0" }}</span>
+                <span class="summary-label">Total de Padarias</span>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon active">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <div class="summary-content">
+                <span class="summary-value">{% with active_count=0 %}{% for item in subscriptions_data %}{% if item.subscription.status == 'active' %}{% with active_count=active_count|add:1 %}{% endwith %}{% endif %}{% endfor %}{{ active_count }}{% endwith %}</span>
+                <span class="summary-label">Assinaturas Ativas</span>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon pending">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="summary-content">
+                <span class="summary-value">{% with pending_count=0 %}{% for item in subscriptions_data %}{% if item.subscription.status == 'pending' or not item.subscription %}{% with pending_count=pending_count|add:1 %}{% endwith %}{% endif %}{% endfor %}{{ pending_count }}{% endwith %}</span>
+                <span class="summary-label">Pendentes</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Padarias -->
+    <div class="list-card">
+        <div class="list-header">
+            <h2>📋 Padarias e Assinaturas</h2>
+        </div>
+        <div class="list-body">
+            {% if subscriptions_data %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Padaria</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Plano</th>
+                        <th>Próx. Vencimento</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in subscriptions_data %}
+                    <tr>
+                        <td>
+                            <div class="padaria-info">
+                                <strong>{{ item.padaria.name }}</strong>
+                                <small>{{ item.padaria.slug }}</small>
+                            </div>
+                        </td>
+                        <td>{{ item.padaria.email|default:item.padaria.owner.email|default:"—" }}</td>
+                        <td>
+                            {% if item.subscription %}
+                            <span class="status-badge {% if item.subscription.status == 'active' %}badge-success{% elif item.subscription.status == 'pending' %}badge-warning{% elif item.subscription.status == 'overdue' %}badge-danger{% else %}badge-neutral{% endif %}">
+                                {% if item.subscription.status == 'active' %}Ativa{% elif item.subscription.status == 'pending' %}Pendente{% elif item.subscription.status == 'overdue' %}Inadimplente{% elif item.subscription.status == 'cancelled' %}Cancelada{% else %}{{ item.subscription.status }}{% endif %}
+                            </span>
+                            {% else %}
+                            <span class="status-badge badge-neutral">Sem assinatura</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.subscription %}
+                            R$ {{ item.subscription.plan_value|floatformat:2 }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.subscription and item.subscription.next_due_date %}
+                            {{ item.subscription.next_due_date|date:"d/m/Y" }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'payments:subscription_status' %}?padaria={{ item.padaria.slug }}" class="btn-action-sm">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                </svg>
+                                Gerenciar
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="64" height="64">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                <h3>Nenhuma padaria cadastrada</h3>
+                <p>Crie uma nova padaria para começar a gerenciar assinaturas.</p>
+                <a href="{% url 'payments:create_padaria_subscription' %}" class="btn-primary" style="margin-top: 1rem;">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Criar Nova Padaria
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+.breadcrumb a {
+    color: #3b82f6;
+    text-decoration: none;
+}
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+.summary-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e5e7eb;
+}
+.summary-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+.summary-icon.total { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.summary-icon.active { background: linear-gradient(135deg, #10b981, #059669); }
+.summary-icon.pending { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.summary-content {
+    display: flex;
+    flex-direction: column;
+}
+.summary-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+.summary-label {
+    font-size: 0.8125rem;
+    color: #6b7280;
+}
+
+.list-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+.list-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+.list-header h2 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+.list-body {
+    padding: 0;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.data-table th,
+.data-table td {
+    padding: 1rem 1.25rem;
+    text-align: left;
+}
+.data-table th {
+    background: #f9fafb;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6b7280;
+}
+.data-table td {
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.9375rem;
+    color: #374151;
+}
+.data-table tr:hover td {
+    background: #f9fafb;
+}
+
+.padaria-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+.padaria-info strong {
+    color: #1f2937;
+}
+.padaria-info small {
+    color: #9ca3af;
+    font-size: 0.75rem;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.badge-success { background: #d1fae5; color: #065f46; }
+.badge-warning { background: #fef3c7; color: #92400e; }
+.badge-danger { background: #fee2e2; color: #991b1b; }
+.badge-neutral { background: #f3f4f6; color: #6b7280; }
+
+.btn-action-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    background: #3b82f6;
+    color: white;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+.btn-action-sm:hover {
+    background: #2563eb;
+}
+
+.empty-state {
+    padding: 4rem 2rem;
+    text-align: center;
+    color: #6b7280;
+}
+.empty-state svg {
+    margin: 0 auto 1rem;
+    opacity: 0.3;
+    color: #9ca3af;
+}
+.empty-state h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    color: #374151;
+}
+.empty-state p {
+    font-size: 0.9375rem;
+    margin: 0;
+}
+</style>
+{% endblock %}

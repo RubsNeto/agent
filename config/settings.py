@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     "ui",
     "audit",
     "admin_panel",
-    # "payments",  # TODO v2: Stripe payments
+    "payments",  # Asaas + Mercado Pago integration
 ]
 
 MIDDLEWARE = [
@@ -186,8 +186,23 @@ EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY", "")
 # Gemini AI Settings
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-# TODO v2: Stripe Connect Settings
-# STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
-# STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
-# STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+# Asaas Settings (Assinaturas SaaS)
+ASAAS_API_KEY = os.getenv("ASAAS_API_KEY", "")
+ASAAS_WEBHOOK_TOKEN = os.getenv("ASAAS_WEBHOOK_TOKEN", "asaas_webhook_pandia_2025_secure")
+ASAAS_ENVIRONMENT = os.getenv("ASAAS_ENVIRONMENT", "production")  # sandbox ou production
+ASAAS_API_URL = (
+    "https://api.asaas.com/v3" 
+    if ASAAS_ENVIRONMENT == "production" 
+    else "https://sandbox.asaas.com/api/v3"
+)
+
+# Asaas Subscription Settings
+ASAAS_SUBSCRIPTION_VALUE = float(os.getenv("ASAAS_SUBSCRIPTION_VALUE", "0"))  # R$ por mês
+ASAAS_SUBSCRIPTION_CYCLE = os.getenv("ASAAS_SUBSCRIPTION_CYCLE", "MONTHLY")  # MONTHLY, WEEKLY, etc
+
+# Stripe Connect Settings (Legado - mantido para retrocompatibilidade)
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+
 

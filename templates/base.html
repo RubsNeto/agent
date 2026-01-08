@@ -114,6 +114,29 @@
                         </a>
                     </li>
                 </ul>
+                <div class="sidebar-divider">FINANCEIRO</div>
+                <ul>
+                    <li>
+                        <a href="{% url 'payments:subscription_status' %}"
+                            class="{% if 'assinatura' in request.path %}active{% endif %}">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Assinatura
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'payments:mercadopago_config' %}"
+                            class="{% if 'mercadopago' in request.path %}active{% endif %}">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            Pagamentos
+                        </a>
+                    </li>
+                </ul>
                 {# TODO v2: Pagamentos Stripe - descomentar seção quando implementar #}
                 <div class="sidebar-divider">OUTROS</div>
                 <ul>
