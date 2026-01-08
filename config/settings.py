@@ -20,7 +20,23 @@ DEBUG = os.getenv("DEBUG", "1") == "1"
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()] if not DEBUG else ["*"]
 ALLOWED_HOSTS.append("petra-nonlogistical-freeman.ngrok-free.dev")
-CSRF_TRUSTED_ORIGINS = ["https://petra-nonlogistical-freeman.ngrok-free.dev"]
+
+# Configurações de Proxy e SSL (Traefik)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+# CSRF e Cookies
+CSRF_TRUSTED_ORIGINS = [
+    "https://pandia.com.br",
+    "https://www.pandia.com.br",
+    "https://petra-nonlogistical-freeman.ngrok-free.dev"
+]
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = False  # Traefik já faz isso
+
 
 # Application definition
 INSTALLED_APPS = [
@@ -145,11 +161,11 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # Backend padrão como fallback
 ]
 
-# CSRF Trusted Origins
+# CSRF Trusted Origins (Legacy env var support)
 csrf_origins = os.getenv("CSRF_TRUSTED_ORIGINS", "")
-CSRF_TRUSTED_ORIGINS = []
 if csrf_origins:
-    CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins.split(",") if origin.strip()]
+    extra_origins = [origin.strip() for origin in csrf_origins.split(",") if origin.strip()]
+    CSRF_TRUSTED_ORIGINS.extend(extra_origins)
 
 # Adicionar ngrok URLs (aceitar qualquer subdomínio ngrok em desenvolvimento)
 if DEBUG:
