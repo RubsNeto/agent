@@ -30,6 +30,8 @@ services:
       - sqlite_data:/app/data
       # Media files (uploads)
       - media_data:/app/media
+      # Environment file (para dotenv ler as secrets)
+      - /opt/apps/agentesai/agent/.env:/app/.env:ro
     networks:
       - mysellerynet
     deploy:
