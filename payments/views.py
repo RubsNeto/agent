@@ -261,6 +261,7 @@ def create_subscription(request):
             asaas_sub = asaas_service.create_subscription(
                 customer_id=subscription.asaas_customer_id,
                 billing_type=billing_type,
+                value=subscription.plan_value,
                 description=f"Assinatura Pandia - {padaria.name}",
             )
             
