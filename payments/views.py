@@ -258,10 +258,26 @@ def create_subscription(request):
         if not subscription.asaas_subscription_id:
             billing_type = request.POST.get('billing_type', 'PIX')
             
+            # Garantir que o valor não seja zero (pode ter sido criado vazio antes)
+            if not subscription.plan_value or subscription.plan_value <= 0:
+                print(f"DEBUG: Valor incorreto ({subscription.plan_value}), atualizando para settings ({settings.ASAAS_SUBSCRIPTION_VALUE})")
+                subscription.plan_value = settings.ASAAS_SUBSCRIPTION_VALUE
+                subscription.save()
+
+            # Se o valor for 0 ou menor, é plano gratuito
+            if subscription.plan_value <= 0:
+                print("DEBUG: Plano Gratuito detectado. Ativando sem Asaas.")
+                subscription.status = 'active'
+                subscription.save()
+                messages.success(request, "Plano gratuito ativado com sucesso!")
+                return redirect('payments:subscription_status')
+
+            print(f"DEBUG: Criando assinatura Asaas com value={subscription.plan_value}")
+
             asaas_sub = asaas_service.create_subscription(
                 customer_id=subscription.asaas_customer_id,
                 billing_type=billing_type,
-                value=subscription.plan_value,
+                value=float(subscription.plan_value),
                 description=f"Assinatura Pandia - {padaria.name}",
             )
             
@@ -269,15 +285,20 @@ def create_subscription(request):
             subscription.billing_type = billing_type
             subscription.next_due_date = asaas_sub.get('nextDueDate')
             subscription.status = 'pending'
-            subscription.save()
             
-            messages.success(request, "Assinatura criada com sucesso!")
-        
-        # Buscar pagamentos pendentes
-        if subscription.asaas_subscription_id:
-            payments_data = asaas_service.get_subscription_payments(
-                subscription.asaas_subscription_id
-            )
+            # Tenta pegar o link do pagamento inicial se tiver cobranca imediata
+            payments_data = asaas_service.get_subscription_payments(subscription.asaas_subscription_id)
+            for payment_data in payments_data.get('data', []):
+                if payment_data.get('status') in ['PENDING', 'OVERDUE']:
+                    invoice_url = payment_data.get('invoiceUrl')
+                    if invoice_url:
+                        subscription.current_payment_link = invoice_url
+                        subscription.save()
+                        print(f"DEBUG: Redirecionando para checkout Asaas: {invoice_url}")
+                        return redirect(invoice_url)
+            
+            subscription.save()
+            messages.success(request, "Assinatura criada com sucesso! Aguardando pagamento.")
             
             for payment_data in payments_data.get('data', []):
                 if payment_data.get('status') in ['PENDING', 'OVERDUE']:
