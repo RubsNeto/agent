@@ -49,7 +49,7 @@ services:
         - "traefik.http.routers.agentesai.rule=Host(`pandia.com.br`) || Host(`www.pandia.com.br`)"
         - "traefik.http.routers.agentesai.entrypoints=websecure"
         - "traefik.http.routers.agentesai.tls=true"
-        - "traefik.http.routers.agentesai.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.agentesai.tls.certresolver=letsencryptresolver"
         # Service
         - "traefik.http.services.agentesai.loadbalancer.server.port=8000"
         # Middleware redirect
