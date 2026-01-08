@@ -19,6 +19,7 @@ urlpatterns = [
     
     # === Páginas de status ===
     path('success/', views.payment_success, name='success'),
+    path('assinatura/success/', views.payment_success, name='subscription_success'),
     path('cancel/', views.payment_cancel, name='cancel'),
     
     # === Legado (Stripe) - Mantidos para compatibilidade ===

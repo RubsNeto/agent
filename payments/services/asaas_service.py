@@ -120,6 +120,8 @@ class AsaasService:
         cycle: str = None,
         description: str = "Assinatura Pandia",
         next_due_date: str = None,
+        external_reference: str = None,
+        callback_url: str = None,
     ) -> Dict[str, Any]:
         """
         Cria uma assinatura recorrente para o cliente.
@@ -131,6 +133,8 @@ class AsaasService:
             cycle: Ciclo de cobrança (MONTHLY, WEEKLY, etc)
             description: Descrição da assinatura
             next_due_date: Data do primeiro vencimento (YYYY-MM-DD)
+            external_reference: Referência externa (slug da padaria)
+            callback_url: URL para redirecionar após pagamento
         
         Returns:
             Dict com dados da assinatura, incluindo 'id' (asaas_subscription_id)
@@ -151,6 +155,17 @@ class AsaasService:
             "description": description,
             "nextDueDate": next_due_date,
         }
+        
+        # Adicionar referência externa para identificar a padaria
+        if external_reference:
+            data["externalReference"] = external_reference
+        
+        # Configurar callbacks (redirecionamento após pagamento)
+        if callback_url:
+            data["callback"] = {
+                "successUrl": callback_url,
+                "autoRedirect": True,
+            }
         
         return self._request("POST", "subscriptions", data)
     

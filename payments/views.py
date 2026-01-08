@@ -94,6 +94,21 @@ def subscription_status(request):
         }
     )
     
+    # Sincronizar status com o Asaas (verifica se pagamento foi confirmado)
+    if subscription.asaas_subscription_id and subscription.status != 'active':
+        try:
+            sync_subscription_status(subscription)
+        except Exception as e:
+            print(f"DEBUG: Erro ao sincronizar status: {e}")
+    
+    # Corrigir data de vencimento se estiver incorreta (mais de 35 dias no futuro)
+    if subscription.status == 'active' and subscription.next_due_date:
+        days_until_due = (subscription.next_due_date - timezone.now().date()).days
+        if days_until_due > 35:  # Se está mais de 35 dias no futuro, está errado
+            print(f"DEBUG: Corrigindo data de vencimento de {subscription.next_due_date} para 30 dias")
+            subscription.next_due_date = timezone.now().date() + timezone.timedelta(days=30)
+            subscription.save(update_fields=['next_due_date', 'updated_at'])
+    
     # Histórico de pagamentos
     payments = AsaasPayment.objects.filter(
         subscription=subscription
@@ -117,6 +132,50 @@ def subscription_status(request):
     }
     
     return render(request, 'payments/subscription_status.html', context)
+
+
+def sync_subscription_status(subscription):
+    """
+    Sincroniza o status da assinatura com o Asaas.
+    Verifica se há pagamentos confirmados e atualiza o status local.
+    """
+    if not subscription.asaas_subscription_id:
+        return
+    
+    try:
+        # Buscar pagamentos da assinatura no Asaas
+        payments_data = asaas_service.get_subscription_payments(
+            subscription.asaas_subscription_id
+        )
+        
+        for payment_data in payments_data.get('data', []):
+            payment_status = payment_data.get('status', '')
+            
+            # Se há um pagamento confirmado/recebido, ativar assinatura
+            if payment_status in ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH']:
+                subscription.status = 'active'
+                subscription.last_payment_date = timezone.now().date()
+                
+                # Atualizar próximo vencimento (30 dias a partir de HOJE, não da data original)
+                subscription.next_due_date = timezone.now().date() + timezone.timedelta(days=30)
+                
+                # Limpar link de pagamento pendente
+                subscription.current_payment_link = ''
+                subscription.current_payment_id = ''
+                subscription.save()
+                
+                print(f"DEBUG: Assinatura {subscription.id} ativada via sincronização")
+                return  # Encontrou pagamento confirmado, pode parar
+            
+            # Se há pagamento vencido
+            elif payment_status == 'OVERDUE':
+                if subscription.status != 'active':
+                    subscription.status = 'overdue'
+                    subscription.save()
+                    print(f"DEBUG: Assinatura {subscription.id} marcada como inadimplente")
+                    
+    except Exception as e:
+        print(f"DEBUG: Erro ao sincronizar com Asaas: {e}")
 
 
 @login_required
@@ -234,6 +293,18 @@ def create_subscription(request):
             messages.info(request, "A assinatura já está ativa!")
             return redirect('payments:subscription_status')
         
+        # Se a assinatura estava cancelada, limpar dados antigos para reativar
+        if subscription.status == 'cancelled':
+            print(f"DEBUG: Reativando assinatura cancelada para {padaria.name}")
+            # Limpar IDs do Asaas antigos para criar nova assinatura
+            subscription.asaas_subscription_id = ''
+            subscription.current_payment_link = ''
+            subscription.current_payment_id = ''
+            subscription.status = 'pending'
+            subscription.plan_value = settings.ASAAS_SUBSCRIPTION_VALUE
+            subscription.save()
+            messages.info(request, "Reativando sua assinatura...")
+        
         # Se não tem customer_id, criar no Asaas
         if not subscription.asaas_customer_id:
             # Usar email da padaria ou do owner
@@ -272,13 +343,25 @@ def create_subscription(request):
                 messages.success(request, "Plano gratuito ativado com sucesso!")
                 return redirect('payments:subscription_status')
 
+
             print(f"DEBUG: Criando assinatura Asaas com value={subscription.plan_value}")
 
+            # Construir URL de callback para redirecionar após pagamento
+            # Só envia callback se não estiver em localhost (evita erro de domínio no sandbox)
+            callback_url = None
+            host = request.get_host()
+            if 'localhost' not in host and '127.0.0.1' not in host:
+                callback_url = request.build_absolute_uri(
+                    f"/payments/success/?padaria={padaria.slug}"
+                )
+            
             asaas_sub = asaas_service.create_subscription(
                 customer_id=subscription.asaas_customer_id,
                 billing_type=billing_type,
                 value=float(subscription.plan_value),
                 description=f"Assinatura Pandia - {padaria.name}",
+                external_reference=padaria.slug,
+                callback_url=callback_url,
             )
             
             subscription.asaas_subscription_id = asaas_sub.get('id')
@@ -292,10 +375,26 @@ def create_subscription(request):
                 if payment_data.get('status') in ['PENDING', 'OVERDUE']:
                     invoice_url = payment_data.get('invoiceUrl')
                     if invoice_url:
-                        subscription.current_payment_link = invoice_url
+                        # Adicionar parâmetro para forçar o tipo de pagamento na URL
+                        # O Asaas aceita #paymentType= no final da URL
+                        payment_type_map = {
+                            'PIX': 'PIX',
+                            'CREDIT_CARD': 'CREDIT_CARD',
+                            'BOLETO': 'BOLETO',
+                        }
+                        payment_type_param = payment_type_map.get(billing_type, 'PIX')
+                        
+                        # Remover hash existente se houver e adicionar o novo
+                        if '#' in invoice_url:
+                            invoice_url = invoice_url.split('#')[0]
+                        
+                        # Adicionar o parâmetro de tipo de pagamento
+                        invoice_url_with_type = f"{invoice_url}#paymentType={payment_type_param}"
+                        
+                        subscription.current_payment_link = invoice_url_with_type
                         subscription.save()
-                        print(f"DEBUG: Redirecionando para checkout Asaas: {invoice_url}")
-                        return redirect(invoice_url)
+                        print(f"DEBUG: Redirecionando para checkout Asaas ({billing_type}): {invoice_url_with_type}")
+                        return redirect(invoice_url_with_type)
             
             subscription.save()
             messages.success(request, "Assinatura criada com sucesso! Aguardando pagamento.")
@@ -304,6 +403,12 @@ def create_subscription(request):
                 if payment_data.get('status') in ['PENDING', 'OVERDUE']:
                     payment_url = payment_data.get('invoiceUrl', '')
                     if payment_url:
+                        # Aplicar mesmo tratamento de tipo de pagamento
+                        payment_type_param = {'PIX': 'PIX', 'CREDIT_CARD': 'CREDIT_CARD', 'BOLETO': 'BOLETO'}.get(billing_type, 'PIX')
+                        if '#' in payment_url:
+                            payment_url = payment_url.split('#')[0]
+                        payment_url = f"{payment_url}#paymentType={payment_type_param}"
+                        
                         subscription.current_payment_link = payment_url
                         subscription.save()
                         messages.info(request, "Link de pagamento disponível!")
@@ -327,7 +432,12 @@ def cancel_subscription(request):
     Cancela assinatura e envia email para suporte.
     Qualquer membro da padaria pode solicitar cancelamento.
     """
+    print(f"DEBUG: cancel_subscription chamada")
+    print(f"DEBUG: POST data: {request.POST}")
+    
     padaria_slug = request.POST.get('padaria_slug') or request.GET.get('padaria')
+    print(f"DEBUG: padaria_slug = {padaria_slug}")
+    
     padaria = get_user_padaria(request.user, padaria_slug)
     
     if not padaria:
@@ -396,6 +506,9 @@ Este é um email automático do sistema Pandia.
     except Exception as e:
         messages.error(request, f"Erro ao cancelar: {str(e)}")
     
+    # Redirecionar com o slug da padaria
+    if padaria_slug:
+        return redirect(f"/payments/assinatura/?padaria={padaria_slug}")
     return redirect('payments:subscription_status')
 
 
@@ -427,9 +540,17 @@ def subscription_payment_link(request):
             
             for payment_data in payments_data.get('data', []):
                 if payment_data.get('status') in ['PENDING', 'OVERDUE']:
+                    payment_url = payment_data.get('invoiceUrl', '')
+                    
+                    # Adicionar parâmetro de tipo de pagamento
+                    if payment_url and subscription.billing_type:
+                        if '#' in payment_url:
+                            payment_url = payment_url.split('#')[0]
+                        payment_url = f"{payment_url}#paymentType={subscription.billing_type}"
+                    
                     return JsonResponse({
                         'success': True,
-                        'payment_url': payment_data.get('invoiceUrl', ''),
+                        'payment_url': payment_url,
                     })
         
         return JsonResponse({
@@ -640,10 +761,39 @@ def stripe_dashboard(request):
 
 
 def payment_success(request):
-    """Página de sucesso."""
+    """Página de sucesso após pagamento confirmado."""
+    # Tentar buscar a assinatura do usuário
+    padaria = None
+    subscription = None
+    
+    if request.user.is_authenticated:
+        padaria_slug = request.GET.get('padaria')
+        padaria = get_user_padaria(request.user, padaria_slug)
+        
+        if padaria:
+            subscription = AsaasSubscription.objects.filter(padaria=padaria).first()
+    
+    # Se temos assinatura, mostrar página detalhada
+    if padaria and subscription:
+        return render(request, 'payments/subscription_success.html', {
+            'padaria': padaria,
+            'subscription': subscription,
+        })
+    
+    # Fallback para página genérica
     return render(request, 'payments/success.html')
 
 
 def payment_cancel(request):
-    """Página de cancelamento."""
+    """Página de cancelamento/erro no pagamento."""
+    messages.warning(request, "O pagamento não foi concluído. Você pode tentar novamente.")
+    
+    if request.user.is_authenticated:
+        padaria_slug = request.GET.get('padaria')
+        padaria = get_user_padaria(request.user, padaria_slug)
+        
+        if padaria:
+            return redirect(f"/payments/assinatura/?padaria={padaria.slug}")
+    
     return render(request, 'payments/cancel.html')
+
