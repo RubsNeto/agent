@@ -3,6 +3,7 @@ Views para integração de pagamentos - Asaas + Mercado Pago.
 Gerencia assinaturas do SaaS e configuração de MP por padaria.
 """
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
@@ -291,10 +292,10 @@ def create_subscription(request):
     except Exception as e:
         messages.error(request, f"Erro inesperado: {str(e)}")
     
-    redirect_url = 'payments:subscription_status'
     if padaria_slug:
-        return redirect(f"{redirect_url}?padaria={padaria.slug}")
-    return redirect(redirect_url)
+        base_url = reverse('payments:subscription_status')
+        return redirect(f"{base_url}?padaria={padaria.slug}")
+    return redirect('payments:subscription_status')
 
 
 @login_required
