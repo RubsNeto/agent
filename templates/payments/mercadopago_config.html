@@ -187,29 +187,29 @@
         </div>
         <div class="card-body" style="padding: 0;">
             {% if recent_payments %}
-            <table class="data-table" style="width: 100%;">
+            <table class="data-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                 <thead>
                     <tr>
-                        <th style="padding: 1rem;">Data</th>
-                        <th style="padding: 1rem;">Descrição</th>
-                        <th style="padding: 1rem;">Valor</th>
-                        <th style="padding: 1rem;">Status</th>
-                        <th style="padding: 1rem;">Link</th>
+                        <th style="padding: 1rem; text-align: left; width: 18%;">Data</th>
+                        <th style="padding: 1rem; text-align: left; width: 35%;">Descrição</th>
+                        <th style="padding: 1rem; text-align: center; width: 15%;">Valor</th>
+                        <th style="padding: 1rem; text-align: center; width: 15%;">Status</th>
+                        <th style="padding: 1rem; text-align: center; width: 17%;">Link</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for payment in recent_payments %}
                     <tr>
-                        <td style="padding: 1rem;">{{ payment.created_at|date:"d/m/Y H:i" }}</td>
-                        <td style="padding: 1rem;">{{ payment.description|truncatechars:30 }}</td>
-                        <td style="padding: 1rem;">R$ {{ payment.amount|floatformat:2 }}</td>
-                        <td style="padding: 1rem;">
+                        <td style="padding: 1rem; text-align: left;">{{ payment.created_at|date:"d/m/Y H:i" }}</td>
+                        <td style="padding: 1rem; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ payment.description|truncatechars:30 }}</td>
+                        <td style="padding: 1rem; text-align: center;">R$ {{ payment.amount|floatformat:2 }}</td>
+                        <td style="padding: 1rem; text-align: center;">
                             <span
                                 class="badge {% if payment.status == 'approved' %}badge-success{% elif payment.status == 'pending' %}badge-warning{% else %}badge-secondary{% endif %}">
                                 {{ payment.get_status_display }}
                             </span>
                         </td>
-                        <td style="padding: 1rem;">
+                        <td style="padding: 1rem; text-align: center;">
                             {% if payment.checkout_url %}
                             <a href="{{ payment.checkout_url }}" target="_blank" class="btn btn-sm btn-outline">
                                 Abrir Link
@@ -295,6 +295,147 @@
 </style>
 
 <script>
+    // Variável para armazenar o ID do pagamento sendo monitorado
+    let currentPaymentId = null;
+    let pollingInterval = null;
+
+    // Toast notification
+    function showToast(message, type = 'success') {
+        // Remover toast existente
+        const existingToast = document.getElementById('paymentToast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        const toast = document.createElement('div');
+        toast.id = 'paymentToast';
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            ${type === 'success' 
+                ? 'background: linear-gradient(135deg, #10b981, #059669);' 
+                : 'background: linear-gradient(135deg, #3b82f6, #2563eb);'}
+        `;
+        
+        const icon = type === 'success' ? '✅' : 'ℹ️';
+        toast.innerHTML = `<span style="font-size: 1.25rem;">${icon}</span><span>${message}</span>`;
+        
+        document.body.appendChild(toast);
+        
+        // Remover após 5 segundos
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+
+    // CSS para animação do toast
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Função para verificar status do pagamento
+    async function checkPaymentStatus(paymentId) {
+        try {
+            const response = await fetch(`/payments/mercadopago/status/${paymentId}/`);
+            const data = await response.json();
+            
+            if (data.success) {
+                if (data.status === 'approved') {
+                    // Pagamento aprovado!
+                    stopPolling();
+                    showToast('🎉 Pagamento aprovado com sucesso!', 'success');
+                    
+                    // Atualizar a tabela (recarregar a página após 2 segundos)
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else if (data.status === 'rejected' || data.status === 'cancelled') {
+                    stopPolling();
+                    showToast('Pagamento não aprovado: ' + data.status_display, 'info');
+                }
+            }
+        } catch (error) {
+            console.log('Erro ao verificar status:', error);
+        }
+    }
+
+    // Iniciar polling
+    function startPolling(paymentId) {
+        currentPaymentId = paymentId;
+        
+        // Mostrar indicador de monitoramento
+        const resultDiv = document.getElementById('paymentLinkResult');
+        if (resultDiv) {
+            let monitoringIndicator = document.getElementById('monitoringIndicator');
+            if (!monitoringIndicator) {
+                monitoringIndicator = document.createElement('p');
+                monitoringIndicator.id = 'monitoringIndicator';
+                monitoringIndicator.style.cssText = 'margin-top: 1rem; color: #3b82f6; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem;';
+                monitoringIndicator.innerHTML = `
+                    <span class="pulse-dot" style="width: 10px; height: 10px; background: #3b82f6; border-radius: 50%; animation: pulse 1.5s infinite;"></span>
+                    Aguardando confirmação do pagamento...
+                `;
+                resultDiv.appendChild(monitoringIndicator);
+                
+                // Adicionar CSS para pulse
+                const pulseStyle = document.createElement('style');
+                pulseStyle.textContent = `
+                    @keyframes pulse {
+                        0% { opacity: 1; transform: scale(1); }
+                        50% { opacity: 0.5; transform: scale(1.2); }
+                        100% { opacity: 1; transform: scale(1); }
+                    }
+                `;
+                document.head.appendChild(pulseStyle);
+            }
+        }
+        
+        // Verificar a cada 5 segundos
+        pollingInterval = setInterval(() => {
+            checkPaymentStatus(paymentId);
+        }, 5000);
+        
+        // Parar polling após 10 minutos (600000ms)
+        setTimeout(() => {
+            stopPolling();
+        }, 600000);
+    }
+
+    // Parar polling
+    function stopPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+        
+        // Remover indicador
+        const indicator = document.getElementById('monitoringIndicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
     document.getElementById('createPaymentForm')?.addEventListener('submit', async function (e) {
         e.preventDefault();
 
@@ -304,6 +445,9 @@
 
         submitBtn.innerHTML = 'Gerando...';
         submitBtn.disabled = true;
+
+        // Parar polling anterior se existir
+        stopPolling();
 
         try {
             const response = await fetch('{% url "payments:mercadopago_create_payment" %}', {
@@ -324,6 +468,11 @@
 
                 // Limpar formulário
                 this.reset();
+
+                // Iniciar polling para monitorar o status
+                if (data.payment_id) {
+                    startPolling(data.payment_id);
+                }
             } else {
                 alert('Erro: ' + (data.error || 'Erro desconhecido'));
             }
@@ -339,7 +488,7 @@
         const linkInput = document.getElementById('generatedLink');
         linkInput.select();
         document.execCommand('copy');
-        alert('Link copiado!');
+        showToast('Link copiado para a área de transferência!', 'info');
     }
 </script>
 {% endblock %}

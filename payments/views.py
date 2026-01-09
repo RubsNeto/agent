@@ -653,6 +653,93 @@ def mercadopago_test_connection(request):
 
 
 @login_required
+def mercadopago_payment_status(request, payment_id):
+    """
+    Retorna o status atual de um pagamento Mercado Pago.
+    Usado pelo frontend para polling e atualização automática.
+    
+    Se o pagamento ainda estiver 'pending', consulta a API do MP diretamente
+    para verificar se foi pago (bypass para quando webhook não funciona em localhost).
+    """
+    padaria_slug = request.GET.get('padaria')
+    padaria = get_user_padaria(request.user, padaria_slug)
+    
+    if not padaria:
+        return JsonResponse({'error': 'Padaria não encontrada'}, status=400)
+    
+    try:
+        mp_config = padaria.mercadopago_config
+        payment = MercadoPagoPayment.objects.get(
+            id=payment_id,
+            config=mp_config
+        )
+        
+        # Se ainda está pendente, verificar diretamente na API do MP
+        # APENAS para pagamentos que têm external_reference (criados após a correção)
+        if payment.status == 'pending':
+            try:
+                # Usar external_reference se disponível (armazenado em pix_qr_code)
+                external_ref = payment.pix_qr_code if payment.pix_qr_code and payment.pix_qr_code.startswith('pandia_') else None
+                
+                # Só consultar API se tiver external_reference (para evitar falsos positivos)
+                if external_ref:
+                    mp_service = MercadoPagoService(mp_config.access_token)
+                    
+                    print(f"DEBUG: Buscando por external_reference: {external_ref}")
+                    search_result = mp_service.search_payments(
+                        external_reference=external_ref,
+                        limit=5
+                    )
+                    
+                    # Verificar se encontrou o pagamento específico
+                    for mp_payment_data in search_result.get('results', []):
+                        mp_status = mp_payment_data.get('status', '')
+                        mp_external_ref = mp_payment_data.get('external_reference', '')
+                        
+                        # Match APENAS por external_reference (é único)
+                        if mp_external_ref == external_ref:
+                            print(f"DEBUG: Match por external_reference! Status: {mp_status}")
+                            
+                            if mp_status in ['approved', 'authorized']:
+                                # Pagamento aprovado! Atualizar banco
+                                payment.status = 'approved'
+                                payment.mp_payment_id = str(mp_payment_data.get('id', ''))
+                                payment.paid_at = timezone.now()
+                                payment.save()
+                                
+                                print(f"DEBUG: Pagamento {payment.id} atualizado para approved via polling direto")
+                                break
+                            elif mp_status in ['rejected', 'cancelled', 'refunded']:
+                                payment.status = mp_status
+                                payment.mp_payment_id = str(mp_payment_data.get('id', ''))
+                                payment.save()
+                                print(f"DEBUG: Pagamento {payment.id} atualizado para {mp_status}")
+                                break
+                else:
+                    # Pagamento antigo sem external_reference - não atualizar automaticamente
+                    print(f"DEBUG: Pagamento {payment.id} sem external_reference, ignorando polling")
+                            
+            except Exception as e:
+                print(f"DEBUG: Erro ao consultar MP API: {e}")
+                import traceback
+                traceback.print_exc()
+                # Continua e retorna o status atual do banco
+        
+        return JsonResponse({
+            'success': True,
+            'payment_id': payment.id,
+            'status': payment.status,
+            'status_display': payment.get_status_display(),
+            'paid_at': payment.paid_at.isoformat() if payment.paid_at else None,
+        })
+        
+    except MercadoPagoConfig.DoesNotExist:
+        return JsonResponse({'error': 'Mercado Pago não configurado'}, status=404)
+    except MercadoPagoPayment.DoesNotExist:
+        return JsonResponse({'error': 'Pagamento não encontrado'}, status=404)
+
+
+@login_required
 @require_http_methods(["POST"])
 def mercadopago_create_payment(request):
     """
@@ -678,6 +765,16 @@ def mercadopago_create_payment(request):
         if amount <= 0:
             return JsonResponse({'error': 'Valor inválido'}, status=400)
         
+        # Construir notification_url para receber webhook
+        notification_url = None
+        host = request.get_host()
+        if 'localhost' not in host and '127.0.0.1' not in host:
+            notification_url = request.build_absolute_uri('/webhooks/mercadopago/')
+        
+        # Gerar external_reference único para identificar o pagamento
+        import uuid
+        external_reference = f"pandia_{padaria.slug}_{uuid.uuid4().hex[:8]}"
+        
         # Criar preferência no MP
         mp_service = MercadoPagoService(mp_config.access_token)
         preference = mp_service.create_preference(
@@ -685,6 +782,8 @@ def mercadopago_create_payment(request):
             amount=amount,
             description=description,
             payer_email=payer_email if payer_email else None,
+            notification_url=notification_url,
+            external_reference=external_reference,
         )
         
         # Salvar no banco
@@ -697,6 +796,10 @@ def mercadopago_create_payment(request):
             checkout_url=preference.get('init_point', ''),
             status='pending',
         )
+        
+        # Armazenar external_reference no pix_qr_code (campo livre) para poder buscar depois
+        mp_payment.pix_qr_code = external_reference
+        mp_payment.save()
         
         return JsonResponse({
             'success': True,

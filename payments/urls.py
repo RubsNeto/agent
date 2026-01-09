@@ -17,6 +17,7 @@ urlpatterns = [
     path('mercadopago/', views.mercadopago_config, name='mercadopago_config'),
     path('mercadopago/testar/', views.mercadopago_test_connection, name='mercadopago_test'),
     path('mercadopago/criar-pagamento/', views.mercadopago_create_payment, name='mercadopago_create_payment'),
+    path('mercadopago/status/<int:payment_id>/', views.mercadopago_payment_status, name='mercadopago_payment_status'),
     
     # === Páginas de status ===
     path('success/', views.payment_success, name='success'),
