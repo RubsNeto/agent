@@ -396,23 +396,10 @@ def create_subscription(request):
                         print(f"DEBUG: Redirecionando para checkout Asaas ({billing_type}): {invoice_url_with_type}")
                         return redirect(invoice_url_with_type)
             
+            # Se não encontrou link de pagamento pendente, apenas salva
+            # (link pode vir depois via webhook)
             subscription.save()
             messages.success(request, "Assinatura criada com sucesso! Aguardando pagamento.")
-            
-            for payment_data in payments_data.get('data', []):
-                if payment_data.get('status') in ['PENDING', 'OVERDUE']:
-                    payment_url = payment_data.get('invoiceUrl', '')
-                    if payment_url:
-                        # Aplicar mesmo tratamento de tipo de pagamento
-                        payment_type_param = {'PIX': 'PIX', 'CREDIT_CARD': 'CREDIT_CARD', 'BOLETO': 'BOLETO'}.get(billing_type, 'PIX')
-                        if '#' in payment_url:
-                            payment_url = payment_url.split('#')[0]
-                        payment_url = f"{payment_url}#paymentType={payment_type_param}"
-                        
-                        subscription.current_payment_link = payment_url
-                        subscription.save()
-                        messages.info(request, "Link de pagamento disponível!")
-                        break
         
     except AsaasAPIError as e:
         messages.error(request, f"Erro ao criar assinatura: {e.message}")

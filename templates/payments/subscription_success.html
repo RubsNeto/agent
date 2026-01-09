@@ -71,8 +71,7 @@
             </div>
             <div class="detail-content">
                 <span class="detail-label">Próximo Pagamento</span>
-                <span class="detail-value">{% if subscription.next_due_date %}{{ subscription.next_due_date|date:"d/m/Y"
-                    }}{% else %}em 30 dias{% endif %}</span>
+                <span class="detail-value">{% if subscription.next_due_date %}{{ subscription.next_due_date|date:"d/m/Y" }}{% else %}em 30 dias{% endif %}</span>
             </div>
         </div>
     </div>
