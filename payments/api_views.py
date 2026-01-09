@@ -299,6 +299,9 @@ def create_payment_link(request):
     Cria link de pagamento (checkout) via Mercado Pago.
     Endpoint para integração com n8n/WhatsApp.
     
+    O n8n envia os produtos e quantidades, o sistema busca os preços
+    no banco e gera o link com o total calculado.
+    
     POST /payments/api/generate-link/
     
     Headers:
@@ -307,9 +310,10 @@ def create_payment_link(request):
     Body:
     {
         "padaria_slug": "padaria-do-marcos",
-        "title": "Pão Francês",
-        "amount": 5.00,
-        "description": "10 unidades de pão francês",  // opcional
+        "items": [
+            {"nome": "Pão Francês", "quantidade": 10},
+            {"nome": "Bolo de Chocolate", "quantidade": 1}
+        ],
         "payer_email": "cliente@email.com"  // opcional
     }
     
@@ -318,9 +322,13 @@ def create_payment_link(request):
         "success": true,
         "payment_id": 15,
         "checkout_url": "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=...",
-        "title": "Pão Francês",
-        "amount": 5.00,
-        "description": "10 unidades de pão francês",
+        "title": "Pedido Padaria",
+        "total": 35.00,
+        "items": [
+            {"nome": "Pão Francês", "quantidade": 10, "preco_unitario": 0.50, "subtotal": 5.00},
+            {"nome": "Bolo de Chocolate", "quantidade": 1, "preco_unitario": 30.00, "subtotal": 30.00}
+        ],
+        "description": "10x Pão Francês, 1x Bolo de Chocolate",
         "status": "pending",
         "created_at": "2026-01-09T16:30:00Z"
     }
@@ -331,6 +339,8 @@ def create_payment_link(request):
         "error": "Descrição do erro"
     }
     """
+    from organizations.models import Produto
+    
     try:
         # Parse do body JSON
         try:
@@ -343,9 +353,7 @@ def create_payment_link(request):
         
         # Validar campos obrigatórios
         padaria_slug = data.get("padaria_slug")
-        title = data.get("title")
-        amount = data.get("amount")
-        description = data.get("description", "")
+        items = data.get("items", [])
         payer_email = data.get("payer_email", "")
         
         if not padaria_slug:
@@ -354,20 +362,10 @@ def create_payment_link(request):
                 "error": "Campo 'padaria_slug' é obrigatório"
             }, status=400)
         
-        if not title:
+        if not items or not isinstance(items, list):
             return JsonResponse({
                 "success": False,
-                "error": "Campo 'title' é obrigatório"
-            }, status=400)
-        
-        try:
-            amount = float(amount)
-            if amount <= 0:
-                raise ValueError("Valor deve ser maior que zero")
-        except (TypeError, ValueError) as e:
-            return JsonResponse({
-                "success": False,
-                "error": f"Campo 'amount' inválido: {str(e)}"
+                "error": "Campo 'items' é obrigatório e deve ser uma lista de produtos"
             }, status=400)
         
         # Buscar padaria
@@ -393,6 +391,102 @@ def create_payment_link(request):
                 "error": "Mercado Pago não configurado para esta padaria"
             }, status=400)
         
+        # Processar itens e buscar preços no banco
+        items_processados = []
+        items_nao_encontrados = []
+        total = 0.0
+        descricao_itens = []
+        
+        for item in items:
+            nome = item.get("nome", "").strip()
+            produto_id = item.get("id")  # Também aceita ID do produto
+            quantidade = item.get("quantidade", 1)
+            
+            if not nome and not produto_id:
+                continue
+            
+            try:
+                quantidade = int(quantidade)
+                if quantidade <= 0:
+                    quantidade = 1
+            except (TypeError, ValueError):
+                quantidade = 1
+            
+            # Buscar produto no banco (por ID ou por nome)
+            produto = None
+            try:
+                if produto_id:
+                    produto = Produto.objects.get(id=produto_id, padaria=padaria, ativo=True)
+                else:
+                    # Busca por nome (case-insensitive, parcial)
+                    produto = Produto.objects.filter(
+                        padaria=padaria,
+                        nome__icontains=nome,
+                        ativo=True
+                    ).first()
+                    
+                    # Se não encontrou parcial, tenta exato
+                    if not produto:
+                        produto = Produto.objects.filter(
+                            padaria=padaria,
+                            nome__iexact=nome,
+                            ativo=True
+                        ).first()
+            except Produto.DoesNotExist:
+                pass
+            
+            if produto and produto.preco:
+                preco_original = float(produto.preco)
+                preco_unitario = preco_original
+                em_promocao = False
+                
+                # Verificar se o produto tem promoção ativa
+                from organizations.models import Promocao
+                promocao_ativa = Promocao.objects.filter(
+                    produto=produto,
+                    is_active=True
+                ).first()
+                
+                if promocao_ativa and promocao_ativa.is_valid() and promocao_ativa.preco:
+                    preco_unitario = float(promocao_ativa.preco)
+                    em_promocao = True
+                
+                subtotal = preco_unitario * quantidade
+                total += subtotal
+                
+                item_data = {
+                    "id": produto.id,
+                    "nome": produto.nome,
+                    "quantidade": quantidade,
+                    "preco_unitario": round(preco_unitario, 2),
+                    "subtotal": round(subtotal, 2)
+                }
+                
+                # Adicionar info de promoção se aplicável
+                if em_promocao:
+                    item_data["em_promocao"] = True
+                    item_data["preco_original"] = round(preco_original, 2)
+                    descricao_itens.append(f"{quantidade}x {produto.nome} (PROMO)")
+                else:
+                    descricao_itens.append(f"{quantidade}x {produto.nome}")
+                
+                items_processados.append(item_data)
+            else:
+                items_nao_encontrados.append(nome if nome else f"ID:{produto_id}")
+        
+        # Verificar se encontrou algum item
+        if not items_processados:
+            return JsonResponse({
+                "success": False,
+                "error": f"Nenhum produto encontrado. Itens não encontrados: {', '.join(items_nao_encontrados)}"
+            }, status=404)
+        
+        if total <= 0:
+            return JsonResponse({
+                "success": False,
+                "error": "Total do pedido deve ser maior que zero"
+            }, status=400)
+        
         # Gerar external_reference único para tracking
         import uuid
         external_reference = f"pandia_{padaria.slug}_{uuid.uuid4().hex[:8]}"
@@ -403,14 +497,20 @@ def create_payment_link(request):
         if 'localhost' not in host and '127.0.0.1' not in host:
             notification_url = f"https://{host}/webhooks/mercadopago/"
         
+        # Montar título e descrição
+        title = f"Pedido {padaria.name}"
+        description = ", ".join(descricao_itens)
+        if len(description) > 200:
+            description = description[:197] + "..."
+        
         # Criar preferência no Mercado Pago
         mp_service = MercadoPagoService(mp_config.access_token)
         
-        logger.info(f"Criando link de pagamento: {title} - R${amount:.2f}")
+        logger.info(f"Criando link de pagamento: {title} - R${total:.2f} - {len(items_processados)} itens")
         
         preference = mp_service.create_preference(
             title=title,
-            amount=amount,
+            amount=total,
             description=description,
             payer_email=payer_email if payer_email else None,
             external_reference=external_reference,
@@ -421,8 +521,8 @@ def create_payment_link(request):
         mp_payment = MercadoPagoPayment.objects.create(
             config=mp_config,
             mp_preference_id=preference.get('id', ''),
-            description=title,
-            amount=amount,
+            description=description,
+            amount=total,
             payer_email=payer_email,
             checkout_url=preference.get('init_point', ''),
             pix_qr_code=external_reference,  # Armazena external_ref para tracking
@@ -431,18 +531,25 @@ def create_payment_link(request):
         
         logger.info(f"Link de pagamento criado: {mp_payment.id} - {preference.get('init_point', '')[:50]}...")
         
-        # Retornar resposta de sucesso
-        return JsonResponse({
+        # Preparar resposta
+        response_data = {
             "success": True,
             "payment_id": mp_payment.id,
             "checkout_url": preference.get('init_point', ''),
             "sandbox_url": preference.get('sandbox_init_point', ''),
             "title": title,
-            "amount": round(amount, 2),
+            "total": round(total, 2),
+            "items": items_processados,
             "description": description,
             "status": "pending",
             "created_at": mp_payment.created_at.isoformat(),
-        })
+        }
+        
+        # Adicionar aviso se algum item não foi encontrado
+        if items_nao_encontrados:
+            response_data["warning"] = f"Alguns itens não foram encontrados: {', '.join(items_nao_encontrados)}"
+        
+        return JsonResponse(response_data)
         
     except MercadoPagoAPIError as e:
         logger.error(f"Erro Mercado Pago: {e.message}")
