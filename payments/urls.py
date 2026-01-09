@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import api_views
 
 app_name = 'payments'
 
@@ -21,6 +22,10 @@ urlpatterns = [
     path('success/', views.payment_success, name='success'),
     path('assinatura/success/', views.payment_success, name='subscription_success'),
     path('cancel/', views.payment_cancel, name='cancel'),
+    
+    # === API para Agentes (WhatsApp/n8n) ===
+    path('api/cart/', api_views.create_cart_payment, name='api_create_cart'),
+    path('api/<str:payment_id>/status/', api_views.get_payment_status, name='api_payment_status'),
     
     # === Legado (Stripe) - Mantidos para compatibilidade ===
     path('settings/', views.payment_settings, name='settings'),

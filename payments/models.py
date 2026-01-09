@@ -462,6 +462,26 @@ class MercadoPagoPayment(models.Model):
         verbose_name="URL de Checkout"
     )
     
+    # PIX data (para pagamentos via WhatsApp)
+    pix_qr_code = models.TextField(
+        blank=True,
+        verbose_name="PIX Copia e Cola"
+    )
+    pix_qr_code_base64 = models.TextField(
+        blank=True,
+        verbose_name="QR Code PIX (base64)"
+    )
+    ticket_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="URL do Ticket"
+    )
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Expira em"
+    )
+    
     # Status
     status = models.CharField(
         max_length=20,
