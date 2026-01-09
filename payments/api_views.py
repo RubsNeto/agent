@@ -290,3 +290,169 @@ def get_payment_status(request, payment_id):
             "success": False,
             "error": str(e)
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_payment_link(request):
+    """
+    Cria link de pagamento (checkout) via Mercado Pago.
+    Endpoint para integração com n8n/WhatsApp.
+    
+    POST /payments/api/generate-link/
+    
+    Headers:
+        Content-Type: application/json
+    
+    Body:
+    {
+        "padaria_slug": "padaria-do-marcos",
+        "title": "Pão Francês",
+        "amount": 5.00,
+        "description": "10 unidades de pão francês",  // opcional
+        "payer_email": "cliente@email.com"  // opcional
+    }
+    
+    Response (success):
+    {
+        "success": true,
+        "payment_id": 15,
+        "checkout_url": "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=...",
+        "title": "Pão Francês",
+        "amount": 5.00,
+        "description": "10 unidades de pão francês",
+        "status": "pending",
+        "created_at": "2026-01-09T16:30:00Z"
+    }
+    
+    Response (error):
+    {
+        "success": false,
+        "error": "Descrição do erro"
+    }
+    """
+    try:
+        # Parse do body JSON
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "success": False,
+                "error": "JSON inválido no body da requisição"
+            }, status=400)
+        
+        # Validar campos obrigatórios
+        padaria_slug = data.get("padaria_slug")
+        title = data.get("title")
+        amount = data.get("amount")
+        description = data.get("description", "")
+        payer_email = data.get("payer_email", "")
+        
+        if not padaria_slug:
+            return JsonResponse({
+                "success": False,
+                "error": "Campo 'padaria_slug' é obrigatório"
+            }, status=400)
+        
+        if not title:
+            return JsonResponse({
+                "success": False,
+                "error": "Campo 'title' é obrigatório"
+            }, status=400)
+        
+        try:
+            amount = float(amount)
+            if amount <= 0:
+                raise ValueError("Valor deve ser maior que zero")
+        except (TypeError, ValueError) as e:
+            return JsonResponse({
+                "success": False,
+                "error": f"Campo 'amount' inválido: {str(e)}"
+            }, status=400)
+        
+        # Buscar padaria
+        try:
+            padaria = Padaria.objects.get(slug=padaria_slug)
+        except Padaria.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "error": f"Padaria '{padaria_slug}' não encontrada"
+            }, status=404)
+        
+        # Verificar se padaria tem Mercado Pago configurado
+        try:
+            mp_config = padaria.mercadopago_config
+            if not mp_config.access_token:
+                return JsonResponse({
+                    "success": False,
+                    "error": "Mercado Pago não configurado para esta padaria"
+                }, status=400)
+        except MercadoPagoConfig.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "error": "Mercado Pago não configurado para esta padaria"
+            }, status=400)
+        
+        # Gerar external_reference único para tracking
+        import uuid
+        external_reference = f"pandia_{padaria.slug}_{uuid.uuid4().hex[:8]}"
+        
+        # URL de notificação (webhook)
+        notification_url = None
+        host = request.get_host()
+        if 'localhost' not in host and '127.0.0.1' not in host:
+            notification_url = f"https://{host}/webhooks/mercadopago/"
+        
+        # Criar preferência no Mercado Pago
+        mp_service = MercadoPagoService(mp_config.access_token)
+        
+        logger.info(f"Criando link de pagamento: {title} - R${amount:.2f}")
+        
+        preference = mp_service.create_preference(
+            title=title,
+            amount=amount,
+            description=description,
+            payer_email=payer_email if payer_email else None,
+            external_reference=external_reference,
+            notification_url=notification_url,
+        )
+        
+        # Salvar no banco
+        mp_payment = MercadoPagoPayment.objects.create(
+            config=mp_config,
+            mp_preference_id=preference.get('id', ''),
+            description=title,
+            amount=amount,
+            payer_email=payer_email,
+            checkout_url=preference.get('init_point', ''),
+            pix_qr_code=external_reference,  # Armazena external_ref para tracking
+            status='pending',
+        )
+        
+        logger.info(f"Link de pagamento criado: {mp_payment.id} - {preference.get('init_point', '')[:50]}...")
+        
+        # Retornar resposta de sucesso
+        return JsonResponse({
+            "success": True,
+            "payment_id": mp_payment.id,
+            "checkout_url": preference.get('init_point', ''),
+            "sandbox_url": preference.get('sandbox_init_point', ''),
+            "title": title,
+            "amount": round(amount, 2),
+            "description": description,
+            "status": "pending",
+            "created_at": mp_payment.created_at.isoformat(),
+        })
+        
+    except MercadoPagoAPIError as e:
+        logger.error(f"Erro Mercado Pago: {e.message}")
+        return JsonResponse({
+            "success": False,
+            "error": f"Erro Mercado Pago: {e.message}"
+        }, status=500)
+    except Exception as e:
+        logger.exception(f"Erro inesperado ao criar link de pagamento: {e}")
+        return JsonResponse({
+            "success": False,
+            "error": f"Erro inesperado: {str(e)}"
+        }, status=500)

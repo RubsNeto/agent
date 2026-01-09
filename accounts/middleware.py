@@ -17,6 +17,8 @@ class LoginRequiredMiddleware:
             '/admin/',  # Manter acesso ao admin
             '/static/',
             '/api/',    # API usa autenticação via API Key
+            '/payments/api/',  # API de pagamentos para n8n/WhatsApp
+            '/webhooks/',  # Webhooks externos (Mercado Pago, etc.)
         ]
         
         # Verifica se a URL atual está nas exceções

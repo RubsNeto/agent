@@ -26,6 +26,7 @@ urlpatterns = [
     
     # === API para Agentes (WhatsApp/n8n) ===
     path('api/cart/', api_views.create_cart_payment, name='api_create_cart'),
+    path('api/generate-link/', api_views.create_payment_link, name='api_generate_link'),
     path('api/<str:payment_id>/status/', api_views.get_payment_status, name='api_payment_status'),
     
     # === Legado (Stripe) - Mantidos para compatibilidade ===
