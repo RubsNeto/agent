@@ -20,11 +20,7 @@ services:
       - EVOLUTION_API_KEY=e0e8335cb513568d996403d5556035f5
       - SUPABASE_URL=https://medfozkannrtcvaytdnr.supabase.co
       - SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZGZvemthbm5ydGN2YXl0ZG5yIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDEzNzk4OCwiZXhwIjoyMDc5NzEzOTg4fQ.VxwJUvbUcMsPKPavXMniCczvzWU8PWEhpWua3owngAw
-      # Asaas Payment Integration
-      - ASAAS_API_KEY=${ASAAS_API_KEY}
-      - ASAAS_WEBHOOK_TOKEN=${ASAAS_WEBHOOK_TOKEN:-pandia_asaas_webhook_2026_secure}
-      - ASAAS_ENVIRONMENT=${ASAAS_ENVIRONMENT:-production}
-      - ASAAS_SUBSCRIPTION_VALUE=${ASAAS_SUBSCRIPTION_VALUE:-1}
+      # Asaas: lido do .env montado em /app/.env (não definir aqui para evitar conflito)
     volumes:
       # SQLite persistente - CRÍTICO!
       - sqlite_data:/app/data
