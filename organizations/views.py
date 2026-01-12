@@ -89,13 +89,11 @@ def send_products_webhook(padaria, user=None, action="product_update"):
             elif produto.preco:
                 linhas.append(f"Preço: R$ {produto.preco:.2f}")
             
-            # URL da imagem (se houver)
+            # URL da imagem (apenas se o produto tiver imagem)
             if produto.imagem:
-                linhas.append(f"Imagem: https://pandia.com.br/media/{produto.imagem.name}")
+                # Usar o caminho real da imagem
+                linhas.append(f"Imagem do produto: https://pandia.com.br{produto.imagem.url}")
             
-            # Link do produto (referência fictícia)
-            produto_slug = slugify(produto.nome)
-            linhas.append(f"Link origem: https://pandia.com.br/cardapio/{padaria.slug}/{produto_slug}")
             linhas.append("")  # Linha em branco entre produtos
         
         extracted_text = "\n".join(linhas)
