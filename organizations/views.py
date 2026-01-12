@@ -17,6 +17,132 @@ def get_user_padarias(user):
     return Padaria.objects.filter(id__in=user_padaria_ids)
 
 
+def send_products_webhook(padaria, user=None, action="product_update"):
+    """
+    Envia todos os produtos da padaria para o webhook N8N para atualização do RAG.
+    Formata produtos como catálogo de texto incluindo promoções ativas.
+    """
+    try:
+        from django.utils import timezone
+        from django.utils.text import slugify
+        
+        # Buscar agente da padaria
+        agent = padaria.get_agent()
+        if not agent:
+            print(f"[DEBUG] Padaria {padaria.name} não tem agente. Pulando webhook de produtos.")
+            return False
+        
+        # Buscar todos os produtos ativos da padaria
+        produtos = Produto.objects.filter(padaria=padaria, ativo=True).order_by('categoria', 'nome')
+        
+        if not produtos.exists():
+            print(f"[DEBUG] Padaria {padaria.name} não tem produtos ativos. Pulando webhook.")
+            return False
+        
+        # Buscar promoções ativas vinculadas a produtos
+        promocoes_ativas = Promocao.objects.filter(
+            padaria=padaria,
+            produto__isnull=False,
+            is_active=True
+        ).select_related('produto')
+        
+        # Criar dicionário de produto_id -> promoção ativa
+        promocao_por_produto = {}
+        for promo in promocoes_ativas:
+            if promo.is_valid() and promo.produto_id:
+                promocao_por_produto[promo.produto_id] = promo
+        
+        # Formatar produtos como catálogo de texto
+        linhas = ["Cardápio / Catálogo de Produtos", ""]
+        
+        categoria_atual = None
+        for produto in produtos:
+            # Adicionar cabeçalho de categoria se mudou
+            if produto.categoria and produto.categoria != categoria_atual:
+                if categoria_atual is not None:
+                    linhas.append("")  # Linha em branco entre categorias
+                linhas.append(f"## {produto.categoria}")
+                linhas.append("")
+                categoria_atual = produto.categoria
+            
+            # Nome do produto
+            linhas.append(produto.nome)
+            
+            # Descrição (se houver)
+            if produto.descricao:
+                linhas.append(produto.descricao)
+            
+            # Preço (verificar se tem promoção ativa)
+            promo = promocao_por_produto.get(produto.id)
+            if promo and promo.preco:
+                # Produto com promoção
+                preco_original = produto.preco or promo.preco_original
+                desconto = promo.get_discount_percentage()
+                if preco_original and desconto:
+                    linhas.append(f"Preço: R$ {promo.preco:.2f} (de R$ {preco_original:.2f} - {int(desconto)}% OFF!)")
+                else:
+                    linhas.append(f"Preço: R$ {promo.preco:.2f} (PROMOÇÃO)")
+                
+                # Validade da promoção
+                if promo.data_fim:
+                    linhas.append(f"Promoção válida até: {promo.data_fim.strftime('%d/%m/%Y')}")
+            elif produto.preco:
+                linhas.append(f"Preço: R$ {produto.preco:.2f}")
+            
+            # Link do produto
+            produto_slug = slugify(produto.nome)
+            linhas.append(f"Link origem: https://pandia.com.br/cardapio/{padaria.slug}/{produto_slug}")
+            linhas.append("")  # Linha em branco entre produtos
+        
+        extracted_text = "\n".join(linhas)
+        
+        # Preparar payload no mesmo formato do PDF
+        rag_table_name = f"rag_{padaria.slug.replace('-', '_')}"
+        
+        payload = {
+            "agent_id": agent.id,
+            "agent_name": agent.name,
+            "agent_slug": agent.slug,
+            "rag_table_name": rag_table_name,
+            "pdf_filename": None,
+            "pdf_category": "Produtos",
+            "extracted_text": extracted_text,
+            "text_length": len(extracted_text),
+            "padaria": padaria.name,
+            "padaria_slug": padaria.slug,
+            "uploaded_by": user.email if user else "",
+            "action": action,
+            "total_produtos": produtos.count(),
+            "produtos_com_promocao": len(promocao_por_produto)
+        }
+        
+        # Enviar para webhook N8N
+        webhook_url = "https://n8n.newcouros.com.br/webhook/memoria"
+        
+        response = requests.post(
+            webhook_url,
+            json=payload,
+            headers={'Content-Type': 'application/json'},
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            print(f"[DEBUG] Webhook de produtos enviado com sucesso! {produtos.count()} produtos, {len(extracted_text)} caracteres.")
+            return True
+        else:
+            print(f"[WARNING] Webhook de produtos retornou status {response.status_code}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"[WARNING] Erro ao enviar webhook de produtos: {str(e)}")
+        return False
+    except Exception as e:
+        print(f"[ERROR] Erro inesperado ao enviar webhook de produtos: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return False
+
+
 @login_required
 def organization_list(request):
     """Redireciona para a padaria do usuário ou lista se for admin."""
@@ -754,6 +880,10 @@ def promocao_create(request):
                 diff={"titulo": titulo}
             )
             
+            # Se promoção está vinculada a produto, atualizar RAG
+            if produto_vinculado:
+                send_products_webhook(padaria, request.user, action="promotion_created")
+            
             messages.success(request, f"Promoção '{titulo}' criada com sucesso!")
             return redirect("organizations:promocao_list")
             
@@ -846,6 +976,10 @@ def promocao_edit(request, pk):
                     diff=diff
                 )
             
+            # Se promoção está vinculada a produto, atualizar RAG
+            if promocao.produto:
+                send_products_webhook(promocao.padaria, request.user, action="promotion_updated")
+            
             messages.success(request, "Promoção atualizada com sucesso!")
             return redirect("organizations:promocao_list")
             
@@ -875,6 +1009,7 @@ def promocao_delete(request, pk):
         titulo = promocao.titulo
         promocao_id = promocao.id
         padaria = promocao.padaria
+        tinha_produto = promocao.produto is not None  # Guardar antes de deletar
         
         try:
             AuditLog.log(
@@ -887,6 +1022,11 @@ def promocao_delete(request, pk):
             )
             
             promocao.delete()
+            
+            # Se promoção estava vinculada a produto, atualizar RAG
+            if tinha_produto:
+                send_products_webhook(padaria, request.user, action="promotion_deleted")
+            
             messages.success(request, f"Promoção '{titulo}' excluída com sucesso!")
             return redirect("organizations:promocao_list")
             
@@ -1001,6 +1141,9 @@ def produto_create(request):
                 diff={"nome": nome}
             )
             
+            # Enviar webhook para atualizar RAG do N8N
+            send_products_webhook(padaria, request.user, action="product_created")
+            
             messages.success(request, f"Produto '{nome}' criado com sucesso!")
             return redirect("organizations:produto_list")
             
@@ -1077,6 +1220,9 @@ def produto_edit(request, pk):
                     diff=diff
                 )
             
+            # Enviar webhook para atualizar RAG do N8N
+            send_products_webhook(produto.padaria, request.user, action="product_updated")
+            
             messages.success(request, f"Produto '{nome}' atualizado com sucesso!")
             return redirect("organizations:produto_list")
             
@@ -1117,6 +1263,10 @@ def produto_delete(request, pk):
             )
             
             produto.delete()
+            
+            # Enviar webhook para atualizar RAG do N8N (produto removido)
+            send_products_webhook(padaria, request.user, action="product_deleted")
+            
             messages.success(request, f"Produto '{nome}' excluído com sucesso!")
             return redirect("organizations:produto_list")
             
@@ -1189,6 +1339,9 @@ def produto_import(request):
                         "produtos_importados": len(produtos_criados)
                     }
                 )
+                
+                # Enviar webhook para atualizar RAG do N8N
+                send_products_webhook(padaria, request.user, action="products_imported_pdf")
                 
                 messages.success(request, f"✅ {len(produtos_criados)} produtos foram importados do PDF!")
             else:
@@ -1351,6 +1504,9 @@ def produto_import_excel(request):
             
             # Mensagem de resultado
             if produtos_importados > 0 or produtos_atualizados > 0:
+                # Enviar webhook para atualizar RAG do N8N
+                send_products_webhook(padaria, request.user, action="products_imported_excel")
+                
                 msg = f"✅ Importação concluída! "
                 if produtos_importados > 0:
                     msg += f"{produtos_importados} produtos novos"
