@@ -887,3 +887,164 @@ def payment_cancel(request):
     
     return render(request, 'payments/cancel.html')
 
+
+# =============================================================================
+# Views de Retorno do Mercado Pago
+# =============================================================================
+
+def mp_payment_return(request):
+    """
+    Página de retorno após pagamento no Mercado Pago.
+    Recebe parâmetros do MP e atualiza o status do pagamento.
+    
+    Query params do MP:
+        - collection_id: ID do pagamento no MP
+        - collection_status: approved, pending, rejected
+        - external_reference: nossa referência
+        - payment_id: nosso ID interno (passado na back_url)
+        - status: status passado por nós na back_url
+    """
+    # Parâmetros que nós passamos
+    payment_id = request.GET.get('payment_id')
+    our_status = request.GET.get('status', '')
+    external_reference = request.GET.get('external_reference', '')
+    
+    # Parâmetros que o MP adiciona
+    collection_id = request.GET.get('collection_id')
+    collection_status = request.GET.get('collection_status', '')
+    payment_status = request.GET.get('payment_status', '')
+    
+    # Status final (prioriza o que o MP retorna)
+    final_status = collection_status or payment_status or our_status
+    
+    payment = None
+    
+    if payment_id:
+        try:
+            payment = MercadoPagoPayment.objects.select_related('config', 'config__padaria').get(id=payment_id)
+            
+            # Atualizar com os dados do MP
+            if collection_id and not payment.mp_payment_id:
+                payment.mp_payment_id = str(collection_id)
+            
+            # Atualizar status se mudou
+            old_status = payment.status
+            if final_status and final_status != old_status:
+                # Mapear status do MP para nosso
+                status_map = {
+                    'approved': 'approved',
+                    'pending': 'pending',
+                    'in_process': 'in_process',
+                    'rejected': 'rejected',
+                    'cancelled': 'cancelled',
+                    'refunded': 'refunded',
+                }
+                new_status = status_map.get(final_status, final_status)
+                
+                if new_status in [s[0] for s in MercadoPagoPayment.STATUS_CHOICES]:
+                    payment.status = new_status
+                    
+                    if new_status == 'approved':
+                        payment.paid_at = timezone.now()
+                    
+                    payment.save()
+                    print(f"DEBUG: Pagamento {payment.id} atualizado via return: {old_status} -> {new_status}")
+            
+            # Se ainda está pendente, tentar consultar a API do MP diretamente
+            if payment.status == 'pending' and payment.config and payment.config.access_token:
+                try:
+                    from .services.mercadopago_service import MercadoPagoService
+                    mp_service = MercadoPagoService(payment.config.access_token)
+                    
+                    # Buscar por external_reference
+                    ext_ref = payment.pix_qr_code if payment.pix_qr_code and payment.pix_qr_code.startswith('pandia_') else external_reference
+                    if ext_ref:
+                        search_result = mp_service.search_payments(external_reference=ext_ref, limit=5)
+                        for mp_data in search_result.get('results', []):
+                            if mp_data.get('external_reference') == ext_ref:
+                                mp_status = mp_data.get('status', '')
+                                if mp_status == 'approved':
+                                    payment.status = 'approved'
+                                    payment.mp_payment_id = str(mp_data.get('id', ''))
+                                    payment.paid_at = timezone.now()
+                                    payment.save()
+                                    print(f"DEBUG: Pagamento {payment.id} confirmado via API lookup")
+                                break
+                except Exception as e:
+                    print(f"DEBUG: Erro ao consultar MP API no return: {e}")
+                    
+        except MercadoPagoPayment.DoesNotExist:
+            print(f"DEBUG: Pagamento {payment_id} não encontrado")
+    
+    # Renderizar página baseada no status
+    context = {
+        'payment': payment,
+        'status': payment.status if payment else final_status,
+        'amount': payment.amount if payment else None,
+        'description': payment.description if payment else None,
+        'padaria_name': payment.config.padaria.name if payment and payment.config and payment.config.padaria else None,
+    }
+    
+    if payment and payment.status == 'approved':
+        return render(request, 'payments/mp_success.html', context)
+    elif payment and payment.status in ['rejected', 'cancelled']:
+        return render(request, 'payments/mp_failure.html', context)
+    else:
+        return render(request, 'payments/mp_pending.html', context)
+
+
+def mp_checkout_gate(request, payment_id):
+    """
+    Página intermediária que verifica se o pagamento já foi realizado
+    antes de redirecionar para o checkout do Mercado Pago.
+    
+    Se já foi pago, mostra mensagem e bloqueia o acesso ao link.
+    """
+    try:
+        payment = MercadoPagoPayment.objects.select_related('config', 'config__padaria').get(id=payment_id)
+        
+        context = {
+            'payment': payment,
+            'padaria_name': payment.config.padaria.name if payment.config and payment.config.padaria else 'Loja',
+        }
+        
+        # Verificar se já foi pago
+        if payment.status == 'approved':
+            return render(request, 'payments/mp_already_paid.html', context)
+        
+        # Verificar se foi cancelado ou rejeitado
+        if payment.status in ['cancelled', 'rejected', 'refunded']:
+            return render(request, 'payments/mp_expired.html', context)
+        
+        # Se ainda está pendente, tentar sincronizar antes de redirecionar
+        if payment.status == 'pending' and payment.config and payment.config.access_token:
+            try:
+                from .services.mercadopago_service import MercadoPagoService
+                mp_service = MercadoPagoService(payment.config.access_token)
+                
+                ext_ref = payment.pix_qr_code if payment.pix_qr_code and payment.pix_qr_code.startswith('pandia_') else None
+                if ext_ref:
+                    search_result = mp_service.search_payments(external_reference=ext_ref, limit=1)
+                    for mp_data in search_result.get('results', []):
+                        if mp_data.get('external_reference') == ext_ref and mp_data.get('status') == 'approved':
+                            payment.status = 'approved'
+                            payment.mp_payment_id = str(mp_data.get('id', ''))
+                            payment.paid_at = timezone.now()
+                            payment.save()
+                            return render(request, 'payments/mp_already_paid.html', context)
+            except Exception:
+                pass
+        
+        # Redirecionar para o checkout do MP
+        if payment.checkout_url:
+            return redirect(payment.checkout_url)
+        else:
+            return render(request, 'payments/mp_error.html', {
+                'error': 'Link de pagamento não disponível',
+                **context
+            })
+            
+    except MercadoPagoPayment.DoesNotExist:
+        return render(request, 'payments/mp_error.html', {
+            'error': 'Pagamento não encontrado'
+        })

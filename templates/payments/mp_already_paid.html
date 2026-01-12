@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Pagamento Já Realizado{% endblock %}
+{% block page_title %}Pagamento Já Realizado{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 3rem 1.5rem;">
+    <div class="info-icon">
+        <svg width="48" height="48" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+    </div>
+
+    <h2 style="color: #2563eb; font-size: 1.75rem; margin: 1.5rem 0 0.75rem;">Este pagamento já foi realizado!</h2>
+    <p style="color: #4b5563; font-size: 1.125rem;">Não é possível pagar novamente um pedido já confirmado.</p>
+
+    {% if padaria_name %}
+    <p style="color: #6b7280; font-size: 0.95rem; margin-top: 0.5rem;">
+        {{ padaria_name }}
+    </p>
+    {% endif %}
+
+    {% if payment %}
+    <div class="payment-details"
+        style="margin-top: 2rem; background: #eff6ff; border-radius: 12px; padding: 1.5rem; text-align: left; border: 1px solid #bfdbfe;">
+        <h3 style="font-size: 1rem; color: #1e40af; margin-bottom: 1rem;">Detalhes do Pagamento</h3>
+        
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #bfdbfe;">
+            <span style="color: #1e40af;">Valor Pago</span>
+            <span style="font-weight: 600; color: #1e3a8a;">R$ {{ payment.amount|floatformat:2 }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #bfdbfe;">
+            <span style="color: #1e40af;">Descrição</span>
+            <span style="font-weight: 500; color: #1e3a8a; text-align: right; max-width: 60%;">{{ payment.description|truncatechars:50 }}</span>
+        </div>
+        
+        {% if payment.paid_at %}
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #bfdbfe;">
+            <span style="color: #1e40af;">Data do Pagamento</span>
+            <span style="font-weight: 500; color: #1e3a8a;">{{ payment.paid_at|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+        
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+            <span style="color: #1e40af;">Status</span>
+            <span style="background: #dcfce7; color: #166534; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">
+                ✓ Pago
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 2rem; padding: 1rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+        <p style="color: #166534; font-size: 0.875rem; margin: 0;">
+            <strong>✓ Tudo certo!</strong><br>
+            Seu pedido foi confirmado e está sendo processado.
+        </p>
+    </div>
+
+    <p style="color: #9ca3af; font-size: 0.875rem; margin-top: 2rem;">
+        Você pode fechar esta página com segurança.
+    </p>
+</div>
+
+<style>
+    .info-icon {
+        width: 96px;
+        height: 96px;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        box-shadow: 0 10px 40px rgba(59, 130, 246, 0.3);
+    }
+</style>
+{% endblock %}

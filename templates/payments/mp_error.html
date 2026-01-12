@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Erro no Pagamento{% endblock %}
+{% block page_title %}Erro{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 3rem 1.5rem;">
+    <div class="error-icon">
+        <svg width="48" height="48" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+    </div>
+
+    <h2 style="color: #dc2626; font-size: 1.75rem; margin: 1.5rem 0 0.75rem;">Ops! Algo deu errado</h2>
+    <p style="color: #4b5563; font-size: 1.125rem;">
+        {% if error %}
+            {{ error }}
+        {% else %}
+            Não foi possível processar sua solicitação.
+        {% endif %}
+    </p>
+
+    <div style="margin-top: 2rem; padding: 1rem; background: #f3f4f6; border-radius: 8px;">
+        <p style="color: #6b7280; font-size: 0.875rem; margin: 0;">
+            <strong>O que posso fazer?</strong><br>
+            Tente novamente ou entre em contato com a loja.
+        </p>
+    </div>
+
+    <p style="color: #9ca3af; font-size: 0.875rem; margin-top: 2rem;">
+        Você pode fechar esta página.
+    </p>
+</div>
+
+<style>
+    .error-icon {
+        width: 96px;
+        height: 96px;
+        background: linear-gradient(135deg, #f87171, #dc2626);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        box-shadow: 0 10px 40px rgba(220, 38, 38, 0.3);
+    }
+</style>
+{% endblock %}

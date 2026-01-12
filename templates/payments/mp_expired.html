@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Link Expirado{% endblock %}
+{% block page_title %}Link Expirado{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 3rem 1.5rem;">
+    <div class="expired-icon">
+        <svg width="48" height="48" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <path stroke-linecap="round" d="M12 6v6l4 2" />
+            <path stroke-linecap="round" stroke-width="3" d="M4 4l16 16" />
+        </svg>
+    </div>
+
+    <h2 style="color: #6b7280; font-size: 1.75rem; margin: 1.5rem 0 0.75rem;">Link de Pagamento Expirado</h2>
+    <p style="color: #4b5563; font-size: 1.125rem;">Este link de pagamento não está mais disponível.</p>
+
+    {% if padaria_name %}
+    <p style="color: #6b7280; font-size: 0.95rem; margin-top: 0.5rem;">
+        {{ padaria_name }}
+    </p>
+    {% endif %}
+
+    {% if payment %}
+    <div class="payment-details"
+        style="margin-top: 2rem; background: #f9fafb; border-radius: 12px; padding: 1.5rem; text-align: left; border: 1px solid #e5e7eb;">
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb;">
+            <span style="color: #6b7280;">Valor</span>
+            <span style="font-weight: 600; color: #374151;">R$ {{ payment.amount|floatformat:2 }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+            <span style="color: #6b7280;">Status</span>
+            <span style="background: #f3f4f6; color: #6b7280; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">
+                {{ payment.get_status_display }}
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 2rem; padding: 1rem; background: #f3f4f6; border-radius: 8px;">
+        <p style="color: #6b7280; font-size: 0.875rem; margin: 0;">
+            <strong>O que posso fazer?</strong><br>
+            Entre em contato com a loja para solicitar um novo link de pagamento.
+        </p>
+    </div>
+
+    <p style="color: #9ca3af; font-size: 0.875rem; margin-top: 2rem;">
+        Você pode fechar esta página.
+    </p>
+</div>
+
+<style>
+    .expired-icon {
+        width: 96px;
+        height: 96px;
+        background: linear-gradient(135deg, #9ca3af, #6b7280);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        box-shadow: 0 10px 40px rgba(107, 114, 128, 0.3);
+    }
+</style>
+{% endblock %}

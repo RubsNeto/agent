@@ -494,8 +494,11 @@ def create_payment_link(request):
         # URL de notificação (webhook)
         notification_url = None
         host = request.get_host()
+        scheme = "https" if 'localhost' not in host and '127.0.0.1' not in host else "http"
+        base_url = f"{scheme}://{host}"
+        
         if 'localhost' not in host and '127.0.0.1' not in host:
-            notification_url = f"https://{host}/webhooks/mercadopago/"
+            notification_url = f"{base_url}/webhooks/mercadopago/"
         
         # Montar título e descrição
         title = f"Pedido {padaria.name}"
@@ -508,6 +511,25 @@ def create_payment_link(request):
         
         logger.info(f"Criando link de pagamento: {title} - R${total:.2f} - {len(items_processados)} itens")
         
+        # Salvar no banco ANTES de criar a preferência para ter o ID
+        mp_payment = MercadoPagoPayment.objects.create(
+            config=mp_config,
+            mp_preference_id='',  # Será atualizado após criar preferência
+            description=description,
+            amount=total,
+            payer_email=payer_email,
+            checkout_url='',  # Será atualizado após criar preferência
+            pix_qr_code=external_reference,  # Armazena external_ref para tracking
+            status='pending',
+        )
+        
+        # Back URLs dinâmicas com payment_id
+        back_urls = {
+            "success": f"{base_url}/payments/mp/return/?status=approved&payment_id={mp_payment.id}&external_reference={external_reference}",
+            "failure": f"{base_url}/payments/mp/return/?status=rejected&payment_id={mp_payment.id}&external_reference={external_reference}",
+            "pending": f"{base_url}/payments/mp/return/?status=pending&payment_id={mp_payment.id}&external_reference={external_reference}",
+        }
+        
         preference = mp_service.create_preference(
             title=title,
             amount=total,
@@ -515,21 +537,33 @@ def create_payment_link(request):
             payer_email=payer_email if payer_email else None,
             external_reference=external_reference,
             notification_url=notification_url,
+            back_urls=back_urls,
         )
         
-        # Salvar no banco
-        mp_payment = MercadoPagoPayment.objects.create(
-            config=mp_config,
-            mp_preference_id=preference.get('id', ''),
-            description=description,
-            amount=total,
-            payer_email=payer_email,
-            checkout_url=preference.get('init_point', ''),
-            pix_qr_code=external_reference,  # Armazena external_ref para tracking
-            status='pending',
-        )
+        # Atualizar payment com dados da preferência
+        mp_payment.mp_preference_id = preference.get('id', '')
+        mp_payment.checkout_url = preference.get('init_point', '')
+        mp_payment.save()
         
         logger.info(f"Link de pagamento criado: {mp_payment.id} - {preference.get('init_point', '')[:50]}...")
+        
+        # Iniciar monitoramento automático do status
+        try:
+            from payments.services.payment_monitor import start_payment_monitor
+            start_payment_monitor(
+                payment_id=mp_payment.id,
+                external_reference=external_reference,
+                access_token=mp_config.access_token,
+                check_interval=5,  # Verificar a cada 5 segundos
+                max_duration=600   # Por até 10 minutos
+            )
+            logger.info(f"Monitor de pagamento iniciado para {mp_payment.id}")
+        except Exception as e:
+            logger.warning(f"Não foi possível iniciar monitor: {e}")
+        
+        # URLs adicionais
+        secure_checkout_url = f"{base_url}/payments/mp/pay/{mp_payment.id}/"
+        status_check_url = f"{base_url}/payments/api/check/{mp_payment.id}/"
         
         # Preparar resposta
         response_data = {
@@ -537,6 +571,8 @@ def create_payment_link(request):
             "payment_id": mp_payment.id,
             "preference_id": preference.get('id', ''),
             "checkout_url": preference.get('init_point', ''),
+            "secure_checkout_url": secure_checkout_url,  # URL que verifica se já foi pago antes de redirecionar
+            "status_check_url": status_check_url,  # URL para polling de status
             "sandbox_url": preference.get('sandbox_init_point', ''),
             "title": title,
             "total": round(total, 2),
@@ -544,6 +580,7 @@ def create_payment_link(request):
             "description": description,
             "status": "pending",
             "external_reference": external_reference,
+            "monitoring": True,  # Indica que o pagamento está sendo monitorado automaticamente
             "created_at": mp_payment.created_at.isoformat(),
         }
         
@@ -935,3 +972,166 @@ def sync_all_pending_payments(request):
             "error": str(e)
         }, status=500)
 
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def start_monitor(request, payment_id):
+    """
+    Inicia o monitoramento automático de um pagamento específico.
+    
+    POST /payments/api/monitor/<payment_id>/start/
+    
+    Response:
+    {
+        "success": true,
+        "payment_id": 15,
+        "message": "Monitoramento iniciado",
+        "monitoring": true
+    }
+    """
+    try:
+        # Buscar pagamento
+        try:
+            mp_payment = MercadoPagoPayment.objects.select_related('config').get(id=payment_id)
+        except MercadoPagoPayment.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "error": f"Pagamento {payment_id} não encontrado"
+            }, status=404)
+        
+        # Verificar se já está em status final
+        if mp_payment.status in ['approved', 'rejected', 'cancelled', 'refunded']:
+            return JsonResponse({
+                "success": True,
+                "payment_id": payment_id,
+                "status": mp_payment.status,
+                "message": f"Pagamento já está em status final: {mp_payment.status}",
+                "monitoring": False
+            })
+        
+        # Obter external_reference
+        external_ref = mp_payment.pix_qr_code if mp_payment.pix_qr_code and mp_payment.pix_qr_code.startswith('pandia_') else None
+        
+        if not external_ref:
+            return JsonResponse({
+                "success": False,
+                "error": "Pagamento não tem external_reference para monitoramento"
+            }, status=400)
+        
+        # Verificar se tem config de MP
+        if not mp_payment.config or not mp_payment.config.access_token:
+            return JsonResponse({
+                "success": False,
+                "error": "Configuração de Mercado Pago não encontrada"
+            }, status=400)
+        
+        # Iniciar monitor
+        from payments.services.payment_monitor import start_payment_monitor
+        started = start_payment_monitor(
+            payment_id=payment_id,
+            external_reference=external_ref,
+            access_token=mp_payment.config.access_token,
+            check_interval=5,
+            max_duration=600
+        )
+        
+        return JsonResponse({
+            "success": True,
+            "payment_id": payment_id,
+            "status": mp_payment.status,
+            "message": "Monitoramento iniciado" if started else "Monitoramento já estava ativo",
+            "monitoring": True
+        })
+        
+    except Exception as e:
+        logger.exception(f"Erro ao iniciar monitor: {e}")
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_active_monitors(request):
+    """
+    Retorna lista de pagamentos sendo monitorados ativamente.
+    
+    GET /payments/api/monitors/
+    
+    Response:
+    {
+        "success": true,
+        "active_count": 3,
+        "payment_ids": [15, 16, 17]
+    }
+    """
+    try:
+        from payments.services.payment_monitor import get_active_monitors as get_monitors
+        
+        active_ids = get_monitors()
+        
+        return JsonResponse({
+            "success": True,
+            "active_count": len(active_ids),
+            "payment_ids": list(active_ids)
+        })
+        
+    except Exception as e:
+        logger.exception(f"Erro ao listar monitores: {e}")
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def start_bulk_monitor(request):
+    """
+    Inicia monitoramento para todos os pagamentos pendentes de uma padaria.
+    
+    POST /payments/api/monitors/start-all/
+    
+    Body:
+    {
+        "padaria_slug": "padaria-do-marcos"
+    }
+    
+    Response:
+    {
+        "success": true,
+        "monitors_started": 5
+    }
+    """
+    try:
+        data = json.loads(request.body)
+        padaria_slug = data.get("padaria_slug", "")
+        
+        if not padaria_slug:
+            return JsonResponse({
+                "success": False,
+                "error": "Campo 'padaria_slug' é obrigatório"
+            }, status=400)
+        
+        from payments.services.payment_monitor import start_bulk_payment_monitor
+        
+        count = start_bulk_payment_monitor(padaria_slug)
+        
+        return JsonResponse({
+            "success": True,
+            "padaria_slug": padaria_slug,
+            "monitors_started": count
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "success": False,
+            "error": "JSON inválido"
+        }, status=400)
+    except Exception as e:
+        logger.exception(f"Erro ao iniciar monitores em lote: {e}")
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)

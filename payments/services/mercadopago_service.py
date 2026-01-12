@@ -98,6 +98,7 @@ class MercadoPagoService:
         payer_email: Optional[str] = None,
         external_reference: Optional[str] = None,
         notification_url: Optional[str] = None,
+        back_urls: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """
         Cria uma preferência de pagamento (link de checkout).
@@ -109,6 +110,7 @@ class MercadoPagoService:
             payer_email: Email do pagador (pré-preenche no checkout)
             external_reference: Referência externa (seu ID)
             notification_url: URL para webhook de notificação
+            back_urls: URLs de retorno (success, failure, pending)
         
         Returns:
             Dict com 'id', 'init_point' (URL do checkout), 'sandbox_init_point'
@@ -122,13 +124,18 @@ class MercadoPagoService:
                     "currency_id": "BRL",
                 }
             ],
-            "back_urls": {
+            "auto_return": "approved",
+        }
+        
+        # Usar back_urls personalizadas ou padrão
+        if back_urls:
+            data["back_urls"] = back_urls
+        else:
+            data["back_urls"] = {
                 "success": "https://pandia.com.br/payments/mp/success/",
                 "failure": "https://pandia.com.br/payments/mp/failure/",
                 "pending": "https://pandia.com.br/payments/mp/pending/",
-            },
-            "auto_return": "approved",
-        }
+            }
         
         if description:
             data["items"][0]["description"] = description

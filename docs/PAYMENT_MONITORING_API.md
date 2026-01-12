@@ -6,10 +6,22 @@ Esta documentação descreve os endpoints disponíveis para monitorar o status d
 
 Quando um link de pagamento é gerado via `/payments/api/generate-link/`, ele retorna um `payment_id` interno que pode ser usado para monitorar o status do pagamento.
 
-O sistema oferece 3 formas de monitorar os pagamentos:
-1. **Webhook automático**: O Mercado Pago notifica automaticamente quando há mudanças
-2. **Polling por pagamento**: Consultar status individual periodicamente
-3. **Sincronização em lote**: Sincronizar todos os pagamentos pendentes de uma vez
+### 🔄 Monitoramento Automático
+
+O sistema agora inclui **monitoramento automático em background**! Quando um link de pagamento é criado:
+
+1. Um **monitor em background** é iniciado automaticamente
+2. O monitor verifica o status na API do Mercado Pago **a cada 5 segundos**
+3. Quando o pagamento é aprovado, o status é atualizado automaticamente no banco
+4. O monitoramento dura até **10 minutos** ou até o pagamento ser finalizado
+
+### Formas de Monitorar
+
+O sistema oferece 4 formas de monitorar os pagamentos:
+1. **Monitoramento automático em background** (novo!) - Inicia automaticamente
+2. **Webhook automático**: O Mercado Pago notifica quando há mudanças
+3. **Polling manual**: Consultar status individual via API
+4. **Sincronização em lote**: Sincronizar todos os pagamentos pendentes de uma vez
 
 ---
 
@@ -247,7 +259,7 @@ setInterval(async () => {
 
 ## Response do Endpoint de Geração de Link
 
-O endpoint `/payments/api/generate-link/` foi atualizado para retornar mais informações úteis para monitoramento:
+O endpoint `/payments/api/generate-link/` retorna informações completas para monitoramento:
 
 ```json
 {
@@ -255,6 +267,8 @@ O endpoint `/payments/api/generate-link/` foi atualizado para retornar mais info
     "payment_id": 15,
     "preference_id": "xxx-yyy-zzz",
     "checkout_url": "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=...",
+    "secure_checkout_url": "http://seusite.com/payments/mp/pay/15/",
+    "status_check_url": "http://seusite.com/payments/api/check/15/",
     "sandbox_url": "https://sandbox...",
     "title": "Pedido Padaria do Marcos",
     "total": 35.00,
@@ -266,9 +280,51 @@ O endpoint `/payments/api/generate-link/` foi atualizado para retornar mais info
 }
 ```
 
-Os novos campos são:
-- `preference_id`: ID da preferência no Mercado Pago
-- `external_reference`: Referência única para rastreamento
+### Campos Importantes:
+
+| Campo | Descrição |
+|-------|-----------|
+| `checkout_url` | Link direto do Mercado Pago (original) |
+| `secure_checkout_url` | **Recomendado!** Link que passa pelo nosso sistema primeiro, verificando se já foi pago |
+| `status_check_url` | URL para verificar status via polling |
+| `preference_id` | ID da preferência no Mercado Pago |
+| `external_reference` | Referência única para rastreamento |
+
+---
+
+## 🔒 Proteção contra Links Já Pagos
+
+O sistema agora bloqueia automaticamente o acesso a links de pagamento que já foram aprovados:
+
+### URL Segura (Recomendada)
+
+Use `secure_checkout_url` em vez de `checkout_url` para enviar ao cliente:
+
+```
+http://seusite.com/payments/mp/pay/{payment_id}/
+```
+
+Esta URL:
+1. Verifica se o pagamento já foi realizado
+2. Se **já foi pago**: mostra página informando que o pagamento já foi feito
+3. Se **expirado/cancelado**: mostra página de link expirado
+4. Se **pendente**: redireciona para o checkout do Mercado Pago
+
+### Páginas de Retorno
+
+Após o cliente completar (ou abandonar) o pagamento no MP, ele é redirecionado para:
+
+| URL | Quando |
+|-----|--------|
+| `/payments/mp/return/?status=approved&payment_id=X` | Pagamento aprovado |
+| `/payments/mp/return/?status=pending&payment_id=X` | Pagamento pendente |
+| `/payments/mp/return/?status=rejected&payment_id=X` | Pagamento rejeitado |
+
+A página de retorno:
+1. Recebe os parâmetros do Mercado Pago
+2. Atualiza o status no banco de dados
+3. Mostra página apropriada (sucesso, pendente ou falha)
+4. Para pagamentos pendentes, faz polling automático a cada 5 segundos
 
 ---
 
@@ -296,4 +352,132 @@ Os novos campos são:
     "success": false,
     "error": "Mercado Pago não configurado para esta padaria"
 }
+```
+
+---
+
+## 🤖 Endpoints de Monitoramento Automático
+
+O sistema inclui um serviço de polling em background que monitora automaticamente os pagamentos.
+
+### 4. Iniciar Monitor para um Pagamento
+
+**Endpoint:** `POST /payments/api/monitor/<payment_id>/start/`
+
+Inicia manualmente o monitoramento de um pagamento específico. Útil se o monitor automático expirou e você quer reiniciar.
+
+#### Exemplo de Requisição
+
+```bash
+curl -X POST "http://localhost:8000/payments/api/monitor/15/start/"
+```
+
+#### Resposta de Sucesso (200)
+
+```json
+{
+    "success": true,
+    "payment_id": 15,
+    "status": "pending",
+    "message": "Monitoramento iniciado",
+    "monitoring": true
+}
+```
+
+---
+
+### 5. Listar Monitores Ativos
+
+**Endpoint:** `GET /payments/api/monitors/`
+
+Retorna a lista de pagamentos que estão sendo monitorados ativamente em background.
+
+#### Exemplo de Requisição
+
+```bash
+curl "http://localhost:8000/payments/api/monitors/"
+```
+
+#### Resposta de Sucesso (200)
+
+```json
+{
+    "success": true,
+    "active_count": 3,
+    "payment_ids": [15, 16, 17]
+}
+```
+
+---
+
+### 6. Iniciar Monitores em Lote
+
+**Endpoint:** `POST /payments/api/monitors/start-all/`
+
+Inicia monitoramento para todos os pagamentos pendentes de uma padaria.
+
+#### Body (JSON)
+
+```json
+{
+    "padaria_slug": "padaria-do-marcos"
+}
+```
+
+#### Exemplo de Requisição
+
+```bash
+curl -X POST "http://localhost:8000/payments/api/monitors/start-all/" \
+     -H "Content-Type: application/json" \
+     -d '{"padaria_slug": "padaria-do-marcos"}'
+```
+
+#### Resposta de Sucesso (200)
+
+```json
+{
+    "success": true,
+    "padaria_slug": "padaria-do-marcos",
+    "monitors_started": 5
+}
+```
+
+---
+
+## Como Funciona o Monitoramento Automático
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                    FLUXO DE MONITORAMENTO                        │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Link Criado                                                  │
+│     └── POST /payments/api/generate-link/                        │
+│         └── Monitor iniciado automaticamente (thread)            │
+│                                                                  │
+│  2. Loop de Verificação (a cada 5 segundos)                      │
+│     ├── Buscar pagamento no banco                                │
+│     ├── Consultar API do Mercado Pago (search_payments)          │
+│     │   └── GET /v1/payments/search?external_reference=xxx       │
+│     └── Se status mudou → Atualizar banco                        │
+│                                                                  │
+│  3. Condições de Parada                                          │
+│     ├── Status final (approved, rejected, cancelled)             │
+│     ├── Tempo máximo atingido (10 minutos)                       │
+│     └── Pagamento não existe mais                                │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Logs de Debug
+
+O sistema gera logs para cada operação do monitor:
+
+```
+INFO: Monitor iniciado para pagamento 15
+DEBUG: Monitor 15: verificação #1
+DEBUG: Monitor 15: verificação #2
+INFO: Monitor 15: status mudou pending -> approved
+INFO: Monitor 15: status final approved, parando
+INFO: Monitor 15: finalizado após 3 verificações
 ```

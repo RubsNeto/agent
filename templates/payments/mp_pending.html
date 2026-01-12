@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}Pagamento Pendente{% endblock %}
+{% block page_title %}Aguardando Confirmação{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 3rem 1.5rem;">
+    <div class="pending-icon">
+        <svg width="48" height="48" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <path stroke-linecap="round" d="M12 6v6l4 2" />
+        </svg>
+    </div>
+
+    <h2 style="color: #d97706; font-size: 1.75rem; margin: 1.5rem 0 0.75rem;">Aguardando Confirmação</h2>
+    <p style="color: #4b5563; font-size: 1.125rem;">Seu pagamento está sendo processado.</p>
+
+    {% if padaria_name %}
+    <p style="color: #6b7280; font-size: 0.95rem; margin-top: 0.5rem;">
+        {{ padaria_name }}
+    </p>
+    {% endif %}
+
+    {% if payment %}
+    <div class="payment-details"
+        style="margin-top: 2rem; background: #fffbeb; border-radius: 12px; padding: 1.5rem; text-align: left; border: 1px solid #fcd34d;">
+        <h3 style="font-size: 1rem; color: #92400e; margin-bottom: 1rem;">Detalhes do Pagamento</h3>
+        
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #fcd34d;">
+            <span style="color: #92400e;">Valor</span>
+            <span style="font-weight: 600; color: #78350f;">R$ {{ payment.amount|floatformat:2 }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #fcd34d;">
+            <span style="color: #92400e;">Descrição</span>
+            <span style="font-weight: 500; color: #78350f; text-align: right; max-width: 60%;">{{ payment.description|truncatechars:50 }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+            <span style="color: #92400e;">Status</span>
+            <span style="background: #fef3c7; color: #d97706; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">
+                ⏳ Pendente
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 2rem; padding: 1rem; background: #f3f4f6; border-radius: 8px;">
+        <p style="color: #6b7280; font-size: 0.875rem; margin: 0;">
+            <strong>O que acontece agora?</strong><br>
+            Você receberá uma confirmação assim que o pagamento for aprovado.
+            Isso geralmente leva alguns segundos para PIX e cartão.
+        </p>
+    </div>
+
+    {% if payment %}
+    <div style="margin-top: 1.5rem;">
+        <button onclick="checkStatus()" class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;">
+            <span id="check-btn-text">Verificar Status</span>
+            <span id="check-spinner" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" style="animation: spin 1s linear infinite;">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="40 20"/>
+                </svg>
+            </span>
+        </button>
+    </div>
+    
+    <script>
+        let checkCount = 0;
+        const maxChecks = 60; // 5 minutos (a cada 5 segundos)
+        
+        function checkStatus() {
+            const btn = document.querySelector('button');
+            const btnText = document.getElementById('check-btn-text');
+            const spinner = document.getElementById('check-spinner');
+            
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'inline-block';
+            
+            fetch('/payments/api/check/{{ payment.id }}/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'approved') {
+                        window.location.reload();
+                    } else if (data.status === 'rejected' || data.status === 'cancelled') {
+                        window.location.reload();
+                    } else {
+                        btn.disabled = false;
+                        btnText.textContent = 'Ainda pendente - Verificar novamente';
+                        btnText.style.display = 'inline';
+                        spinner.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    btn.disabled = false;
+                    btnText.textContent = 'Erro - Tentar novamente';
+                    btnText.style.display = 'inline';
+                    spinner.style.display = 'none';
+                });
+        }
+        
+        // Auto-check a cada 5 segundos por 5 minutos
+        function autoCheck() {
+            if (checkCount < maxChecks) {
+                checkCount++;
+                fetch('/payments/api/check/{{ payment.id }}/')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'approved' || data.status === 'rejected' || data.status === 'cancelled') {
+                            window.location.reload();
+                        } else {
+                            setTimeout(autoCheck, 5000);
+                        }
+                    })
+                    .catch(() => setTimeout(autoCheck, 5000));
+            }
+        }
+        
+        // Iniciar auto-check após 3 segundos
+        setTimeout(autoCheck, 3000);
+    </script>
+    {% endif %}
+
+    <p style="color: #9ca3af; font-size: 0.875rem; margin-top: 2rem;">
+        Você pode fechar esta página. O status será atualizado automaticamente.
+    </p>
+</div>
+
+<style>
+    .pending-icon {
+        width: 96px;
+        height: 96px;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        box-shadow: 0 10px 40px rgba(245, 158, 11, 0.3);
+        animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}

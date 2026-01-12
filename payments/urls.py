@@ -24,6 +24,10 @@ urlpatterns = [
     path('assinatura/success/', views.payment_success, name='subscription_success'),
     path('cancel/', views.payment_cancel, name='cancel'),
     
+    # === Mercado Pago - Páginas de Retorno ===
+    path('mp/return/', views.mp_payment_return, name='mp_return'),
+    path('mp/pay/<int:payment_id>/', views.mp_checkout_gate, name='mp_checkout_gate'),
+    
     # === API para Agentes (WhatsApp/n8n) ===
     path('api/cart/', api_views.create_cart_payment, name='api_create_cart'),
     path('api/generate-link/', api_views.create_payment_link, name='api_generate_link'),
@@ -33,6 +37,11 @@ urlpatterns = [
     path('api/check/<int:payment_id>/', api_views.check_payment_status, name='api_check_payment'),
     path('api/pending/', api_views.list_pending_payments, name='api_list_pending'),
     path('api/sync-pending/', api_views.sync_all_pending_payments, name='api_sync_pending'),
+    
+    # === API de Monitoramento Automático ===
+    path('api/monitor/<int:payment_id>/start/', api_views.start_monitor, name='api_start_monitor'),
+    path('api/monitors/', api_views.get_active_monitors, name='api_active_monitors'),
+    path('api/monitors/start-all/', api_views.start_bulk_monitor, name='api_start_bulk_monitor'),
     
     # === Legado (Stripe) - Mantidos para compatibilidade ===
     path('settings/', views.payment_settings, name='settings'),
