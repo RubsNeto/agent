@@ -29,6 +29,11 @@ urlpatterns = [
     path('api/generate-link/', api_views.create_payment_link, name='api_generate_link'),
     path('api/<str:payment_id>/status/', api_views.get_payment_status, name='api_payment_status'),
     
+    # === API de Monitoramento de Status ===
+    path('api/check/<int:payment_id>/', api_views.check_payment_status, name='api_check_payment'),
+    path('api/pending/', api_views.list_pending_payments, name='api_list_pending'),
+    path('api/sync-pending/', api_views.sync_all_pending_payments, name='api_sync_pending'),
+    
     # === Legado (Stripe) - Mantidos para compatibilidade ===
     path('settings/', views.payment_settings, name='settings'),
     path('stripe/onboarding/', views.start_onboarding, name='start_onboarding'),

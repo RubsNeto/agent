@@ -535,6 +535,7 @@ def create_payment_link(request):
         response_data = {
             "success": True,
             "payment_id": mp_payment.id,
+            "preference_id": preference.get('id', ''),
             "checkout_url": preference.get('init_point', ''),
             "sandbox_url": preference.get('sandbox_init_point', ''),
             "title": title,
@@ -542,6 +543,7 @@ def create_payment_link(request):
             "items": items_processados,
             "description": description,
             "status": "pending",
+            "external_reference": external_reference,
             "created_at": mp_payment.created_at.isoformat(),
         }
         
@@ -563,3 +565,373 @@ def create_payment_link(request):
             "success": False,
             "error": f"Erro inesperado: {str(e)}"
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def check_payment_status(request, payment_id):
+    """
+    Consulta e sincroniza status de um pagamento pelo ID interno.
+    Busca o status atual no Mercado Pago e atualiza o banco local.
+    
+    GET /payments/api/check/<payment_id>/
+    POST /payments/api/check/<payment_id>/
+    
+    Response (success):
+    {
+        "success": true,
+        "payment_id": 15,
+        "mp_payment_id": "123456789",
+        "preference_id": "xxx-yyy-zzz",
+        "status": "pending|approved|rejected|cancelled|in_process",
+        "status_detail": "Detalhes do status",
+        "amount": 35.00,
+        "description": "Pedido...",
+        "checkout_url": "https://...",
+        "paid_at": null,
+        "created_at": "2026-01-09T16:30:00Z",
+        "updated_at": "2026-01-09T16:35:00Z",
+        "synced_at": "2026-01-12T10:30:00Z"
+    }
+    """
+    try:
+        # Buscar pagamento no banco local
+        try:
+            mp_payment = MercadoPagoPayment.objects.select_related('config', 'config__padaria').get(id=payment_id)
+        except MercadoPagoPayment.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "error": f"Pagamento {payment_id} não encontrado"
+            }, status=404)
+        
+        old_status = mp_payment.status
+        status_detail = ""
+        synced = False
+        mp_status_response = None
+        
+        # Tentar sincronizar com o Mercado Pago
+        mp_config = mp_payment.config
+        if mp_config and mp_config.access_token:
+            mp_service = MercadoPagoService(mp_config.access_token)
+            
+            # Se temos o mp_payment_id, buscar status direto
+            if mp_payment.mp_payment_id:
+                try:
+                    mp_status_response = mp_service.get_payment(mp_payment.mp_payment_id)
+                    if mp_status_response:
+                        new_status = mp_status_response.get("status", mp_payment.status)
+                        status_detail = mp_status_response.get("status_detail", "")
+                        
+                        if new_status != old_status:
+                            mp_payment.status = new_status
+                            if new_status == "approved":
+                                mp_payment.paid_at = timezone.now()
+                            mp_payment.save()
+                            logger.info(f"Pagamento {payment_id} sincronizado: {old_status} -> {new_status}")
+                        
+                        synced = True
+                except Exception as e:
+                    logger.warning(f"Erro ao sincronizar pagamento {payment_id} via mp_payment_id: {e}")
+            
+            # Se ainda não sincronizou e temos preference_id, buscar por external_reference
+            if not synced and mp_payment.mp_preference_id:
+                try:
+                    # O external_reference está armazenado no campo pix_qr_code (workaround)
+                    external_ref = mp_payment.pix_qr_code  # pandia_padaria_xxxxx
+                    if external_ref and external_ref.startswith("pandia_"):
+                        search_result = mp_service.search_payments(external_reference=external_ref, limit=1)
+                        if search_result and search_result.get("results"):
+                            payment_data = search_result["results"][0]
+                            new_status = payment_data.get("status", mp_payment.status)
+                            status_detail = payment_data.get("status_detail", "")
+                            mp_id = str(payment_data.get("id", ""))
+                            
+                            if mp_id and not mp_payment.mp_payment_id:
+                                mp_payment.mp_payment_id = mp_id
+                            
+                            if new_status != old_status:
+                                mp_payment.status = new_status
+                                if new_status == "approved":
+                                    mp_payment.paid_at = timezone.now()
+                                mp_payment.save()
+                                logger.info(f"Pagamento {payment_id} sincronizado via search: {old_status} -> {new_status}")
+                            
+                            synced = True
+                except Exception as e:
+                    logger.warning(f"Erro ao buscar pagamento {payment_id} via search: {e}")
+        
+        # Preparar resposta
+        response_data = {
+            "success": True,
+            "payment_id": mp_payment.id,
+            "mp_payment_id": mp_payment.mp_payment_id or None,
+            "preference_id": mp_payment.mp_preference_id or None,
+            "external_reference": mp_payment.pix_qr_code if mp_payment.pix_qr_code and mp_payment.pix_qr_code.startswith("pandia_") else None,
+            "status": mp_payment.status,
+            "status_detail": status_detail,
+            "status_label": dict(MercadoPagoPayment.STATUS_CHOICES).get(mp_payment.status, mp_payment.status),
+            "amount": float(mp_payment.amount),
+            "description": mp_payment.description,
+            "checkout_url": mp_payment.checkout_url,
+            "padaria_name": mp_payment.config.padaria.name if mp_payment.config and mp_payment.config.padaria else None,
+            "payer_email": mp_payment.payer_email,
+            "paid_at": mp_payment.paid_at.isoformat() if mp_payment.paid_at else None,
+            "created_at": mp_payment.created_at.isoformat(),
+            "updated_at": mp_payment.updated_at.isoformat(),
+            "synced": synced,
+            "synced_at": timezone.now().isoformat() if synced else None,
+            "status_changed": old_status != mp_payment.status,
+        }
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        logger.exception(f"Erro ao consultar status do pagamento: {e}")
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def list_pending_payments(request):
+    """
+    Lista todos os pagamentos pendentes de uma padaria.
+    Útil para criar uma tela de monitoramento.
+    
+    GET /payments/api/pending/?padaria_slug=bela-milao
+    
+    Query params:
+        padaria_slug: Slug da padaria (obrigatório)
+        status: Filtrar por status (opcional, default: pending)
+        limit: Número máximo de resultados (opcional, default: 50)
+    
+    Response:
+    {
+        "success": true,
+        "count": 5,
+        "payments": [
+            {
+                "payment_id": 15,
+                "status": "pending",
+                "amount": 35.00,
+                "description": "...",
+                "checkout_url": "...",
+                "created_at": "..."
+            },
+            ...
+        ]
+    }
+    """
+    try:
+        padaria_slug = request.GET.get("padaria_slug", "")
+        status_filter = request.GET.get("status", "pending")
+        limit = int(request.GET.get("limit", 50))
+        
+        if not padaria_slug:
+            return JsonResponse({
+                "success": False,
+                "error": "Campo 'padaria_slug' é obrigatório"
+            }, status=400)
+        
+        # Buscar padaria
+        try:
+            padaria = Padaria.objects.get(slug=padaria_slug)
+        except Padaria.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "error": f"Padaria '{padaria_slug}' não encontrada"
+            }, status=404)
+        
+        # Verificar se tem config de MP
+        try:
+            mp_config = padaria.mercadopago_config
+        except MercadoPagoConfig.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "error": "Mercado Pago não configurado para esta padaria"
+            }, status=400)
+        
+        # Buscar pagamentos
+        queryset = MercadoPagoPayment.objects.filter(config=mp_config)
+        
+        if status_filter and status_filter != "all":
+            queryset = queryset.filter(status=status_filter)
+        
+        queryset = queryset.order_by("-created_at")[:limit]
+        
+        payments = []
+        for p in queryset:
+            payments.append({
+                "payment_id": p.id,
+                "mp_payment_id": p.mp_payment_id or None,
+                "preference_id": p.mp_preference_id or None,
+                "status": p.status,
+                "status_label": dict(MercadoPagoPayment.STATUS_CHOICES).get(p.status, p.status),
+                "amount": float(p.amount),
+                "description": p.description,
+                "checkout_url": p.checkout_url,
+                "payer_email": p.payer_email,
+                "paid_at": p.paid_at.isoformat() if p.paid_at else None,
+                "created_at": p.created_at.isoformat(),
+            })
+        
+        return JsonResponse({
+            "success": True,
+            "padaria": padaria.name,
+            "count": len(payments),
+            "status_filter": status_filter,
+            "payments": payments,
+        })
+        
+    except Exception as e:
+        logger.exception(f"Erro ao listar pagamentos: {e}")
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def sync_all_pending_payments(request):
+    """
+    Sincroniza todos os pagamentos pendentes de uma padaria com o Mercado Pago.
+    Útil para atualização em lote.
+    
+    POST /payments/api/sync-pending/
+    
+    Body:
+    {
+        "padaria_slug": "bela-milao"
+    }
+    
+    Response:
+    {
+        "success": true,
+        "synced_count": 3,
+        "approved_count": 1,
+        "updated_payments": [...]
+    }
+    """
+    try:
+        data = json.loads(request.body)
+        padaria_slug = data.get("padaria_slug", "")
+        
+        if not padaria_slug:
+            return JsonResponse({
+                "success": False,
+                "error": "Campo 'padaria_slug' é obrigatório"
+            }, status=400)
+        
+        # Buscar padaria
+        try:
+            padaria = Padaria.objects.get(slug=padaria_slug)
+        except Padaria.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "error": f"Padaria '{padaria_slug}' não encontrada"
+            }, status=404)
+        
+        # Verificar se tem config de MP
+        try:
+            mp_config = padaria.mercadopago_config
+            if not mp_config.access_token:
+                return JsonResponse({
+                    "success": False,
+                    "error": "Mercado Pago não configurado"
+                }, status=400)
+        except MercadoPagoConfig.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "error": "Mercado Pago não configurado"
+            }, status=400)
+        
+        mp_service = MercadoPagoService(mp_config.access_token)
+        
+        # Buscar pagamentos pendentes
+        pending_payments = MercadoPagoPayment.objects.filter(
+            config=mp_config,
+            status="pending"
+        ).order_by("-created_at")[:100]  # Limita a 100 para performance
+        
+        synced_count = 0
+        approved_count = 0
+        updated_payments = []
+        
+        for payment in pending_payments:
+            try:
+                old_status = payment.status
+                new_status = old_status
+                synced = False
+                
+                # Tentar buscar por mp_payment_id
+                if payment.mp_payment_id:
+                    try:
+                        mp_data = mp_service.get_payment(payment.mp_payment_id)
+                        if mp_data:
+                            new_status = mp_data.get("status", old_status)
+                            synced = True
+                    except Exception:
+                        pass
+                
+                # Se não sincronizou, tentar por external_reference
+                if not synced and payment.pix_qr_code and payment.pix_qr_code.startswith("pandia_"):
+                    try:
+                        search_result = mp_service.search_payments(
+                            external_reference=payment.pix_qr_code,
+                            limit=1
+                        )
+                        if search_result and search_result.get("results"):
+                            mp_data = search_result["results"][0]
+                            new_status = mp_data.get("status", old_status)
+                            mp_id = str(mp_data.get("id", ""))
+                            if mp_id:
+                                payment.mp_payment_id = mp_id
+                            synced = True
+                    except Exception:
+                        pass
+                
+                if synced:
+                    synced_count += 1
+                    if new_status != old_status:
+                        payment.status = new_status
+                        if new_status == "approved":
+                            payment.paid_at = timezone.now()
+                            approved_count += 1
+                        payment.save()
+                        
+                        updated_payments.append({
+                            "payment_id": payment.id,
+                            "old_status": old_status,
+                            "new_status": new_status,
+                            "amount": float(payment.amount),
+                            "description": payment.description,
+                        })
+                        
+            except Exception as e:
+                logger.warning(f"Erro ao sincronizar pagamento {payment.id}: {e}")
+                continue
+        
+        return JsonResponse({
+            "success": True,
+            "padaria": padaria.name,
+            "synced_count": synced_count,
+            "approved_count": approved_count,
+            "total_pending": pending_payments.count(),
+            "updated_payments": updated_payments,
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "success": False,
+            "error": "JSON inválido"
+        }, status=400)
+    except Exception as e:
+        logger.exception(f"Erro ao sincronizar pagamentos: {e}")
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+
