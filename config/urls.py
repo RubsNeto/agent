@@ -22,3 +22,11 @@ urlpatterns = [
 # Servir arquivos de media em desenvolvimento
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # Em produção, também servir media files via Django
+    # Nota: Para alta performance, configure o Traefik/nginx para servir /media/ diretamente
+    from django.views.static import serve
+    from django.urls import re_path
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    ]
