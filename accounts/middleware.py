@@ -16,6 +16,7 @@ class LoginRequiredMiddleware:
             reverse('accounts:register'),
             '/admin/',  # Manter acesso ao admin
             '/static/',
+            '/media/',  # Arquivos de mídia (imagens de produtos, promoções, etc.)
             '/api/',    # API usa autenticação via API Key
             '/payments/api/',  # API de pagamentos para n8n/WhatsApp
             '/webhooks/',  # Webhooks externos (Mercado Pago, etc.)
