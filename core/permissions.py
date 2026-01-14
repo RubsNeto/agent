@@ -13,6 +13,23 @@ def is_admin_master(user):
     return user.is_authenticated and user.is_superuser
 
 
+def is_system_admin(user):
+    """
+    Verifica se o usuário é um admin do sistema.
+    Pode ser Superuser ou ter perfil com role='admin'.
+    """
+    if not user.is_authenticated:
+        return False
+    
+    if user.is_superuser:
+        return True
+        
+    try:
+        return hasattr(user, 'profile') and user.profile.role == 'admin'
+    except Exception:
+        return False
+
+
 def get_user_padaria(user):
     """
     Retorna a padaria do usuário.
@@ -89,6 +106,24 @@ def require_admin_master(view_func):
         
         if not is_admin_master(request.user):
             messages.error(request, "Acesso restrito a administradores.")
+            return redirect('ui:dashboard')
+        
+        return view_func(request, *args, **kwargs)
+    
+    return wrapper
+
+
+def require_system_admin(view_func):
+    """
+    Decorator que exige que o usuário seja admin do sistema (Role=Admin ou Superuser).
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+        
+        if not is_system_admin(request.user):
+            messages.error(request, "Acesso restrito a administradores do sistema.")
             return redirect('ui:dashboard')
         
         return view_func(request, *args, **kwargs)

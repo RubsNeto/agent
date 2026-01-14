@@ -5,15 +5,16 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from django.core.paginator import Paginator
 
-from core.permissions import require_admin_master
+from core.permissions import require_admin_master, require_system_admin
 from organizations.models import Padaria, PadariaUser, ApiKey
 from agents.models import Agent
 from audit.models import AuditLog
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def dashboard(request):
+
     """Dashboard do admin master com métricas globais."""
     # Métricas
     total_padarias = Padaria.objects.count()
@@ -51,7 +52,7 @@ def dashboard(request):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def padarias_list(request):
     """Lista todas as padarias."""
     search = request.GET.get('search', '')
@@ -90,7 +91,7 @@ def padarias_list(request):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def padaria_create(request):
     """Criar nova padaria com usuario dono."""
     if request.method == 'POST':
@@ -190,7 +191,7 @@ def padaria_create(request):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def padaria_detail(request, slug):
     """Detalhes de uma padaria."""
     padaria = get_object_or_404(Padaria.objects.select_related('owner'), slug=slug)
@@ -214,7 +215,7 @@ def padaria_detail(request, slug):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def padaria_edit(request, slug):
     """Editar padaria."""
     padaria = get_object_or_404(Padaria, slug=slug)
@@ -296,7 +297,7 @@ def padaria_delete(request, slug):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def padaria_members(request, slug):
     """Gerenciar membros da padaria."""
     padaria = get_object_or_404(Padaria, slug=slug)
@@ -310,7 +311,7 @@ def padaria_members(request, slug):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def padaria_member_add(request, slug):
     """Adicionar membro à padaria."""
     padaria = get_object_or_404(Padaria, slug=slug)
@@ -358,7 +359,7 @@ def padaria_member_add(request, slug):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def padaria_member_remove(request, slug, member_id):
     """Remover membro da padaria."""
     padaria = get_object_or_404(Padaria, slug=slug)
@@ -393,7 +394,7 @@ def padaria_member_remove(request, slug, member_id):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def agents_list(request):
     """Lista global de todos os agentes."""
     search = request.GET.get('search', '')
@@ -425,7 +426,7 @@ def agents_list(request):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def agent_detail(request, slug):
     """Detalhes de um agente (visão admin)."""
     agent = get_object_or_404(Agent.objects.select_related('padaria'), slug=slug)
@@ -437,7 +438,7 @@ def agent_detail(request, slug):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def padaria_apikey(request, slug):
     """Gerenciar API Keys da padaria."""
     padaria = get_object_or_404(Padaria, slug=slug)
@@ -451,7 +452,7 @@ def padaria_apikey(request, slug):
 
 
 @login_required
-@require_admin_master
+@require_system_admin
 def padaria_apikey_generate(request, slug):
     """Gerar nova API Key para a padaria."""
     padaria = get_object_or_404(Padaria, slug=slug)
@@ -517,6 +518,7 @@ def user_create(request):
         password = request.POST.get('password', '')
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
+        role = request.POST.get('role', 'user')
         
         if not username:
             messages.error(request, 'O nome de usuario e obrigatorio.')
@@ -542,12 +544,17 @@ def user_create(request):
             last_name=last_name
         )
         
+        # Atribuir papel
+        if hasattr(user, 'profile'):
+            user.profile.role = role
+            user.profile.save()
+        
         AuditLog.log(
             action='create',
             entity='User',
             actor=request.user,
             entity_id=user.id,
-            diff={'username': username, 'email': email}
+            diff={'username': username, 'email': email, 'role': role}
         )
         
         messages.success(request, f"Usuario '{username}' criado com sucesso!")
@@ -568,6 +575,11 @@ def user_edit(request, user_id):
         user_obj.last_name = request.POST.get('last_name', '').strip()
         user_obj.is_active = request.POST.get('is_active') == 'on'
         
+        role = request.POST.get('role')
+        if role and hasattr(user_obj, 'profile'):
+            user_obj.profile.role = role
+            user_obj.profile.save()
+        
         new_password = request.POST.get('password', '')
         if new_password:
             user_obj.set_password(new_password)
@@ -579,7 +591,7 @@ def user_edit(request, user_id):
             entity='User',
             actor=request.user,
             entity_id=user_obj.id,
-            diff={'username': user_obj.username}
+            diff={'username': user_obj.username, 'role': role}
         )
         
         messages.success(request, f"Usuario '{user_obj.username}' atualizado!")

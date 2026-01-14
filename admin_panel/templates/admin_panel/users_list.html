@@ -1,0 +1,97 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Usuários do Sistema{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{% url 'admin_panel:dashboard' %}">Dashboard</a> /
+    Usuários
+</div>
+
+<div class="content-header">
+    <div>
+        <h2 class="content-title">Usuários do Sistema</h2>
+        <p class="content-subtitle">Gerenciamento de usuários e permissões</p>
+    </div>
+    <a href="{% url 'admin_panel:user_create' %}" class="btn btn-primary">
+        + Novo Usuário
+    </a>
+</div>
+
+<div class="card">
+    <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
+        <form method="get" style="display: flex; gap: 1rem; flex: 1;">
+            <input type="text" name="search" class="form-input" placeholder="Buscar por nome, email ou username..." value="{{ search }}">
+            <button type="submit" class="btn btn-secondary">Buscar</button>
+        </form>
+    </div>
+
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>Nome</th>
+                    <th>E-mail</th>
+                    <th>Papel (Role)</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <div style="font-weight: 500;">{{ user.username }}</div>
+                        <div style="font-size: 0.75rem; color: var(--gray-500);">ID: {{ user.id }}</div>
+                    </td>
+                    <td>{{ user.get_full_name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.profile.role == 'admin' %}
+                            <span class="badge badge-primary" style="background-color: #7c3aed; color: white;">Administrador</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Usuário Padaria</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                            <span class="badge badge-success" style="background-color: #10b981; color: white;">Ativo</span>
+                        {% else %}
+                            <span class="badge badge-danger" style="background-color: #ef4444; color: white;">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'admin_panel:user_edit' user.id %}" class="btn-icon" title="Editar">
+                            ✏️
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem;">
+                        <p style="color: var(--gray-500);">Nenhum usuário encontrado.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if users.paginator.num_pages > 1 %}
+    <div class="pagination" style="margin-top: 1.5rem; display: flex; justify-content: center; gap: 0.5rem;">
+        {% if users.has_previous %}
+            <a href="?page={{ users.previous_page_number }}&search={{ search }}" class="btn btn-secondary">Anterior</a>
+        {% endif %}
+        
+        <span style="display: flex; align-items: center;">
+            Página {{ users.number }} de {{ users.paginator.num_pages }}
+        </span>
+        
+        {% if users.has_next %}
+            <a href="?page={{ users.next_page_number }}&search={{ search }}" class="btn btn-secondary">Próxima</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

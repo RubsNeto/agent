@@ -1,0 +1,89 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}{% if is_edit %}Editar{% else %}Novo{% endif %} Usuário{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{% url 'admin_panel:dashboard' %}">Dashboard</a> /
+    <a href="{% url 'admin_panel:users_list' %}">Usuários</a> /
+    {% if is_edit %}{{ user_obj.username }}{% else %}Novo{% endif %}
+</div>
+
+<div class="content-header">
+    <div>
+        <h2 class="content-title">{% if is_edit %}Editar Usuário{% else %}Novo Usuário{% endif %}</h2>
+        <p class="content-subtitle">{% if is_edit %}Atualize os dados do usuário{% else %}Cadastre um novo usuário no sistema{% endif %}</p>
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 class="card-title">Dados do Usuário</h3>
+
+        <div class="form-group">
+            <label class="form-label">Nome de Usuário (Login) *</label>
+            <input type="text" name="username" class="form-input" required
+                value="{% if is_edit %}{{ user_obj.username }}{% endif %}" placeholder="usuario.sistema"
+                {% if is_edit %}disabled{% endif %}>
+            {% if is_edit %}<p class="form-help">O nome de usuário não pode ser alterado.</p>{% endif %}
+        </div>
+
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label class="form-label">Nome</label>
+                <input type="text" name="first_name" class="form-input" 
+                    value="{% if is_edit %}{{ user_obj.first_name }}{% endif %}" placeholder="Nome">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Sobrenome</label>
+                <input type="text" name="last_name" class="form-input"
+                    value="{% if is_edit %}{{ user_obj.last_name }}{% endif %}" placeholder="Sobrenome">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">E-mail</label>
+            <input type="email" name="email" class="form-input"
+                value="{% if is_edit %}{{ user_obj.email }}{% endif %}" placeholder="usuario@exemplo.com">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Papel no Sistema (Role)</label>
+            <select name="role" class="form-input" style="height: 42px;">
+                <option value="user" {% if not is_edit or user_obj.profile.role == 'user' %}selected{% endif %}>Usuário Padaria (Padrão)</option>
+                <option value="admin" {% if is_edit and user_obj.profile.role == 'admin' %}selected{% endif %}>Administrador do Sistema (Pode criar Padarias)</option>
+            </select>
+            <p class="form-help">Nota: Administradores do Sistema não podem criar outros administradores.</p>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">{% if is_edit %}Nova Senha (deixe em branco para manter){% else %}Senha *{% endif %}</label>
+            <input type="password" name="password" class="form-input" 
+                {% if not is_edit %}required{% endif %} placeholder="Mínimo 6 caracteres" minlength="6">
+        </div>
+
+        {% if is_edit %}
+        <div class="form-group">
+            <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="is_active" {% if user_obj.is_active %}checked{% endif %}>
+                Usuário Ativo
+            </label>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="display: flex; gap: 1rem;">
+        <button type="submit" class="btn btn-primary">{% if is_edit %}Salvar Alterações{% else %}Criar Usuário{% endif %}</button>
+        <a href="{% url 'admin_panel:users_list' %}" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+
+{% if is_edit %}
+<div class="card" style="margin-top: 2rem; border-left: 4px solid #ef4444;">
+    <h3 class="card-title" style="color: #ef4444;">Zona de Perigo</h3>
+    <a href="{% url 'admin_panel:user_delete' user_obj.id %}" class="btn btn-danger">Deletar Usuário</a>
+</div>
+{% endif %}
+{% endblock %}
