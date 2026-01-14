@@ -170,27 +170,19 @@ class MercadoPagoService:
     
     def search_payments(
         self, 
-        external_reference: Optional[str] = None,
-        status: Optional[str] = None,
-        limit: int = 10
+        limit: int = 50,
+        offset: int = 0,
+        **filters
     ) -> Dict[str, Any]:
         """
-        Busca pagamentos com filtros.
-        
-        Args:
-            external_reference: Filtra por referência externa
-            status: Filtra por status (approved, pending, rejected, etc)
-            limit: Limite de resultados
-        
-        Returns:
-            Dict com 'results' (lista de pagamentos)
+        Busca pagamentos com filtros flexíveis.
+        Suporta: status, external_reference, range, begin_date, end_date, etc.
         """
-        params = [f"limit={limit}"]
+        params = [f"limit={limit}", f"offset={offset}"]
         
-        if external_reference:
-            params.append(f"external_reference={external_reference}")
-        if status:
-            params.append(f"status={status}")
+        for key, value in filters.items():
+            if value is not None:
+                params.append(f"{key}={value}")
         
         query_string = "&".join(params)
         return self._request("GET", f"v1/payments/search?{query_string}")

@@ -1,0 +1,533 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Relatórios - {{ organization.name }}{% endblock %}
+{% block page_title %}Relatórios Empresariais{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dashboard Grid Layout */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    /* KPI Cards */
+    .kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e5e7eb;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    }
+
+    .kpi-card-title {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .kpi-card-value {
+        color: #111827;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .kpi-card-subtext {
+        color: #9ca3af;
+        font-size: 0.875rem;
+    }
+
+    /* Chart Section */
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+        border: 1px solid #e5e7eb;
+    }
+
+    .section-title {
+        color: #111827;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Tables Grid */
+    .tables-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+        .tables-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .table-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .custom-table th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        color: #6b7280;
+        font-weight: 600;
+        font-size: 0.875rem;
+        background-color: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .custom-table td {
+        padding: 0.75rem 1rem;
+        color: #374151;
+        font-size: 0.875rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .custom-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-approved {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-pending {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-rejected {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+
+    /* Filters */
+    .filters-bar {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 1rem;
+        align-items: flex-end;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .form-label {
+        font-size: 0.875rem;
+        color: #4b5563;
+        font-weight: 500;
+    }
+
+    .form-input {
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.875rem;
+    }
+
+    .btn-submit {
+        background: #2563eb;
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+    }
+    
+    .btn-submit:hover {
+        background: #1d4ed8;
+    }
+
+    .empty-state-card {
+        text-align: center;
+        padding: 3rem;
+        color: #9ca3af;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div>
+        <h2 class="content-title">Relatórios & Insights</h2>
+        <p class="content-subtitle">Visão 360º do desempenho financeiro da <strong>{{ organization.name }}</strong></p>
+    </div>
+</div>
+
+<!-- Filtros -->
+<form method="get" class="filters-bar">
+    <div class="form-group">
+        <label for="start_date" class="form-label">Data Início</label>
+        <input type="date" id="start_date" name="start_date" value="{{ start_date|default:'' }}" class="form-input">
+    </div>
+    <div class="form-group">
+        <label for="end_date" class="form-label">Data Fim</label>
+        <input type="date" id="end_date" name="end_date" value="{{ end_date|default:'' }}" class="form-input">
+    </div>
+    <button type="submit" class="btn-submit">Atualizar Dashboard</button>
+    {% if start_date or end_date %}
+    <a href="{% url 'organizations:report_detail' organization.slug %}" style="display: flex; align-items: center; color: #6b7280; font-size: 0.875rem; text-decoration: none; margin-bottom: 0.5rem;">Limpar</a>
+    {% endif %}
+</form>
+
+{% if not mp_connected %}
+<div class="alert alert-warning" style="margin-bottom: 2rem; border-left: 4px solid #f59e0b; background: #fffbeb; padding: 1rem; border-radius: 6px; color: #92400e;">
+    <strong>Atenção:</strong> Sua conta do Mercado Pago parece não estar conectada ou não possui transações recentes. Alguns dados podem estar incompletos.
+</div>
+{% endif %}
+
+<!-- KPI Grid -->
+<div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+    <!-- Faturamento -->
+    <div class="kpi-card">
+        <div class="kpi-card-title">Faturamento Total</div>
+        <div class="kpi-card-value" style="color: #10b981;">R$ {{ total_revenue|floatformat:2 }}</div>
+        <div class="kpi-growth {% if revenue_growth >= 0 %}positive{% else %}negative{% endif %}">
+            {% if revenue_growth >= 0 %}
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+            +{{ revenue_growth|floatformat:1 }}%
+            {% else %}
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>
+            {{ revenue_growth|floatformat:1 }}%
+            {% endif %}
+            <span style="color: #9ca3af; font-size: 0.75rem; font-weight: 400;">vs período anterior</span>
+        </div>
+    </div>
+
+    <!-- Vendas -->
+    <div class="kpi-card">
+        <div class="kpi-card-title">Total de Vendas</div>
+        <div class="kpi-card-value" style="color: #3b82f6;">{{ total_sales_count }}</div>
+        <div class="kpi-growth {% if sales_growth >= 0 %}positive{% else %}negative{% endif %}">
+            {% if sales_growth >= 0 %}
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+            +{{ sales_growth|floatformat:1 }}%
+            {% else %}
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>
+            {{ sales_growth|floatformat:1 }}%
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Ticket Médio -->
+    <div class="kpi-card">
+        <div class="kpi-card-title">Ticket Médio</div>
+        <div class="kpi-card-value" style="color: #8b5cf6;">R$ {{ avg_ticket|floatformat:2 }}</div>
+        <div class="kpi-card-subtext">Por venda realizada</div>
+    </div>
+
+    <!-- Taxa de Problemas -->
+    <div class="kpi-card">
+        <div class="kpi-card-title">Cancelamentos/Reembolsos</div>
+        <div class="kpi-card-value" style="color: {% if refund_rate > 5 %}#ef4444{% else %}#f59e0b{% endif %};">{{ refund_rate|floatformat:1 }}%</div>
+        <div class="kpi-card-subtext">Do total de transações</div>
+    </div>
+</div>
+
+<!-- Charts Grid -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Evolução -->
+    <div class="chart-container" style="margin-bottom: 0;">
+        <div class="section-title">
+            Faturamento Diário
+        </div>
+        <div style="height: 250px; position: relative; width: 100%;">
+            <canvas id="salesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Distribuição de Status -->
+    <div class="chart-container" style="margin-bottom: 0;">
+        <div class="section-title">
+            Status dos Pedidos
+        </div>
+        <div style="height: 200px; display: flex; justify-content: center;">
+            <canvas id="statusChart"></canvas>
+        </div>
+        <div style="margin-top: 1rem; font-size: 0.875rem; color: #6b7280; text-align: center;">
+            Visão geral da saúde das transações.
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Top Produtos -->
+    <div class="table-card" style="margin-bottom: 0;">
+        <div class="section-title">Top Produtos (Receita)</div>
+        <div style="height: 300px; overflow-y: auto;">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Qtd</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products_sold %}
+                    <tr>
+                        <td style="font-weight: 500;">{{ product.description|truncatechars:30 }}</td>
+                        <td>{{ product.qty }}</td>
+                        <td>R$ {{ product.revenue|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="empty-state-card">Nenhum dado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Payment Methods Chart -->
+    <div class="chart-container" style="margin-bottom: 0;">
+        <div class="section-title">Meios de Pagamento</div>
+        <div style="height: 200px; display: flex; justify-content: center;">
+            <canvas id="methodsChart"></canvas>
+        </div>
+        <!-- Mini Tabela -->
+        <div style="margin-top: 1.5rem;">
+            <table class="custom-table" style="font-size: 0.85rem;">
+                <thead>
+                    <tr>
+                        <th>Método</th>
+                        <th>Vol.</th>
+                        <th>%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pm in payment_methods %}
+                    <tr>
+                        <td style="text-transform: capitalize;">{{ pm.method }}</td>
+                        <td>R$ {{ pm.revenue|floatformat:0 }}</td>
+                        <td>{{ pm.count }} tx</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Últimas Transações -->
+<div class="table-card">
+    <div class="section-title">Histórico de Transações</div>
+    <div style="overflow-x: auto;">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Status</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in recent_transactions %}
+                <tr>
+                    <td>{{ tx.created_at|date:"d/m/Y H:i" }}</td>
+                    <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        {{ tx.description }}
+                    </td>
+                    <td>
+                        {% if tx.status == 'approved' %}
+                        <span class="status-badge status-approved">Aprovado</span>
+                        {% elif tx.status == 'pending' or tx.status == 'in_process' %}
+                        <span class="status-badge status-pending">Pendente</span>
+                        {% elif tx.status == 'refunded' %}
+                        <span class="status-badge status-rejected" style="background: #e0f2fe; color: #0284c7;">Estornado</span>
+                        {% else %}
+                        <span class="status-badge status-rejected">{{ tx.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-family: monospace; font-size: 0.95rem;">R$ {{ tx.amount|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="empty-state-card">Nenhuma transação.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .kpi-growth {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    .kpi-growth.positive { color: #10b981; }
+    .kpi-growth.negative { color: #ef4444; }
+    
+    .w-4 { width: 1rem; }
+    .h-4 { height: 1rem; }
+    
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        padding: 1.5rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- 1. Gráfico de Evolução (Line) ---
+        const ctxSales = document.getElementById('salesChart').getContext('2d');
+        const salesGradient = ctxSales.createLinearGradient(0, 0, 0, 300);
+        salesGradient.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
+        salesGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+        new Chart(ctxSales, {
+            type: 'line',
+            data: {
+                labels: {{ chart_labels|safe }},
+                datasets: [{
+                    label: 'Receita',
+                    data: {{ chart_data|safe }},
+                    borderColor: '#3b82f6',
+                    backgroundColor: salesGradient,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { borderDash: [4, 4], color: '#f3f4f6' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // --- 2. Gráfico de Status (Doughnut) ---
+        const statusData = {{ status_data|safe }};
+        const statusLabels = {{ status_labels|safe }};
+        const statusColors = statusLabels.map(s => {
+            if(s.includes('approved') || s.includes('Aprovado')) return '#10b981';
+            if(s.includes('pending') || s.includes('Pendente')) return '#f59e0b';
+            if(s.includes('rejected') || s.includes('Rejeitado')) return '#ef4444';
+            return '#6b7280';
+        });
+
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusData,
+                    backgroundColor: statusColors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, usePointStyle: true } }
+                }
+            }
+        });
+
+        // --- 3. Gráfico de Métodos (Pie/Polar) ---
+        const pmData = {{ pm_data|safe }};
+        const pmLabels = {{ pm_labels|safe }};
+        
+        new Chart(document.getElementById('methodsChart'), {
+            type: 'pie',
+            data: {
+                labels: pmLabels,
+                datasets: [{
+                    data: pmData,
+                    backgroundColor: ['#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#64748b'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12 } }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

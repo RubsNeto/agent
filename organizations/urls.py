@@ -41,8 +41,12 @@ urlpatterns = [
     path("campanhas/<int:pk>/status/", views.campanha_status_ajax, name="campanha_status_ajax"),
     path("campanhas/<int:pk>/delete/", views.campanha_delete, name="campanha_delete"),
     
+    # Relatórios
+    path("relatorios/", views.report_list, name="report_list"),
+    
     # Organization detail routes (must come after static routes)
     path("<slug:slug>/", views.organization_detail, name="detail"),
+    path("<slug:slug>/relatorios/", views.report_detail, name="report_detail"),
     path("<slug:slug>/edit/", views.organization_edit, name="edit"),
     path("<slug:slug>/delete/", views.organization_delete, name="delete"),
     path("<slug:slug>/whatsapp/", views.whatsapp_connect, name="whatsapp_connect"),

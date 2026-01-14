@@ -2124,3 +2124,225 @@ def _configure_webhook(api_url, headers, instance_name):
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Exceção ao configurar webhook para {instance_name}: {str(e)}")
+
+
+@login_required
+def report_list(request):
+    """Redireciona para o relatório da primeira padaria encontrada."""
+    padarias = get_user_padarias(request.user)
+    if padarias.exists():
+        return redirect('organizations:report_detail', slug=padarias.first().slug)
+    
+    messages.warning(request, "Você precisa ter uma padaria para acessar relatórios.")
+    return redirect('organizations:list')
+
+
+@login_required
+def report_detail(request, slug):
+    """
+    Relatórios detalhados da padaria (Vendas, Produtos, Faturamento).
+    Busca dados diretamente da API do Mercado Pago para incluir vendas externas.
+    """
+    from django.apps import apps
+    import json
+    from django.core.serializers.json import DjangoJSONEncoder
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+    from payments.services.mercadopago_service import get_mp_service, MercadoPagoAPIError
+
+    padarias = get_user_padarias(request.user)
+    organization = get_object_or_404(Padaria, slug=slug)
+    
+    # Verificar acesso
+    if not request.user.is_superuser and organization not in padarias:
+        messages.error(request, "Você não tem acesso a esta padaria.")
+        return redirect("organizations:list")
+
+    # Inicializar dados vazios
+    all_payments = []
+    
+    # Filtros de Data
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+
+    # Configurar datas padrão se não fornecidas (últimos 30 dias)
+    if not start_date_str:
+        start_date_dt = datetime.now() - timedelta(days=30)
+    else:
+        start_date_dt = datetime.strptime(start_date_str, '%Y-%m-%d')
+        
+    if not end_date_str:
+        end_date_dt = datetime.now()
+    else:
+        end_date_dt = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
+
+    # Buscar dados do Mercado Pago
+    try:
+        mp_service = get_mp_service(organization)
+        
+        # Filtros atuais
+        filters = {
+            "sort": "date_created",
+            "criteria": "desc",
+            "range": "date_created",
+            "begin_date": start_date_dt.strftime("%Y-%m-%dT%H:%M:%S.000-03:00"),
+            "end_date": end_date_dt.strftime("%Y-%m-%dT%H:%M:%S.000-03:00"),
+            "limit": 1000
+        }
+        
+        search_result = mp_service.search_payments(**filters)
+        all_payments = search_result.get("results", [])
+
+        # Buscar período anterior para comparação (Growth)
+        delta = end_date_dt - start_date_dt
+        prev_end_date = start_date_dt - timedelta(seconds=1)
+        prev_start_date = prev_end_date - delta
+        
+        filters_prev = {
+            "range": "date_created",
+            "begin_date": prev_start_date.strftime("%Y-%m-%dT%H:%M:%S.000-03:00"),
+            "end_date": prev_end_date.strftime("%Y-%m-%dT%H:%M:%S.000-03:00"),
+            "limit": 1000,
+            "status": "approved" # Buscar apenas aprovados para otimizar métricas financeiras
+        }
+        prev_search = mp_service.search_payments(**filters_prev)
+        prev_payments = prev_search.get("results", [])
+        
+        prev_revenue = sum(float(p.get('transaction_amount', 0)) for p in prev_payments)
+        prev_count = len(prev_payments)
+        
+    except ValueError:
+        pass 
+    except Exception as e:
+        messages.warning(request, f"Erro ao sincronizar com Mercado Pago: {str(e)}")
+        pass
+
+    # Processamento dos Dados Atuais
+    approved_payments = [p for p in all_payments if p.get('status') == 'approved']
+    
+    # 1. Métricas Principais & Growth
+    total_revenue = sum(float(p.get('transaction_amount', 0)) for p in approved_payments)
+    total_sales_count = len(approved_payments)
+    avg_ticket = total_revenue / total_sales_count if total_sales_count > 0 else 0
+    
+    # Calcular crescimentos
+    def calc_growth(current, previous):
+        if previous == 0:
+            return 100 if current > 0 else 0
+        return ((current - previous) / previous) * 100
+
+    revenue_growth = calc_growth(total_revenue, prev_revenue)
+    sales_growth = calc_growth(total_sales_count, prev_count)
+    
+    # Taxa de Reembolso/Cancelamento
+    refunded_count = len([p for p in all_payments if p.get('status') in ['refunded', 'cancelled', 'rejected']])
+    total_tx = len(all_payments)
+    refund_rate = (refunded_count / total_tx * 100) if total_tx > 0 else 0
+
+    # 2. Vendas por Data (Gráfico de Linha)
+    sales_by_date = defaultdict(lambda: {'revenue': 0.0, 'count': 0})
+    for p in approved_payments:
+        date_str = p.get('date_created', '')[:10]
+        sales_by_date[date_str]['revenue'] += float(p.get('transaction_amount', 0))
+
+    sorted_dates = sorted(sales_by_date.keys())
+    chart_labels = []
+    chart_data = []
+    
+    for d in sorted_dates:
+        try:
+            date_obj = datetime.strptime(d, '%Y-%m-%d')
+            chart_labels.append(date_obj.strftime('%d/%m'))
+        except:
+            chart_labels.append(d)
+        chart_data.append(sales_by_date[d]['revenue'])
+
+    # 3. Distribuição de Status (Gráfico Donut)
+    status_dist = defaultdict(int)
+    for p in all_payments:
+        status_dist[p.get('status_detail') or p.get('status')] += 1
+    
+    status_labels = list(status_dist.keys())
+    status_data = list(status_dist.values())
+
+    # 4. Produtos Vendidos
+    product_stats = defaultdict(lambda: {'qty': 0, 'revenue': 0.0})
+    for p in approved_payments:
+        items = p.get('additional_info', {}).get('items', [])
+        if items:
+            for item in items:
+                title = item.get('title', 'Produto sem nome')
+                qty = float(item.get('quantity', 1))
+                price = float(item.get('unit_price', 0))
+                product_stats[title]['qty'] += int(qty)
+                product_stats[title]['revenue'] += (price * qty)
+        else:
+            desc = p.get('description') or p.get('reason') or "Venda Diversa"
+            amount = float(p.get('transaction_amount', 0))
+            product_stats[desc]['qty'] += 1
+            product_stats[desc]['revenue'] += amount
+
+    products_sold = [
+        {'description': k, 'qty': v['qty'], 'revenue': v['revenue']} 
+        for k, v in product_stats.items()
+    ]
+    products_sold.sort(key=lambda x: x['revenue'], reverse=True)
+
+    # 5. Métodos de Pagamento (Gráfico Pizza + Tabela)
+    payment_methods = defaultdict(lambda: {'count': 0, 'revenue': 0.0})
+    for p in approved_payments:
+        method = p.get('payment_method_id', 'outros')
+        payment_methods[method]['count'] += 1
+        payment_methods[method]['revenue'] += float(p.get('transaction_amount', 0))
+    
+    payment_methods_list = [
+        {'method': k, 'count': v['count'], 'revenue': v['revenue']}
+        for k, v in payment_methods.items()
+    ]
+    payment_methods_list.sort(key=lambda x: x['revenue'], reverse=True)
+    
+    pm_labels = [pm['method'].capitalize() for pm in payment_methods_list]
+    pm_data = [pm['revenue'] for pm in payment_methods_list]
+
+    # 6. Transações Recentes
+    recent_transactions = []
+    for p in all_payments[:50]:
+        created_at = p.get('date_created')
+        try:
+            created_at_dt = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%S.000-03:00")
+        except:
+            created_at_dt = created_at
+            
+        recent_transactions.append({
+            'created_at': created_at_dt,
+            'status': p.get('status'),
+            'get_status_display': p.get('status_detail') or p.get('status'),
+            'amount': float(p.get('transaction_amount', 0)),
+            'description': p.get('description') or "Pagamento Mercado Pago"
+        })
+
+    context = {
+        'organization': organization,
+        'total_revenue': total_revenue,
+        'total_sales_count': total_sales_count,
+        'avg_ticket': avg_ticket,
+        'revenue_growth': revenue_growth,
+        'sales_growth': sales_growth,
+        'refund_rate': refund_rate,
+        # Charts Data
+        'chart_labels': json.dumps(chart_labels, cls=DjangoJSONEncoder),
+        'chart_data': json.dumps(chart_data, cls=DjangoJSONEncoder),
+        'status_labels': json.dumps(status_labels, cls=DjangoJSONEncoder),
+        'status_data': json.dumps(status_data, cls=DjangoJSONEncoder),
+        'pm_labels': json.dumps(pm_labels, cls=DjangoJSONEncoder),
+        'pm_data': json.dumps(pm_data, cls=DjangoJSONEncoder),
+        # Lists
+        'products_sold': products_sold,
+        'payment_methods': payment_methods_list,
+        'recent_transactions': recent_transactions,
+        'start_date': start_date_str,
+        'end_date': end_date_str,
+        'mp_connected': bool(all_payments) # Flag para saber se tem dados
+    }
+
+    return render(request, "organizations/reports.html", context)
