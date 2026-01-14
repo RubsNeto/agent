@@ -20,7 +20,8 @@
             </div>
             <nav class="sidebar-nav">
                 <ul>
-                    {% if user.is_superuser %}
+                    {# Admin Panel - Visível para SuperUser e Admin (role=admin) #}
+                    {% if user.is_superuser or user.profile.role == 'admin' %}
                     <li>
                         <a href="{% url 'admin_panel:dashboard' %}"
                             class="{% if request.resolver_match.namespace == 'admin_panel' %}active{% endif %}">
@@ -32,6 +33,9 @@
                         </a>
                     </li>
                     {% endif %}
+
+                    {# Itens visíveis apenas para SuperUser ou Usuário de Padaria (não Admin) #}
+                    {% if user.is_superuser or user.profile.role != 'admin' %}
                     <li>
                         <a href="{% url 'ui:guia' %}"
                             class="{% if request.resolver_match.url_name == 'guia' %}active{% endif %}">
@@ -42,6 +46,9 @@
                             Guia de Implementação
                         </a>
                     </li>
+                    {% endif %}
+
+                    {# Dashboard - Visível para todos #}
                     <li>
                         <a href="{% url 'ui:dashboard' %}"
                             class="{% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'ui' %}active{% endif %}">
@@ -54,6 +61,8 @@
                             Dashboard
                         </a>
                     </li>
+
+                    {# Padaria - Visível para todos #}
                     <li>
                         <a href="{% url 'organizations:list' %}"
                             class="{% if request.resolver_match.namespace == 'organizations' and 'apikey' not in request.path and 'promocoes' not in request.path and 'clientes' not in request.path and 'campanhas' not in request.path and 'produtos' not in request.path and 'relatorios' not in request.path %}active{% endif %}">
@@ -64,6 +73,9 @@
                             Padaria
                         </a>
                     </li>
+
+                    {# Itens visíveis apenas para SuperUser ou Usuário de Padaria (não Admin) #}
+                    {% if user.is_superuser or user.profile.role != 'admin' %}
                     <li>
                         <a href="{% url 'agents:list' %}"
                             class="{% if request.resolver_match.namespace == 'agents' %}active{% endif %}">
@@ -122,9 +134,12 @@
                             Relatórios
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
+
                 <div class="sidebar-divider">FINANCEIRO</div>
                 <ul>
+                    {# Assinatura - Visível para todos #}
                     <li>
                         <a href="{% url 'payments:subscription_status' %}"
                             class="{% if 'assinatura' in request.path %}active{% endif %}">
@@ -135,6 +150,9 @@
                             Assinatura
                         </a>
                     </li>
+
+                    {# Pagamentos - Visível apenas para SuperUser ou Usuário de Padaria (não Admin) #}
+                    {% if user.is_superuser or user.profile.role != 'admin' %}
                     <li>
                         <a href="{% url 'payments:mercadopago_config' %}"
                             class="{% if 'mercadopago' in request.path %}active{% endif %}">
@@ -145,8 +163,11 @@
                             Pagamentos
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
-                {# TODO v2: Pagamentos Stripe - descomentar seção quando implementar #}
+
+                {# Seção OUTROS - Visível apenas para SuperUser ou Usuário de Padaria (não Admin) #}
+                {% if user.is_superuser or user.profile.role != 'admin' %}
                 <div class="sidebar-divider">OUTROS</div>
                 <ul>
                     {% if user.is_superuser %}
@@ -186,6 +207,21 @@
                         </a>
                     </li>
                 </ul>
+                {% else %}
+                {# Para Admin, apenas botão de Sair #}
+                <div class="sidebar-divider"></div>
+                <ul>
+                    <li>
+                        <a href="{% url 'accounts:logout' %}">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            Sair
+                        </a>
+                    </li>
+                </ul>
+                {% endif %}
             </nav>
         </aside>
         <main class="main-content">
