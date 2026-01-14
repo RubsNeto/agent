@@ -124,6 +124,42 @@ def padaria_create(request):
         if owner_email and User.objects.filter(email=owner_email).exists():
             errors.append('Ja existe um usuario com este email.')
         
+        # Validação de UF: CNPJ da padaria deve ser da mesma UF do CEP do admin
+        admin_cep = None
+        if hasattr(request.user, 'profile') and request.user.profile.cep:
+            admin_cep = request.user.profile.cep
+        
+        if cnpj and admin_cep:
+            from core.uf_validator import validate_same_uf
+            
+            try:
+                uf_result = validate_same_uf(cnpj, admin_cep)
+                
+                if uf_result.get('error'):
+                    # Erro na validação (API indisponível, formato inválido, etc)
+                    messages.warning(
+                        request, 
+                        f"Aviso: Não foi possível validar a região do CNPJ. {uf_result['error']}"
+                    )
+                elif not uf_result.get('valid'):
+                    # UFs diferentes - bloquear criação
+                    errors.append(
+                        f"O CNPJ pertence ao estado {uf_result['cnpj_uf']}, "
+                        f"mas sua região de atuação é {uf_result['cep_uf']}. "
+                        f"Você só pode criar padarias na sua região."
+                    )
+            except Exception as e:
+                # Em caso de erro inesperado, apenas avisa mas não bloqueia
+                messages.warning(request, f"Aviso: Erro ao validar região do CNPJ: {str(e)}")
+        elif cnpj and not admin_cep:
+            # Admin não tem CEP cadastrado - apenas avisa
+            messages.warning(
+                request, 
+                "Aviso: Seu CEP não está cadastrado. "
+                "A validação de região foi ignorada. "
+                "Recomendamos que atualize seu perfil."
+            )
+        
         # Gerar username a partir do email
         username = owner_email.split('@')[0] if owner_email else ''
         base_username = username
