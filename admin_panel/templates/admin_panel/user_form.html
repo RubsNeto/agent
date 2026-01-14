@@ -51,11 +51,19 @@
 
         <div class="form-group">
             <label class="form-label">Papel no Sistema (Role)</label>
-            <select name="role" class="form-input" style="height: 42px;">
+            <select name="role" id="role-select" class="form-input" style="height: 42px;" onchange="toggleCepField()">
                 <option value="user" {% if not is_edit or user_obj.profile.role == 'user' %}selected{% endif %}>Usuário Padaria (Padrão)</option>
                 <option value="admin" {% if is_edit and user_obj.profile.role == 'admin' %}selected{% endif %}>Administrador do Sistema (Pode criar Padarias)</option>
             </select>
             <p class="form-help">Nota: Administradores do Sistema não podem criar outros administradores.</p>
+        </div>
+
+        <div class="form-group" id="cep-field" style="display: none;">
+            <label class="form-label">CEP (Região de Atuação)</label>
+            <input type="text" name="cep" id="cep-input" class="form-input"
+                value="{% if is_edit and user_obj.profile.cep %}{{ user_obj.profile.cep }}{% endif %}" 
+                placeholder="00000-000" maxlength="9">
+            <p class="form-help">Informe o CEP do administrador para definir a região de atuação.</p>
         </div>
 
         <div class="form-group">
@@ -86,4 +94,33 @@
     <a href="{% url 'admin_panel:user_delete' user_obj.id %}" class="btn btn-danger">Deletar Usuário</a>
 </div>
 {% endif %}
+
+<script>
+function toggleCepField() {
+    const roleSelect = document.getElementById('role-select');
+    const cepField = document.getElementById('cep-field');
+    const cepInput = document.getElementById('cep-input');
+    
+    if (roleSelect.value === 'admin') {
+        cepField.style.display = 'block';
+    } else {
+        cepField.style.display = 'none';
+        cepInput.value = '';
+    }
+}
+
+// Formatar CEP enquanto digita
+document.getElementById('cep-input').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 5) {
+        value = value.substring(0, 5) + '-' + value.substring(5, 8);
+    }
+    e.target.value = value;
+});
+
+// Executar ao carregar a página para mostrar o campo se já for admin
+document.addEventListener('DOMContentLoaded', function() {
+    toggleCepField();
+});
+</script>
 {% endblock %}

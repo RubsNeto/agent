@@ -20,6 +20,13 @@ class UserProfile(models.Model):
     )
     
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telefone")
+    cep = models.CharField(
+        max_length=9, 
+        blank=True, 
+        null=True, 
+        verbose_name="CEP",
+        help_text="CEP do administrador (usado para região de atuação)"
+    )
     birth_date = models.DateField(blank=True, null=True, verbose_name="Data de Nascimento")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")

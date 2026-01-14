@@ -519,6 +519,7 @@ def user_create(request):
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
         role = request.POST.get('role', 'user')
+        cep = request.POST.get('cep', '').strip()
         
         if not username:
             messages.error(request, 'O nome de usuario e obrigatorio.')
@@ -544,9 +545,11 @@ def user_create(request):
             last_name=last_name
         )
         
-        # Atribuir papel
+        # Atribuir papel e CEP (para admins)
         if hasattr(user, 'profile'):
             user.profile.role = role
+            if role == 'admin' and cep:
+                user.profile.cep = cep
             user.profile.save()
         
         AuditLog.log(
@@ -576,8 +579,15 @@ def user_edit(request, user_id):
         user_obj.is_active = request.POST.get('is_active') == 'on'
         
         role = request.POST.get('role')
+        cep = request.POST.get('cep', '').strip()
+        
         if role and hasattr(user_obj, 'profile'):
             user_obj.profile.role = role
+            # Salvar CEP apenas para admins
+            if role == 'admin':
+                user_obj.profile.cep = cep if cep else None
+            else:
+                user_obj.profile.cep = None  # Limpar CEP se não for admin
             user_obj.profile.save()
         
         new_password = request.POST.get('password', '')
