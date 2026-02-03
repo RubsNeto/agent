@@ -139,7 +139,8 @@
                         <a href="{% url 'organizations:report_list' %}"
                             class="{% if 'relatorios' in request.path %}active{% endif %}">
                             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                             </svg>
                             Relatórios
                         </a>
@@ -483,27 +484,35 @@
     </style>
 
     <script>
-        function closeModal() {
+        function closeModal()
+        {
             const modal = document.getElementById('messageModal');
-            if (modal) {
+            if (modal)
+            {
                 modal.style.display = 'none';
             }
         }
 
-        function toggleLogoutModal() {
+        function toggleLogoutModal()
+        {
             const modal = document.getElementById('logoutModal');
-            if (modal) {
+            if (modal)
+            {
                 modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
             }
         }
 
         // Event listeners
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function ()
+        {
             // Modal de mensagens
             const messageModal = document.getElementById('messageModal');
-            if (messageModal) {
-                messageModal.addEventListener('click', function (e) {
-                    if (e.target === this) {
+            if (messageModal)
+            {
+                messageModal.addEventListener('click', function (e)
+                {
+                    if (e.target === this)
+                    {
                         closeModal();
                     }
                 });
@@ -511,21 +520,28 @@
 
             // Modal de logout
             const logoutModal = document.getElementById('logoutModal');
-            if (logoutModal) {
-                logoutModal.addEventListener('click', function (e) {
-                    if (e.target === this) {
+            if (logoutModal)
+            {
+                logoutModal.addEventListener('click', function (e)
+                {
+                    if (e.target === this)
+                    {
                         toggleLogoutModal();
                     }
                 });
             }
 
             // ESC key handler
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') {
-                    if (messageModal && messageModal.style.display !== 'none') {
+            document.addEventListener('keydown', function (e)
+            {
+                if (e.key === 'Escape')
+                {
+                    if (messageModal && messageModal.style.display !== 'none')
+                    {
                         closeModal();
                     }
-                    if (logoutModal && logoutModal.style.display === 'flex') {
+                    if (logoutModal && logoutModal.style.display === 'flex')
+                    {
                         toggleLogoutModal();
                     }
                 }

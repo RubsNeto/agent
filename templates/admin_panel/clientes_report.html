@@ -74,7 +74,8 @@
         margin-bottom: 0.5rem;
     }
 
-    .filter-input, .filter-select {
+    .filter-input,
+    .filter-select {
         padding: 0.75rem;
         border: 2px solid #e5e7eb;
         border-radius: 8px;
@@ -82,7 +83,8 @@
         transition: all 0.2s;
     }
 
-    .filter-input:focus, .filter-select:focus {
+    .filter-input:focus,
+    .filter-select:focus {
         outline: none;
         border-color: #667eea;
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -210,7 +212,8 @@
         margin-top: 2rem;
     }
 
-    .pagination a, .pagination span {
+    .pagination a,
+    .pagination span {
         padding: 0.5rem 1rem;
         border-radius: 6px;
         color: #6b7280;
@@ -259,11 +262,12 @@
             <h1>📊 Relatório de Controle de Clientes</h1>
             <p>Visão completa de todas as padarias que utilizam a plataforma</p>
         </div>
-        <a href="{% url 'admin_panel:clientes_export_excel' %}?{{ request.GET.urlencode }}" 
-           class="btn-export"
-           style="background: white; color: #667eea; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <a href="{% url 'admin_panel:clientes_export_excel' %}?{{ request.GET.urlencode }}" class="btn-export"
+            style="background: white; color: #667eea; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                </path>
             </svg>
             Exportar Excel
         </a>
@@ -344,15 +348,16 @@
         <div class="filters-grid">
             <div class="filter-group">
                 <label class="filter-label">Pesquisar</label>
-                <input type="text" name="search" value="{{ search }}" class="filter-input" placeholder="Nome, slug, email...">
+                <input type="text" name="search" value="{{ search }}" class="filter-input"
+                    placeholder="Nome, slug, email...">
             </div>
 
             <div class="filter-group">
                 <label class="filter-label">Status</label>
                 <select name="status" class="filter-select">
                     <option value="">Todos</option>
-                    <option value="ativas" {% if status_filter == 'ativas' %}selected{% endif %}>Ativas</option>
-                    <option value="inativas" {% if status_filter == 'inativas' %}selected{% endif %}>Inativas</option>
+                    <option value="ativas" {% if status_filter=='ativas' %}selected{% endif %}>Ativas</option>
+                    <option value="inativas" {% if status_filter=='inativas' %}selected{% endif %}>Inativas</option>
                 </select>
             </div>
 
@@ -360,8 +365,10 @@
                 <label class="filter-label">WhatsApp</label>
                 <select name="whatsapp" class="filter-select">
                     <option value="">Todos</option>
-                    <option value="conectado" {% if whatsapp_filter == 'conectado' %}selected{% endif %}>Conectado</option>
-                    <option value="desconectado" {% if whatsapp_filter == 'desconectado' %}selected{% endif %}>Desconectado</option>
+                    <option value="conectado" {% if whatsapp_filter=='conectado' %}selected{% endif %}>Conectado
+                    </option>
+                    <option value="desconectado" {% if whatsapp_filter=='desconectado' %}selected{% endif %}>
+                        Desconectado</option>
                 </select>
             </div>
 
@@ -369,8 +376,9 @@
                 <label class="filter-label">Assinatura</label>
                 <select name="subscription" class="filter-select">
                     <option value="">Todas</option>
-                    <option value="ativa" {% if subscription_filter == 'ativa' %}selected{% endif %}>Ativa</option>
-                    <option value="inativa" {% if subscription_filter == 'inativa' %}selected{% endif %}>Inativa/Expirada</option>
+                    <option value="ativa" {% if subscription_filter=='ativa' %}selected{% endif %}>Ativa</option>
+                    <option value="inativa" {% if subscription_filter=='inativa' %}selected{% endif %}>Inativa/Expirada
+                    </option>
                 </select>
             </div>
 
@@ -387,8 +395,11 @@
 
         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
             <button type="submit" class="btn-filter">
-                <svg style="display: inline; width: 1.25rem; height: 1.25rem; margin-right: 0.5rem; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                <svg style="display: inline; width: 1.25rem; height: 1.25rem; margin-right: 0.5rem; vertical-align: middle;"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z">
+                    </path>
                 </svg>
                 Filtrar
             </button>
@@ -400,7 +411,7 @@
 <!-- Tabela de Clientes -->
 <div class="table-card">
     <div class="chart-title" style="margin-bottom: 1.5rem;">Lista de Clientes ({{ total_padarias }} no total)</div>
-    
+
     <table class="data-table">
         <thead>
             <tr>
@@ -421,7 +432,8 @@
             {% for padaria in padarias %}
             <tr>
                 <td>
-                    <a href="{% url 'admin_panel:padaria_detail' padaria.slug %}" style="color: #667eea; font-weight: 600; text-decoration: none;">
+                    <a href="{% url 'admin_panel:padaria_detail' padaria.slug %}"
+                        style="color: #667eea; font-weight: 600; text-decoration: none;">
                         {{ padaria.name }}
                     </a>
                 </td>
@@ -443,17 +455,17 @@
                 </td>
                 <td>
                     {% if padaria.subscription %}
-                        {% if padaria.subscription.status == 'ACTIVE' or padaria.subscription.status == 'active' %}
-                        <span class="status-badge status-active">Ativa</span>
-                        {% elif padaria.subscription.status == 'TRIAL' or padaria.subscription.status == 'trialing' %}
-                        <span class="status-badge status-pending">Trial</span>
-                        {% elif padaria.subscription.status == 'OVERDUE' %}
-                        <span class="status-badge status-inactive">Vencida</span>
-                        {% elif padaria.subscription.status == 'EXPIRED' %}
-                        <span class="status-badge status-inactive">Expirada</span>
-                        {% else %}
-                        <span class="status-badge status-inactive">{{ padaria.subscription.status }}</span>
-                        {% endif %}
+                    {% if padaria.subscription.status == 'ACTIVE' or padaria.subscription.status == 'active' %}
+                    <span class="status-badge status-active">Ativa</span>
+                    {% elif padaria.subscription.status == 'TRIAL' or padaria.subscription.status == 'trialing' %}
+                    <span class="status-badge status-pending">Trial</span>
+                    {% elif padaria.subscription.status == 'OVERDUE' %}
+                    <span class="status-badge status-inactive">Vencida</span>
+                    {% elif padaria.subscription.status == 'EXPIRED' %}
+                    <span class="status-badge status-inactive">Expirada</span>
+                    {% else %}
+                    <span class="status-badge status-inactive">{{ padaria.subscription.status }}</span>
+                    {% endif %}
                     {% else %}
                     <span class="status-badge status-inactive">Sem assinatura</span>
                     {% endif %}
@@ -484,15 +496,23 @@
     {% if padarias.has_other_pages %}
     <div class="pagination">
         {% if padarias.has_previous %}
-        <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">« Primeira</a>
-        <a href="?page={{ padarias.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">‹ Anterior</a>
+        <a
+            href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">«
+            Primeira</a>
+        <a
+            href="?page={{ padarias.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">‹
+            Anterior</a>
         {% endif %}
 
         <span class="current">Página {{ padarias.number }} de {{ padarias.paginator.num_pages }}</span>
 
         {% if padarias.has_next %}
-        <a href="?page={{ padarias.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Próxima ›</a>
-        <a href="?page={{ padarias.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Última »</a>
+        <a
+            href="?page={{ padarias.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Próxima
+            ›</a>
+        <a
+            href="?page={{ padarias.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Última
+            »</a>
         {% endif %}
     </div>
     {% endif %}
@@ -501,8 +521,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Gráfico de Cadastros
-    const cadastrosLabels = {{ meses_labels|safe }};
-    const cadastrosData = {{ cadastros_data|safe }};
+    const cadastrosLabels = {{ meses_labels| safe }};
+    const cadastrosData = {{ cadastros_data| safe }};
 
     new Chart(document.getElementById('cadastrosChart'), {
         type: 'line',
@@ -536,8 +556,8 @@
     });
 
     // Gráfico de Assinaturas
-    const subLabels = {{ sub_labels|safe }};
-    const subData = {{ sub_data|safe }};
+    const subLabels = {{ sub_labels| safe }};
+    const subData = {{ sub_data| safe }};
 
     new Chart(document.getElementById('subscriptionsChart'), {
         type: 'doughnut',
