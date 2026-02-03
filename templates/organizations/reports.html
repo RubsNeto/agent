@@ -203,32 +203,187 @@
         padding: 3rem;
         color: #9ca3af;
     }
+
+    /* Header Moderno */
+    .reports-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+    }
+
+    .reports-header h2 {
+        color: white;
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .reports-header p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        margin: 0;
+        font-weight: 300;
+    }
+
+    .reports-header p strong {
+        font-weight: 600;
+        color: #fff;
+    }
+
+    /* Filtros Card */
+    .filters-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+        border: 1px solid #e5e7eb;
+    }
+
+    .filters-bar {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .filters-bar .form-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filters-bar .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .filters-bar .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        background: #f9fafb;
+    }
+
+    .filters-bar .form-input:focus {
+        outline: none;
+        border-color: #667eea;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .filters-bar .btn-submit {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+        box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.3);
+    }
+
+    .filters-bar .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px -1px rgba(102, 126, 234, 0.4);
+    }
+
+    .filters-bar .btn-submit:active {
+        transform: translateY(0);
+    }
+
+    .btn-clear {
+        padding: 0.75rem 1.25rem;
+        color: #6b7280;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+    }
+
+    .btn-clear:hover {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .header-icon {
+        width: 2rem;
+        height: 2rem;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        padding: 0.4rem;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="content-header">
-    <div>
-        <h2 class="content-title">Relatórios & Insights</h2>
-        <p class="content-subtitle">Visão 360º do desempenho financeiro da <strong>{{ organization.name }}</strong></p>
-    </div>
+<!-- Cabeçalho Moderno com Gradiente -->
+<div class="reports-header">
+    <h2>
+        <svg class="header-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        Relatórios & Insights
+    </h2>
+    <p>Visão 360º do desempenho financeiro da <strong>{{ organization.name }}</strong></p>
 </div>
 
-<!-- Filtros -->
-<form method="get" class="filters-bar">
-    <div class="form-group">
-        <label for="start_date" class="form-label">Data Início</label>
-        <input type="date" id="start_date" name="start_date" value="{{ start_date|default:'' }}" class="form-input">
-    </div>
-    <div class="form-group">
-        <label for="end_date" class="form-label">Data Fim</label>
-        <input type="date" id="end_date" name="end_date" value="{{ end_date|default:'' }}" class="form-input">
-    </div>
-    <button type="submit" class="btn-submit">Atualizar Dashboard</button>
-    {% if start_date or end_date %}
-    <a href="{% url 'organizations:report_detail' organization.slug %}" style="display: flex; align-items: center; color: #6b7280; font-size: 0.875rem; text-decoration: none; margin-bottom: 0.5rem;">Limpar</a>
-    {% endif %}
-</form>
+<!-- Filtros em Card Moderno -->
+<div class="filters-card">
+    <form method="get" class="filters-bar">
+        <div class="form-group">
+            <label for="start_date" class="form-label">
+                <svg style="display: inline; width: 1rem; height: 1rem; margin-right: 0.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                Data Início
+            </label>
+            <input type="date" id="start_date" name="start_date" value="{{ start_date|default:'' }}" class="form-input">
+        </div>
+        <div class="form-group">
+            <label for="end_date" class="form-label">
+                <svg style="display: inline; width: 1rem; height: 1rem; margin-right: 0.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                Data Fim
+            </label>
+            <input type="date" id="end_date" name="end_date" value="{{ end_date|default:'' }}" class="form-input">
+        </div>
+        <button type="submit" class="btn-submit">
+            <svg style="display: inline; width: 1.25rem; height: 1.25rem; margin-right: 0.5rem; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Atualizar Dashboard
+        </button>
+        {% if start_date or end_date %}
+        <a href="{% url 'organizations:report_detail' organization.slug %}" class="btn-clear">
+            <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            Limpar
+        </a>
+        {% endif %}
+    </form>
+</div>
 
 {% if not mp_connected %}
 <div class="alert alert-warning" style="margin-bottom: 2rem; border-left: 4px solid #f59e0b; background: #fffbeb; padding: 1rem; border-radius: 6px; color: #92400e;">
@@ -350,16 +505,16 @@
                 <thead>
                     <tr>
                         <th>Método</th>
-                        <th>Vol.</th>
-                        <th>%</th>
+                        <th>Volume</th>
+                        <th>Qtd. Vendas</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for pm in payment_methods %}
                     <tr>
                         <td style="text-transform: capitalize;">{{ pm.method }}</td>
-                        <td>R$ {{ pm.revenue|floatformat:0 }}</td>
-                        <td>{{ pm.count }} tx</td>
+                        <td style="font-weight: 600; color: #10b981;">R$ {{ pm.revenue|floatformat:0 }}</td>
+                        <td style="color: #6b7280;">{{ pm.count }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -480,10 +635,24 @@
         const statusData = {{ status_data|safe }};
         const statusLabels = {{ status_labels|safe }};
         const statusColors = statusLabels.map(s => {
+            // Aprovado - Verde
             if(s.includes('approved') || s.includes('Aprovado')) return '#10b981';
-            if(s.includes('pending') || s.includes('Pendente')) return '#f59e0b';
-            if(s.includes('rejected') || s.includes('Rejeitado')) return '#ef4444';
-            return '#6b7280';
+            
+            // Pendente - Amarelo/Laranja
+            if(s.includes('pending') || s.includes('Pendente') || s.includes('Processamento') || s.includes('Aguardando')) return '#f59e0b';
+            
+            // Recusado - Vermelho (qualquer tipo de recusa)
+            if(s.includes('Recusado') || s.includes('rejected') || s.includes('Alto Risco') || 
+               s.includes('Insuficiente') || s.includes('Inválido') || s.includes('Bloqueado')) return '#ef4444';
+            
+            // Reembolsado/Estornado - Roxo
+            if(s.includes('Reembolsado') || s.includes('refunded') || s.includes('Estornado') || s.includes('charged_back')) return '#8b5cf6';
+            
+            // Cancelado - Cinza escuro
+            if(s.includes('Cancelado') || s.includes('cancelled')) return '#64748b';
+            
+            // Outros - Cinza claro
+            return '#9ca3af';
         });
 
         new Chart(document.getElementById('statusChart'), {

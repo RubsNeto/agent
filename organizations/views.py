@@ -2160,6 +2160,8 @@ def report_detail(request, slug):
 
     # Inicializar dados vazios
     all_payments = []
+    prev_revenue = 0
+    prev_count = 0
     
     # Filtros de Data
     start_date_str = request.GET.get('start_date')
@@ -2258,9 +2260,35 @@ def report_detail(request, slug):
         chart_data.append(sales_by_date[d]['revenue'])
 
     # 3. Distribuição de Status (Gráfico Donut)
+    # Dicionário de tradução de status
+    status_traducao = {
+        'accredited': 'Aprovado',
+        'approved': 'Aprovado',
+        'pending': 'Pendente',
+        'in_process': 'Em Processamento',
+        'rejected': 'Rejeitado',
+        'cancelled': 'Cancelado',
+        'refunded': 'Reembolsado',
+        'charged_back': 'Estornado',
+        'cc_rejected_high_risk': 'Recusado - Alto Risco',
+        'cc_rejected_call_for_authorize': 'Recusado - Autorização Necessária',
+        'cc_rejected_insufficient_amount': 'Recusado - Saldo Insuficiente',
+        'cc_rejected_bad_filled_card_number': 'Recusado - Número do Cartão Inválido',
+        'cc_rejected_bad_filled_date': 'Recusado - Data Inválida',
+        'cc_rejected_bad_filled_security_code': 'Recusado - CVV Inválido',
+        'cc_rejected_blacklist': 'Recusado - Bloqueado',
+        'cc_rejected_duplicated_payment': 'Recusado - Pagamento Duplicado',
+        'cc_rejected_other_reason': 'Recusado - Outros',
+        'bpp_refunded': 'Reembolsado',
+        'pending_waiting_payment': 'Aguardando Pagamento',
+        'pending_waiting_transfer': 'Aguardando Transferência',
+    }
+    
     status_dist = defaultdict(int)
     for p in all_payments:
-        status_dist[p.get('status_detail') or p.get('status')] += 1
+        status_original = p.get('status_detail') or p.get('status')
+        status_traduzido = status_traducao.get(status_original, status_original)
+        status_dist[status_traduzido] += 1
     
     status_labels = list(status_dist.keys())
     status_data = list(status_dist.values())
@@ -2289,11 +2317,34 @@ def report_detail(request, slug):
     products_sold.sort(key=lambda x: x['revenue'], reverse=True)
 
     # 5. Métodos de Pagamento (Gráfico Pizza + Tabela)
+    # Dicionário de tradução de métodos de pagamento
+    payment_method_traducao = {
+        'pix': 'PIX',
+        'credit_card': 'Cartão de Crédito',
+        'debit_card': 'Cartão de Débito',
+        'account_money': 'Saldo Mercado Pago',
+        'master': 'Mastercard',
+        'visa': 'Visa',
+        'amex': 'American Express',
+        'elo': 'Elo',
+        'hipercard': 'Hipercard',
+        'bolbradesco': 'Boleto Bradesco',
+        'ticket': 'Boleto',
+        'bank_transfer': 'Transferência Bancária',
+        'atm': 'Caixa Eletrônico',
+        'prepaid_card': 'Cartão Pré-pago',
+        'digital_wallet': 'Carteira Digital',
+        'voucher_card': 'Voucher',
+        'crypto_transfer': 'Criptomoeda',
+        'digital_currency': 'Moeda Digital',
+    }
+    
     payment_methods = defaultdict(lambda: {'count': 0, 'revenue': 0.0})
     for p in approved_payments:
-        method = p.get('payment_method_id', 'outros')
-        payment_methods[method]['count'] += 1
-        payment_methods[method]['revenue'] += float(p.get('transaction_amount', 0))
+        method_original = p.get('payment_method_id', 'outros')
+        method_traduzido = payment_method_traducao.get(method_original, method_original.capitalize())
+        payment_methods[method_traduzido]['count'] += 1
+        payment_methods[method_traduzido]['revenue'] += float(p.get('transaction_amount', 0))
     
     payment_methods_list = [
         {'method': k, 'count': v['count'], 'revenue': v['revenue']}
@@ -2301,7 +2352,7 @@ def report_detail(request, slug):
     ]
     payment_methods_list.sort(key=lambda x: x['revenue'], reverse=True)
     
-    pm_labels = [pm['method'].capitalize() for pm in payment_methods_list]
+    pm_labels = [pm['method'] for pm in payment_methods_list]
     pm_data = [pm['revenue'] for pm in payment_methods_list]
 
     # 6. Transações Recentes
