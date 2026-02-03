@@ -675,3 +675,389 @@ def user_delete(request, user_id):
         'user_obj': user_obj,
     }
     return render(request, 'admin_panel/user_confirm_delete.html', context)
+
+
+@login_required
+@require_system_admin
+def clientes_report(request):
+    """Relatório completo de controle de clientes (padarias)."""
+    from datetime import datetime, timedelta
+    from django.db.models import Count, Sum, Q, Max
+    from organizations.models import Produto, Promocao, Cliente, CampanhaWhatsApp
+    from payments.models import AsaasSubscription
+    import json
+    from django.core.serializers.json import DjangoJSONEncoder
+    
+    # Filtros
+    status_filter = request.GET.get('status', '')
+    whatsapp_filter = request.GET.get('whatsapp', '')
+    subscription_filter = request.GET.get('subscription', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    search = request.GET.get('search', '')
+    
+    # Query base
+    padarias = Padaria.objects.select_related('owner').annotate(
+        num_agents=Count('agents', distinct=True),
+        num_users=Count('members', distinct=True),
+        num_produtos=Count('produtos', distinct=True),
+        num_promocoes=Count('promocoes', distinct=True),
+        num_clientes=Count('clientes', distinct=True),
+        num_campanhas=Count('campanhas', distinct=True),
+        ultima_atividade=Max('audit_logs__created_at')
+    )
+    
+    # Aplicar filtros
+    if status_filter == 'ativas':
+        padarias = padarias.filter(is_active=True)
+    elif status_filter == 'inativas':
+        padarias = padarias.filter(is_active=False)
+    
+    if whatsapp_filter == 'conectado':
+        # Padarias com pelo menos 1 agente ativo
+        padarias = padarias.filter(num_agents__gt=0)
+    elif whatsapp_filter == 'desconectado':
+        padarias = padarias.filter(num_agents=0)
+    
+    if subscription_filter == 'ativa':
+        # Padarias com subscription ativa
+        active_subs = AsaasSubscription.objects.filter(
+            status__in=['ACTIVE', 'active']
+        ).values_list('padaria_id', flat=True)
+        padarias = padarias.filter(id__in=active_subs)
+    elif subscription_filter == 'inativa':
+        active_subs = AsaasSubscription.objects.filter(
+            status__in=['ACTIVE', 'active']
+        ).values_list('padaria_id', flat=True)
+        padarias = padarias.exclude(id__in=active_subs)
+    
+    if date_from:
+        try:
+            date_from_dt = datetime.strptime(date_from, '%Y-%m-%d')
+            padarias = padarias.filter(created_at__gte=date_from_dt)
+        except:
+            pass
+    
+    if date_to:
+        try:
+            date_to_dt = datetime.strptime(date_to, '%Y-%m-%d')
+            date_to_dt = date_to_dt.replace(hour=23, minute=59, second=59)
+            padarias = padarias.filter(created_at__lte=date_to_dt)
+        except:
+            pass
+    
+    if search:
+        padarias = padarias.filter(
+            Q(name__icontains=search) |
+            Q(slug__icontains=search) |
+            Q(owner__username__icontains=search) |
+            Q(owner__email__icontains=search)
+        )
+    
+    # Métricas Gerais
+    total_padarias = padarias.count()
+    padarias_ativas = padarias.filter(is_active=True).count()
+    padarias_inativas = padarias.filter(is_active=False).count()
+    
+    total_agentes = Agent.objects.filter(padaria__in=padarias).count()
+    total_usuarios = PadariaUser.objects.filter(padaria__in=padarias).count()
+    total_produtos = Produto.objects.filter(padaria__in=padarias).count()
+    total_clientes = Cliente.objects.filter(padaria__in=padarias).count()
+    
+    # Padarias com WhatsApp conectado (com agentes)
+    padarias_com_whatsapp = padarias.filter(num_agents__gt=0).count()
+    
+    # Padarias com assinatura ativa
+    active_subs = AsaasSubscription.objects.filter(
+        status__in=['ACTIVE', 'active']
+    ).values_list('padaria_id', flat=True)
+    padarias_com_sub_ativa = padarias.filter(id__in=active_subs).count()
+    
+    # Crescimento (últimos 30 dias)
+    trinta_dias_atras = datetime.now() - timedelta(days=30)
+    novas_padarias_30d = Padaria.objects.filter(
+        created_at__gte=trinta_dias_atras
+    ).count()
+    
+    # Gráfico de cadastros por mês (últimos 6 meses)
+    from collections import defaultdict
+    seis_meses_atras = datetime.now() - timedelta(days=180)
+    cadastros_por_mes = defaultdict(int)
+    
+    for padaria in Padaria.objects.filter(created_at__gte=seis_meses_atras):
+        mes_ano = padaria.created_at.strftime('%Y-%m')
+        cadastros_por_mes[mes_ano] += 1
+    
+    meses_labels = sorted(cadastros_por_mes.keys())
+    cadastros_data = [cadastros_por_mes[m] for m in meses_labels]
+    
+    # Formatar labels para português
+    meses_labels_pt = []
+    for m in meses_labels:
+        try:
+            dt = datetime.strptime(m, '%Y-%m')
+            meses_labels_pt.append(dt.strftime('%b/%y'))
+        except:
+            meses_labels_pt.append(m)
+    
+    # Distribuição por status de assinatura
+    subs_status = AsaasSubscription.objects.values('status').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    sub_labels = [s['status'] for s in subs_status]
+    sub_data = [s['count'] for s in subs_status]
+    
+    # Ordenar padarias por data de criação (mais recentes primeiro)
+    padarias_list = padarias.order_by('-created_at')
+    
+    # Paginação
+    paginator = Paginator(padarias_list, 25)
+    page = request.GET.get('page')
+    padarias_page = paginator.get_page(page)
+    
+    # Adicionar informação de subscription para cada padaria
+    subs_dict = {}
+    for sub in AsaasSubscription.objects.filter(padaria__in=padarias_list).select_related('padaria'):
+        subs_dict[sub.padaria_id] = sub
+    
+    for padaria in padarias_page:
+        padaria.subscription = subs_dict.get(padaria.id, None)
+    
+    context = {
+        'total_padarias': total_padarias,
+        'padarias_ativas': padarias_ativas,
+        'padarias_inativas': padarias_inativas,
+        'total_agentes': total_agentes,
+        'total_usuarios': total_usuarios,
+        'total_produtos': total_produtos,
+        'total_clientes': total_clientes,
+        'padarias_com_whatsapp': padarias_com_whatsapp,
+        'padarias_com_sub_ativa': padarias_com_sub_ativa,
+        'novas_padarias_30d': novas_padarias_30d,
+        'padarias': padarias_page,
+        # Gráficos
+        'meses_labels': json.dumps(meses_labels_pt, cls=DjangoJSONEncoder),
+        'cadastros_data': json.dumps(cadastros_data, cls=DjangoJSONEncoder),
+        'sub_labels': json.dumps(sub_labels, cls=DjangoJSONEncoder),
+        'sub_data': json.dumps(sub_data, cls=DjangoJSONEncoder),
+        # Filtros
+        'status_filter': status_filter,
+        'whatsapp_filter': whatsapp_filter,
+        'subscription_filter': subscription_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'search': search,
+    }
+    
+    return render(request, 'admin_panel/clientes_report.html', context)
+
+
+@login_required
+@require_system_admin
+def clientes_export_excel(request):
+    """Exportar relatório de clientes para Excel."""
+    from datetime import datetime, timedelta
+    from django.db.models import Count, Q, Max
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from organizations.models import Produto, Promocao, Cliente, CampanhaWhatsApp
+    from payments.models import AsaasSubscription
+    
+    # Aplicar os mesmos filtros da view principal
+    status_filter = request.GET.get('status', '')
+    whatsapp_filter = request.GET.get('whatsapp', '')
+    subscription_filter = request.GET.get('subscription', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    search = request.GET.get('search', '')
+    
+    # Query base
+    padarias = Padaria.objects.select_related('owner').annotate(
+        num_agents=Count('agents', distinct=True),
+        num_users=Count('members', distinct=True),
+        num_produtos=Count('produtos', distinct=True),
+        num_promocoes=Count('promocoes', distinct=True),
+        num_clientes=Count('clientes', distinct=True),
+        num_campanhas=Count('campanhas', distinct=True),
+        ultima_atividade=Max('audit_logs__created_at')
+    )
+    
+    # Aplicar filtros
+    if status_filter == 'ativas':
+        padarias = padarias.filter(is_active=True)
+    elif status_filter == 'inativas':
+        padarias = padarias.filter(is_active=False)
+    
+    if whatsapp_filter == 'conectado':
+        padarias = padarias.filter(num_agents__gt=0)
+    elif whatsapp_filter == 'desconectado':
+        padarias = padarias.filter(num_agents=0)
+    
+    if subscription_filter == 'ativa':
+        active_subs = AsaasSubscription.objects.filter(
+            status__in=['ACTIVE', 'active']
+        ).values_list('padaria_id', flat=True)
+        padarias = padarias.filter(id__in=active_subs)
+    elif subscription_filter == 'inativa':
+        active_subs = AsaasSubscription.objects.filter(
+            status__in=['ACTIVE', 'active']
+        ).values_list('padaria_id', flat=True)
+        padarias = padarias.exclude(id__in=active_subs)
+    
+    if date_from:
+        try:
+            date_from_dt = datetime.strptime(date_from, '%Y-%m-%d')
+            padarias = padarias.filter(created_at__gte=date_from_dt)
+        except:
+            pass
+    
+    if date_to:
+        try:
+            date_to_dt = datetime.strptime(date_to, '%Y-%m-%d')
+            date_to_dt = date_to_dt.replace(hour=23, minute=59, second=59)
+            padarias = padarias.filter(created_at__lte=date_to_dt)
+        except:
+            pass
+    
+    if search:
+        padarias = padarias.filter(
+            Q(name__icontains=search) |
+            Q(slug__icontains=search) |
+            Q(owner__username__icontains=search) |
+            Q(owner__email__icontains=search)
+        )
+    
+    # Buscar assinaturas
+    subs_dict = {}
+    for sub in AsaasSubscription.objects.filter(padaria__in=padarias).select_related('padaria'):
+        subs_dict[sub.padaria_id] = sub
+    
+    # Criar Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Relatório de Clientes"
+    
+    # Estilos
+    header_fill = PatternFill(start_color="667EEA", end_color="667EEA", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Cabeçalhos
+    headers = [
+        'Nome', 'Slug', 'CNPJ', 'Responsável', 'Email Responsável', 
+        'Status', 'WhatsApp Conectado', 'Status Assinatura', 
+        'Qtd. Agentes', 'Qtd. Usuários', 'Qtd. Produtos', 
+        'Qtd. Promoções', 'Qtd. Clientes', 'Qtd. Campanhas',
+        'Data Cadastro', 'Última Atividade', 'Telefone', 'Endereço'
+    ]
+    
+    # Adicionar título
+    ws.merge_cells('A1:R1')
+    ws['A1'] = 'RELATÓRIO DE CONTROLE DE CLIENTES (PADARIAS)'
+    ws['A1'].font = Font(bold=True, size=16, color="667EEA")
+    ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Adicionar info de geração
+    ws.merge_cells('A2:R2')
+    ws['A2'] = f'Gerado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")} - Total: {padarias.count()} clientes'
+    ws['A2'].font = Font(size=10, italic=True)
+    ws['A2'].alignment = Alignment(horizontal='center')
+    
+    # Cabeçalhos na linha 4
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = border
+    
+    # Dados
+    row_num = 5
+    for padaria in padarias.order_by('name'):
+        subscription = subs_dict.get(padaria.id, None)
+        
+        # Status da assinatura
+        if subscription:
+            if subscription.status in ['ACTIVE', 'active']:
+                sub_status = 'Ativa'
+            elif subscription.status in ['TRIAL', 'trialing']:
+                sub_status = 'Trial'
+            elif subscription.status == 'OVERDUE':
+                sub_status = 'Vencida'
+            elif subscription.status == 'EXPIRED':
+                sub_status = 'Expirada'
+            else:
+                sub_status = subscription.status
+        else:
+            sub_status = 'Sem assinatura'
+        
+        # Dados da linha
+        row_data = [
+            padaria.name,
+            padaria.slug,
+            padaria.cnpj or '-',
+            padaria.owner.username,
+            padaria.owner.email,
+            'Ativa' if padaria.is_active else 'Inativa',
+            'Sim' if padaria.num_agents > 0 else 'Não',
+            sub_status,
+            padaria.num_agents,
+            padaria.num_users,
+            padaria.num_produtos,
+            padaria.num_promocoes,
+            padaria.num_clientes,
+            padaria.num_campanhas,
+            padaria.created_at.strftime('%d/%m/%Y') if padaria.created_at else '-',
+            padaria.ultima_atividade.strftime('%d/%m/%Y %H:%M') if padaria.ultima_atividade else '-',
+            padaria.phone or '-',
+            padaria.address or '-'
+        ]
+        
+        for col_num, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col_num)
+            cell.value = value
+            cell.border = border
+            cell.alignment = Alignment(horizontal='left', vertical='center')
+            
+            # Colorir status
+            if col_num == 6:  # Status
+                if value == 'Ativa':
+                    cell.fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
+                else:
+                    cell.fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+            elif col_num == 7:  # WhatsApp
+                if value == 'Sim':
+                    cell.fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
+        
+        row_num += 1
+    
+    # Ajustar largura das colunas
+    from openpyxl.utils import get_column_letter
+    column_widths = [25, 20, 18, 20, 30, 12, 18, 18, 12, 12, 12, 12, 12, 12, 15, 18, 15, 30]
+    for col_num, width in enumerate(column_widths, 1):
+        col_letter = get_column_letter(col_num)
+        ws.column_dimensions[col_letter].width = width
+    
+    # Ajustar altura das linhas
+    ws.row_dimensions[1].height = 30
+    ws.row_dimensions[2].height = 20
+    ws.row_dimensions[4].height = 25
+    
+    # Preparar resposta
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f'relatorio_clientes_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    wb.save(response)
+    return response
+

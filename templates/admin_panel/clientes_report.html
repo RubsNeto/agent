@@ -1,0 +1,565 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Relatório de Clientes - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #667eea;
+        transition: transform 0.2s;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .metric-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+        color: #111827;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .metric-subtext {
+        color: #9ca3af;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+
+    .filters-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filter-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .filter-input, .filter-select {
+        padding: 0.75rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .filter-input:focus, .filter-select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .chart-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .chart-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 1rem;
+    }
+
+    .table-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+    .data-table thead {
+        background: #f9fafb;
+    }
+
+    .data-table th {
+        padding: 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        color: #374151;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .data-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f3f4f6;
+        color: #6b7280;
+    }
+
+    .data-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-active {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-inactive {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .btn-filter {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px -1px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-clear {
+        padding: 0.75rem 1.5rem;
+        background: #f3f4f6;
+        color: #6b7280;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-clear:hover {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 2rem;
+    }
+
+    .pagination a, .pagination span {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        color: #6b7280;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .pagination a:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .pagination .current {
+        background: #667eea;
+        color: white;
+        font-weight: 600;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        color: white;
+    }
+
+    .page-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .page-header p {
+        margin: 0;
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Cabeçalho -->
+<div class="page-header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1>📊 Relatório de Controle de Clientes</h1>
+            <p>Visão completa de todas as padarias que utilizam a plataforma</p>
+        </div>
+        <a href="{% url 'admin_panel:clientes_export_excel' %}?{{ request.GET.urlencode }}" 
+           class="btn-export"
+           style="background: white; color: #667eea; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Exportar Excel
+        </a>
+    </div>
+</div>
+
+<!-- Métricas Principais -->
+<div class="metrics-grid">
+    <div class="metric-card" style="border-left-color: #667eea;">
+        <div class="metric-label">Total de Clientes</div>
+        <div class="metric-value">{{ total_padarias }}</div>
+        <div class="metric-subtext">Padarias cadastradas</div>
+    </div>
+
+    <div class="metric-card" style="border-left-color: #10b981;">
+        <div class="metric-label">Clientes Ativos</div>
+        <div class="metric-value">{{ padarias_ativas }}</div>
+        <div class="metric-subtext">Com acesso liberado</div>
+    </div>
+
+    <div class="metric-card" style="border-left-color: #f59e0b;">
+        <div class="metric-label">WhatsApp Conectado</div>
+        <div class="metric-value">{{ padarias_com_whatsapp }}</div>
+        <div class="metric-subtext">Com agentes ativos</div>
+    </div>
+
+    <div class="metric-card" style="border-left-color: #8b5cf6;">
+        <div class="metric-label">Assinaturas Ativas</div>
+        <div class="metric-value">{{ padarias_com_sub_ativa }}</div>
+        <div class="metric-subtext">Clientes pagantes</div>
+    </div>
+
+    <div class="metric-card" style="border-left-color: #06b6d4;">
+        <div class="metric-label">Total de Agentes</div>
+        <div class="metric-value">{{ total_agentes }}</div>
+        <div class="metric-subtext">Agentes configurados</div>
+    </div>
+
+    <div class="metric-card" style="border-left-color: #ec4899;">
+        <div class="metric-label">Novos (30 dias)</div>
+        <div class="metric-value">{{ novas_padarias_30d }}</div>
+        <div class="metric-subtext">Crescimento recente</div>
+    </div>
+
+    <div class="metric-card" style="border-left-color: #f97316;">
+        <div class="metric-label">Total de Usuários</div>
+        <div class="metric-value">{{ total_usuarios }}</div>
+        <div class="metric-subtext">Usuários cadastrados</div>
+    </div>
+
+    <div class="metric-card" style="border-left-color: #14b8a6;">
+        <div class="metric-label">Total de Produtos</div>
+        <div class="metric-value">{{ total_produtos }}</div>
+        <div class="metric-subtext">Produtos cadastrados</div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="charts-grid">
+    <div class="chart-card">
+        <div class="chart-title">Crescimento de Clientes (Últimos 6 Meses)</div>
+        <div style="height: 250px;">
+            <canvas id="cadastrosChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-title">Status de Assinaturas</div>
+        <div style="height: 250px; display: flex; justify-content: center;">
+            <canvas id="subscriptionsChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filters-card">
+    <form method="get" id="filterForm">
+        <div class="filters-grid">
+            <div class="filter-group">
+                <label class="filter-label">Pesquisar</label>
+                <input type="text" name="search" value="{{ search }}" class="filter-input" placeholder="Nome, slug, email...">
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label">Status</label>
+                <select name="status" class="filter-select">
+                    <option value="">Todos</option>
+                    <option value="ativas" {% if status_filter == 'ativas' %}selected{% endif %}>Ativas</option>
+                    <option value="inativas" {% if status_filter == 'inativas' %}selected{% endif %}>Inativas</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label">WhatsApp</label>
+                <select name="whatsapp" class="filter-select">
+                    <option value="">Todos</option>
+                    <option value="conectado" {% if whatsapp_filter == 'conectado' %}selected{% endif %}>Conectado</option>
+                    <option value="desconectado" {% if whatsapp_filter == 'desconectado' %}selected{% endif %}>Desconectado</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label">Assinatura</label>
+                <select name="subscription" class="filter-select">
+                    <option value="">Todas</option>
+                    <option value="ativa" {% if subscription_filter == 'ativa' %}selected{% endif %}>Ativa</option>
+                    <option value="inativa" {% if subscription_filter == 'inativa' %}selected{% endif %}>Inativa/Expirada</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label">Data de Cadastro (De)</label>
+                <input type="date" name="date_from" value="{{ date_from }}" class="filter-input">
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label">Data de Cadastro (Até)</label>
+                <input type="date" name="date_to" value="{{ date_to }}" class="filter-input">
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <button type="submit" class="btn-filter">
+                <svg style="display: inline; width: 1.25rem; height: 1.25rem; margin-right: 0.5rem; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                </svg>
+                Filtrar
+            </button>
+            <a href="{% url 'admin_panel:clientes_report' %}" class="btn-clear">Limpar Filtros</a>
+        </div>
+    </form>
+</div>
+
+<!-- Tabela de Clientes -->
+<div class="table-card">
+    <div class="chart-title" style="margin-bottom: 1.5rem;">Lista de Clientes ({{ total_padarias }} no total)</div>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>CNPJ</th>
+                <th>Responsável</th>
+                <th>Status</th>
+                <th>WhatsApp</th>
+                <th>Assinatura</th>
+                <th>Agentes</th>
+                <th>Produtos</th>
+                <th>Clientes</th>
+                <th>Cadastro</th>
+                <th>Última Atividade</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for padaria in padarias %}
+            <tr>
+                <td>
+                    <a href="{% url 'admin_panel:padaria_detail' padaria.slug %}" style="color: #667eea; font-weight: 600; text-decoration: none;">
+                        {{ padaria.name }}
+                    </a>
+                </td>
+                <td>{{ padaria.cnpj|default:"-" }}</td>
+                <td>{{ padaria.owner.username }}</td>
+                <td>
+                    {% if padaria.is_active %}
+                    <span class="status-badge status-active">Ativa</span>
+                    {% else %}
+                    <span class="status-badge status-inactive">Inativa</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if padaria.num_agents > 0 %}
+                    <span class="status-badge status-active">✓ Conectado</span>
+                    {% else %}
+                    <span class="status-badge status-inactive">✗ Sem agente</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if padaria.subscription %}
+                        {% if padaria.subscription.status == 'ACTIVE' or padaria.subscription.status == 'active' %}
+                        <span class="status-badge status-active">Ativa</span>
+                        {% elif padaria.subscription.status == 'TRIAL' or padaria.subscription.status == 'trialing' %}
+                        <span class="status-badge status-pending">Trial</span>
+                        {% elif padaria.subscription.status == 'OVERDUE' %}
+                        <span class="status-badge status-inactive">Vencida</span>
+                        {% elif padaria.subscription.status == 'EXPIRED' %}
+                        <span class="status-badge status-inactive">Expirada</span>
+                        {% else %}
+                        <span class="status-badge status-inactive">{{ padaria.subscription.status }}</span>
+                        {% endif %}
+                    {% else %}
+                    <span class="status-badge status-inactive">Sem assinatura</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">{{ padaria.num_agents }}</td>
+                <td style="text-align: center;">{{ padaria.num_produtos }}</td>
+                <td style="text-align: center;">{{ padaria.num_clientes }}</td>
+                <td>{{ padaria.created_at|date:"d/m/Y" }}</td>
+                <td>
+                    {% if padaria.ultima_atividade %}
+                    {{ padaria.ultima_atividade|date:"d/m/Y H:i" }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="11" style="text-align: center; padding: 2rem; color: #9ca3af;">
+                    Nenhum cliente encontrado com os filtros aplicados.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Paginação -->
+    {% if padarias.has_other_pages %}
+    <div class="pagination">
+        {% if padarias.has_previous %}
+        <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">« Primeira</a>
+        <a href="?page={{ padarias.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">‹ Anterior</a>
+        {% endif %}
+
+        <span class="current">Página {{ padarias.number }} de {{ padarias.paginator.num_pages }}</span>
+
+        {% if padarias.has_next %}
+        <a href="?page={{ padarias.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Próxima ›</a>
+        <a href="?page={{ padarias.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if whatsapp_filter %}&whatsapp={{ whatsapp_filter }}{% endif %}{% if subscription_filter %}&subscription={{ subscription_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Última »</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Gráfico de Cadastros
+    const cadastrosLabels = {{ meses_labels|safe }};
+    const cadastrosData = {{ cadastros_data|safe }};
+
+    new Chart(document.getElementById('cadastrosChart'), {
+        type: 'line',
+        data: {
+            labels: cadastrosLabels,
+            datasets: [{
+                label: 'Novos Clientes',
+                data: cadastrosData,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 5,
+                pointBackgroundColor: '#667eea',
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+    });
+
+    // Gráfico de Assinaturas
+    const subLabels = {{ sub_labels|safe }};
+    const subData = {{ sub_data|safe }};
+
+    new Chart(document.getElementById('subscriptionsChart'), {
+        type: 'doughnut',
+        data: {
+            labels: subLabels,
+            datasets: [{
+                data: subData,
+                backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6b7280'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { usePointStyle: true, padding: 15 }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

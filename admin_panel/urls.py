@@ -7,6 +7,10 @@ urlpatterns = [
     # Dashboard
     path('', views.dashboard, name='dashboard'),
     
+    # Relatório de Clientes (Padarias)
+    path('relatorio-clientes/', views.clientes_report, name='clientes_report'),
+    path('relatorio-clientes/exportar/', views.clientes_export_excel, name='clientes_export_excel'),
+    
     # Padarias CRUD
     path('padarias/', views.padarias_list, name='padarias_list'),
     path('padarias/create/', views.padaria_create, name='padaria_create'),
