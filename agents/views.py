@@ -161,7 +161,7 @@ def agent_create(request):
                     
                     # Enviar para n8n
                     try:
-                        webhook_url = "https://webhook.mysellery.com/webhook/memoria"
+                        webhook_url = "https://n8n.newcouros.com.br/webhook/memoria_pandia"
                         
                         # Nome da tabela RAG no Supabase (baseado na padaria)
                         rag_table_name = f"rag_{agent.padaria.slug.replace('-', '_')}"
@@ -243,7 +243,7 @@ def agent_create(request):
             
             # Notificar n8n sobre novo agente
             try:
-                webhook_url = "https://webhook.mysellery.com/webhook/memoria"
+                webhook_url = "https://n8n.newcouros.com.br/webhook/memoria_pandia"
                 rag_table_name = f"rag_{agent.padaria.slug.replace('-', '_')}"
                 
                 payload = {
@@ -368,7 +368,7 @@ def agent_edit(request, slug):
             # Se tem PDF (novo ou existente), enviar para n8n
             if agent.knowledge_pdf and agent.knowledge_pdf_text:
                 try:
-                    webhook_url = "https://webhook.mysellery.com/webhook/memoria"
+                    webhook_url = "https://n8n.newcouros.com.br/webhook/memoria_pandia"
                     
                     # Nome da tabela RAG no Supabase (baseado na padaria)
                     rag_table_name = f"rag_{agent.padaria.slug.replace('-', '_')}"
@@ -412,7 +412,7 @@ def agent_edit(request, slug):
             
             # Notificar n8n sobre atualização do agente
             try:
-                webhook_url = "https://webhook.mysellery.com/webhook/memoria"
+                webhook_url = "https://n8n.newcouros.com.br/webhook/memoria_pandia"
                 rag_table_name = f"rag_{agent.padaria.slug.replace('-', '_')}"
                 
                 payload = {
