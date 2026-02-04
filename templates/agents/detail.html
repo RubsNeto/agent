@@ -145,17 +145,25 @@
         </h3>
         <div style="display: grid; gap: 1rem;">
             <!-- Diretrizes de Estilo -->
-            <div style="background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); padding: 1rem; border-radius: 10px; border-left: 4px solid #a855f7;">
+            <div
+                style="background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); padding: 1rem; border-radius: 10px; border-left: 4px solid #a855f7;">
                 <div style="display: flex; align-items: start; gap: 0.75rem;">
-                    <svg width="20" height="20" fill="none" stroke="#a855f7" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink: 0; margin-top: 2px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    <svg width="20" height="20" fill="none" stroke="#a855f7" stroke-width="2" viewBox="0 0 24 24"
+                        style="flex-shrink: 0; margin-top: 2px;">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                     <div style="flex: 1;">
-                        <label style="display: block; font-size: 0.75rem; font-weight: 600; color: #7e22ce; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px;">Diretrizes de Estilo</label>
+                        <label
+                            style="display: block; font-size: 0.75rem; font-weight: 600; color: #7e22ce; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px;">Diretrizes
+                            de Estilo</label>
                         {% if agent.style_guidelines %}
-                        <p style="color: #6b21a8; font-size: 0.875rem; margin: 0.25rem 0 0 0; line-height: 1.5; white-space: pre-wrap;">{{ agent.style_guidelines }}</p>
+                        <p
+                            style="color: #6b21a8; font-size: 0.875rem; margin: 0.25rem 0 0 0; line-height: 1.5; white-space: pre-wrap;">
+                            {{ agent.style_guidelines }}</p>
                         {% else %}
-                        <p style="color: #78716c; font-size: 0.875rem; margin: 0.25rem 0 0 0; font-style: italic;">Nenhuma diretriz definida</p>
+                        <p style="color: #78716c; font-size: 0.875rem; margin: 0.25rem 0 0 0; font-style: italic;">
+                            Nenhuma diretriz definida</p>
                         {% endif %}
                     </div>
                 </div>
@@ -163,14 +171,20 @@
 
             <!-- N8N Webhook (se existir) -->
             {% if agent.n8n_webhook_url %}
-            <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem; border-radius: 10px; border-left: 4px solid #10b981;">
+            <div
+                style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem; border-radius: 10px; border-left: 4px solid #10b981;">
                 <div style="display: flex; align-items: start; gap: 0.75rem;">
-                    <svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink: 0; margin-top: 2px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    <svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24"
+                        style="flex-shrink: 0; margin-top: 2px;">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
                     <div style="flex: 1; min-width: 0;">
-                        <label style="display: block; font-size: 0.75rem; font-weight: 600; color: #047857; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px;">N8N Webhook</label>
-                        <p style="font-family: 'Courier New', monospace; font-size: 0.813rem; color: #065f46; background: white; padding: 0.5rem; border-radius: 6px; word-break: break-all; margin: 0.25rem 0 0 0; border: 1px solid #6ee7b7;">
+                        <label
+                            style="display: block; font-size: 0.75rem; font-weight: 600; color: #047857; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px;">N8N
+                            Webhook</label>
+                        <p
+                            style="font-family: 'Courier New', monospace; font-size: 0.813rem; color: #065f46; background: white; padding: 0.5rem; border-radius: 6px; word-break: break-all; margin: 0.25rem 0 0 0; border: 1px solid #6ee7b7;">
                             {{ agent.n8n_webhook_url }}
                         </p>
                     </div>

@@ -131,7 +131,7 @@
         color: var(--gray-700);
     }
 
-    input[type="checkbox"]:checked + .day-button {
+    input[type="checkbox"]:checked+.day-button {
         background: #f59e0b;
         color: white;
         border-color: #f59e0b !important;
@@ -144,7 +144,7 @@
         transition: all 0.2s;
     }
 
-    input[type="checkbox"]:checked + .day-button {
+    input[type="checkbox"]:checked+.day-button {
         background: linear-gradient(135deg, #f59e0b, #ea580c);
         color: white;
         border-color: #f59e0b !important;
@@ -155,7 +155,7 @@
         background: rgba(245, 158, 11, 0.05);
     }
 
-    input[type="checkbox"]:checked + .day-button:hover {
+    input[type="checkbox"]:checked+.day-button:hover {
         background: linear-gradient(135deg, #ea580c, #d97706);
     }
 </style>
@@ -188,7 +188,10 @@
             <div class="status-toggle-container">
                 {% for value, label in form.status_toggle.field.choices %}
                 <div class="status-option {% if value == 'inativo' %}inactive{% endif %}">
-                    <input type="radio" name="status_toggle_display" id="status_{{ value }}_top" value="{{ value }}" onchange="document.getElementById('status_toggle_hidden').value = this.value" {% if form.status_toggle.value == value or value == 'ativo' and not form.status_toggle.value %}checked{% endif %}>
+                    <input type="radio" name="status_toggle_display" id="status_{{ value }}_top" value="{{ value }}"
+                        onchange="document.getElementById('status_toggle_hidden').value = this.value" {% if
+                        form.status_toggle.value==value or value=='ativo' and not form.status_toggle.value %}checked{%
+                        endif %}>
                     <label for="status_{{ value }}_top">{{ label }}</label>
                 </div>
                 {% endfor %}
@@ -288,7 +291,8 @@
                 <div class="status-toggle-container">
                     {% for value, label in form.status_toggle.field.choices %}
                     <div class="status-option {% if value == 'inativo' %}inactive{% endif %}">
-                        <input type="radio" name="status_toggle" id="status_{{ value }}" value="{{ value }}" {% if form.status_toggle.value|default:'ativo' == value %}checked{% endif %}>
+                        <input type="radio" name="status_toggle" id="status_{{ value }}" value="{{ value }}" {% if
+                            form.status_toggle.value|default:'ativo'==value %}checked{% endif %}>
                         <label for="status_{{ value }}">{{ label }}</label>
                     </div>
                     {% endfor %}
@@ -338,28 +342,32 @@
 
         <!-- SEÇÃO 2.5: CRONOGRAMA DE ATENDIMENTO -->
         <div style="margin-bottom: 2rem;">
-            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+            <h3
+                style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
                 </svg>
                 Defina seu Cronograma de Atendimento
             </h3>
             <p class="form-help" style="margin-bottom: 1.5rem;">
-                Configure os dias e horários de funcionamento. A mensagem fora do horário será atualizada automaticamente.
+                Configure os dias e horários de funcionamento. A mensagem fora do horário será atualizada
+                automaticamente.
             </p>
 
             <!-- Dias de funcionamento -->
             <div class="form-group">
-                <label class="form-label" style="margin-bottom: 0.75rem; color: #f59e0b; font-weight: 600;">Dias de funcionamento*</label>
+                <label class="form-label" style="margin-bottom: 0.75rem; color: #f59e0b; font-weight: 600;">Dias de
+                    funcionamento*</label>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     {% for value, label in form.working_days.field.choices %}
                     <label style="flex: 1; min-width: 120px;">
-                        <input type="checkbox" name="working_days" value="{{ value }}" 
-                            {% if form.working_days.value and value in form.working_days.value %}checked{% endif %}
+                        <input type="checkbox" name="working_days" value="{{ value }}" {% if form.working_days.value and
+                            value in form.working_days.value %}checked{% endif %}
                             onchange="toggleDaySchedule('{{ value }}'); updateOutOfHoursMessage();"
                             style="display: none;">
-                        <div class="day-button" style="padding: 0.75rem; text-align: center; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: 600; font-size: 0.875rem;">
+                        <div class="day-button"
+                            style="padding: 0.75rem; text-align: center; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: 600; font-size: 0.875rem;">
                             {{ label }}
                         </div>
                     </label>
@@ -370,24 +378,22 @@
             <!-- Horários específicos por dia -->
             <div id="scheduleContainer" style="margin-top: 1.5rem;">
                 {% for value, label in form.working_days.field.choices %}
-                <div id="schedule_{{ value }}" class="day-schedule" style="display: none; background: #f9fafb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #e5e7eb;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <div id="schedule_{{ value }}" class="day-schedule"
+                    style="display: none; background: #f9fafb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #e5e7eb;">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                         <h4 style="margin: 0; font-size: 1rem; font-weight: 600; color: #f59e0b;">{{ label }}</h4>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div>
                             <label class="form-label" for="start_{{ value }}">Horário de Abertura</label>
-                            <input type="time" id="start_{{ value }}" name="schedule_{{ value }}_start" 
-                                class="form-input schedule-time" 
-                                onchange="updateOutOfHoursMessage()"
-                                value="07:00">
+                            <input type="time" id="start_{{ value }}" name="schedule_{{ value }}_start"
+                                class="form-input schedule-time" onchange="updateOutOfHoursMessage()" value="07:00">
                         </div>
                         <div>
                             <label class="form-label" for="end_{{ value }}">Horário de Fechamento</label>
-                            <input type="time" id="end_{{ value }}" name="schedule_{{ value }}_end" 
-                                class="form-input schedule-time" 
-                                onchange="updateOutOfHoursMessage()"
-                                value="17:00">
+                            <input type="time" id="end_{{ value }}" name="schedule_{{ value }}_end"
+                                class="form-input schedule-time" onchange="updateOutOfHoursMessage()" value="17:00">
                         </div>
                     </div>
                 </div>
@@ -476,29 +482,36 @@
         }
 
         // Inicializar dias já selecionados
-        document.querySelectorAll('input[name="working_days"]:checked').forEach(input => {
+        document.querySelectorAll('input[name="working_days"]:checked').forEach(input =>
+        {
             toggleDaySchedule(input.value, false);
         });
     });
 
-    function toggleDaySchedule(dayValue, updateMessage = true) {
+    function toggleDaySchedule(dayValue, updateMessage = true)
+    {
         const checkbox = document.querySelector(`input[name="working_days"][value="${dayValue}"]`);
         const scheduleDiv = document.getElementById(`schedule_${dayValue}`);
-        
-        if (checkbox && scheduleDiv) {
-            if (checkbox.checked) {
+
+        if (checkbox && scheduleDiv)
+        {
+            if (checkbox.checked)
+            {
                 scheduleDiv.style.display = 'block';
-            } else {
+            } else
+            {
                 scheduleDiv.style.display = 'none';
             }
         }
-        
-        if (updateMessage) {
+
+        if (updateMessage)
+        {
             updateOutOfHoursMessage();
         }
     }
 
-    function updateOutOfHoursMessage() {
+    function updateOutOfHoursMessage()
+    {
         const daysMap = {
             'monday': 'Segunda',
             'tuesday': 'Terça',
@@ -511,12 +524,14 @@
 
         // Obter dias selecionados com seus horários
         const selectedDaysData = [];
-        document.querySelectorAll('input[name="working_days"]:checked').forEach(cb => {
+        document.querySelectorAll('input[name="working_days"]:checked').forEach(cb =>
+        {
             const dayValue = cb.value;
             const startTime = document.getElementById(`start_${dayValue}`)?.value;
             const endTime = document.getElementById(`end_${dayValue}`)?.value;
-            
-            if (startTime && endTime) {
+
+            if (startTime && endTime)
+            {
                 selectedDaysData.push({
                     name: daysMap[dayValue],
                     start: startTime,
@@ -527,37 +542,42 @@
 
         // Construir mensagem
         let message = 'Olá! No momento estamos fora do horário de atendimento.';
-        
-        if (selectedDaysData.length > 0) {
+
+        if (selectedDaysData.length > 0)
+        {
             message += ' Nosso horário de funcionamento é:\n';
-            
+
             // Agrupar dias com mesmo horário
             const scheduleGroups = {};
-            selectedDaysData.forEach(day => {
+            selectedDaysData.forEach(day =>
+            {
                 const schedule = `${day.start} às ${day.end}`;
-                if (!scheduleGroups[schedule]) {
+                if (!scheduleGroups[schedule])
+                {
                     scheduleGroups[schedule] = [];
                 }
                 scheduleGroups[schedule].push(day.name);
             });
-            
+
             // Formatar mensagem
             const scheduleLines = [];
-            Object.entries(scheduleGroups).forEach(([schedule, days]) => {
-                const daysText = days.length === 1 
+            Object.entries(scheduleGroups).forEach(([schedule, days]) =>
+            {
+                const daysText = days.length === 1
                     ? days[0]
                     : days.slice(0, -1).join(', ') + ' e ' + days[days.length - 1];
                 scheduleLines.push(`${daysText} das ${schedule}`);
             });
-            
+
             message += scheduleLines.join('\n');
         }
-        
+
         message += '\n\nDeixe sua mensagem que retornaremos assim que possível!';
 
         // Atualizar o textarea
         const textarea = document.getElementById('id_out_of_hours_message');
-        if (textarea) {
+        if (textarea)
+        {
             textarea.value = message;
         }
     }

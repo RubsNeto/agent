@@ -99,13 +99,20 @@ Olá, {{nome}}!
 Temos uma oferta imperdível para você!
 
 📍 Venha conferir na nossa padaria!</textarea>
-                <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
+                <div
+                    style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
                     <p style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #6d28d9; font-weight: 600;">
                         💡 Personalize sua mensagem com variáveis:
                     </p>
                     <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.875rem; color: #7c3aed; line-height: 1.6;">
-                        <li><strong style="background: white; padding: 0.125rem 0.375rem; border-radius: 4px; color: #6d28d9;">{% templatetag openvariable %}nome{% templatetag closevariable %}</strong> - Primeiro nome do cliente (ex: João)</li>
-                        <li><strong style="background: white; padding: 0.125rem 0.375rem; border-radius: 4px; color: #6d28d9;">{% templatetag openvariable %}nome_cliente{% templatetag closevariable %}</strong> - Nome completo do cliente (ex: João Silva)</li>
+                        <li><strong
+                                style="background: white; padding: 0.125rem 0.375rem; border-radius: 4px; color: #6d28d9;">{%
+                                templatetag openvariable %}nome{% templatetag closevariable %}</strong> - Primeiro nome
+                            do cliente (ex: João)</li>
+                        <li><strong
+                                style="background: white; padding: 0.125rem 0.375rem; border-radius: 4px; color: #6d28d9;">{%
+                                templatetag openvariable %}nome_cliente{% templatetag closevariable %}</strong> - Nome
+                            completo do cliente (ex: João Silva)</li>
                     </ul>
                     <p style="margin: 0.75rem 0 0 0; font-size: 0.75rem; color: #8b5cf6;">
                         As variáveis serão substituídas automaticamente pelo nome de cada cliente ao enviar a campanha.
@@ -177,7 +184,8 @@ Temos uma oferta imperdível para você!
             <div
                 style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
                 <p style="margin: 0; font-size: 0.875rem; color: #b45309;">
-                    <strong>💡 Como funciona:</strong> O sistema enviará uma mensagem, aguardará entre 15-45s de forma aleatória,
+                    <strong>💡 Como funciona:</strong> O sistema enviará uma mensagem, aguardará entre 15-45s de forma
+                    aleatória,
                     e após cada 10 mensagens fará uma pausa de 120s.
                     Isso simula comportamento humano e protege seu número.
                 </p>

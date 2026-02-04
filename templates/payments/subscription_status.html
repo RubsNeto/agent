@@ -42,17 +42,17 @@
             <div class="card-content">
                 <span class="card-value">
                     {% if subscription.status == 'active' and not subscription.asaas_subscription_id %}
-                        Trial Ativo
+                    Trial Ativo
                     {% elif subscription.status == 'active' %}
-                        Ativa
+                    Ativa
                     {% elif subscription.status == 'overdue' %}
-                        Inadimplente
+                    Inadimplente
                     {% elif subscription.status == 'pending' %}
-                        Aguardando
+                    Aguardando
                     {% elif subscription.status == 'cancelled' %}
-                        Cancelada
+                    Cancelada
                     {% else %}
-                        {{ subscription.get_status_display }}
+                    {{ subscription.get_status_display }}
                     {% endif %}
                 </span>
                 <span class="card-label">Status da Assinatura</span>
@@ -69,12 +69,13 @@
                 </svg>
             </div>
             <div class="card-content">
-                <span class="card-value">{% if subscription.next_due_date %}{{ subscription.next_due_date|date:"d/m/Y" }}{% else %}—{% endif %}</span>
+                <span class="card-value">{% if subscription.next_due_date %}{{ subscription.next_due_date|date:"d/m/Y"
+                    }}{% else %}—{% endif %}</span>
                 <span class="card-label">
                     {% if subscription.status == 'active' and not subscription.asaas_subscription_id %}
-                        Fim do Trial Gratuito
+                    Fim do Trial Gratuito
                     {% else %}
-                        Próximo Vencimento
+                    Próximo Vencimento
                     {% endif %}
                 </span>
             </div>
@@ -102,12 +103,14 @@
         <div class="banner-content">
             <div class="banner-icon">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
             </div>
             <div class="banner-text">
                 <h3>🎉 Trial de 15 dias ativo!</h3>
-                <p>Aproveite todos os recursos gratuitamente até {{ subscription.next_due_date|date:"d/m/Y" }}. Configure o pagamento antes dessa data para continuar usando o sistema.</p>
+                <p>Aproveite todos os recursos gratuitamente até {{ subscription.next_due_date|date:"d/m/Y" }}.
+                    Configure o pagamento antes dessa data para continuar usando o sistema.</p>
             </div>
         </div>
         <div class="banner-action">
@@ -132,7 +135,9 @@
                 </div>
                 <button type="submit" class="btn-action btn-activate">
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
+                        </path>
                     </svg>
                     Configurar Pagamento
                 </button>
@@ -159,14 +164,15 @@
                 {% endif %}
             </div>
             <div class="banner-text">
-                <h3>{% if subscription.status == 'overdue' %}Pagamento Pendente{% else %}Ative sua Assinatura{% endif %}</h3>
+                <h3>{% if subscription.status == 'overdue' %}Pagamento Pendente{% else %}Ative sua Assinatura{% endif %}
+                </h3>
                 <p>
                     {% if subscription.current_payment_link %}
-                        Clique no botão ao lado para realizar o pagamento.
+                    Clique no botão ao lado para realizar o pagamento.
                     {% elif not subscription.asaas_subscription_id %}
-                        Você está no período de trial de 15 dias. Configure o pagamento para continuar usando após o trial.
+                    Você está no período de trial de 15 dias. Configure o pagamento para continuar usando após o trial.
                     {% else %}
-                        Configure sua forma de pagamento para começar a usar o sistema.
+                    Configure sua forma de pagamento para começar a usar o sistema.
                     {% endif %}
                 </p>
             </div>
@@ -283,7 +289,8 @@
                     {% elif subscription.billing_type == 'DEBIT_CARD' %}Cartão de Débito
                     {% elif subscription.billing_type == 'PIX' %}PIX
                     {% elif subscription.billing_type == 'BOLETO' %}Boleto
-                    {% elif subscription.status == 'active' and not subscription.asaas_subscription_id %}Trial - A configurar
+                    {% elif subscription.status == 'active' and not subscription.asaas_subscription_id %}Trial - A
+                    configurar
                     {% else %}{{ subscription.billing_type|default:"Não definido" }}
                     {% endif %}
                 </span>
@@ -292,11 +299,11 @@
                 <span class="detail-label">Último Pagamento</span>
                 <span class="detail-value">
                     {% if subscription.last_payment_date %}
-                        {{ subscription.last_payment_date|date:"d/m/Y" }}
+                    {{ subscription.last_payment_date|date:"d/m/Y" }}
                     {% elif subscription.status == 'active' and not subscription.asaas_subscription_id %}
-                        Trial gratuito
+                    Trial gratuito
                     {% else %}
-                        Nenhum
+                    Nenhum
                     {% endif %}
                 </span>
             </div>
@@ -362,8 +369,10 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="sync_payments">
                 <button type="submit" class="btn-small" style="background: #6b7280;">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 4px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                        style="margin-right: 4px;">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                     Sincronizar
                 </button>
@@ -402,8 +411,10 @@
                         <td>
                             {% if payment.invoice_url and payment.status in 'pending,overdue' %}
                             <a href="{{ payment.invoice_url }}" target="_blank" class="btn-small btn-primary">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+                                    viewBox="0 0 24 24" style="margin-right: 4px;">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                                 </svg>
                                 Pagar
                             </a>
