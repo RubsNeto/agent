@@ -291,7 +291,8 @@
                 <div class="status-toggle-container">
                     {% for value, label in form.status_toggle.field.choices %}
                     <div class="status-option {% if value == 'inativo' %}inactive{% endif %}">
-                        <input type="radio" name="status_toggle" id="status_{{ value }}" value="{{ value }}" {% if form.status_toggle.value|default:'ativo' == value %}checked{% endif %}>
+                        <input type="radio" name="status_toggle" id="status_{{ value }}" value="{{ value }}" {% if
+                            form.status_toggle.value|default:'ativo'==value %}checked{% endif %}>
                         <label for="status_{{ value }}">{{ label }}</label>
                     </div>
                     {% endfor %}
