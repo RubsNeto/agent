@@ -47,14 +47,14 @@
                     {# Itens visíveis apenas para SuperUser ou Usuário de Padaria (não Admin) #}
                     {% if user.is_superuser or user.profile.role != 'admin' %}
                     <li>
-                        <a href="{% url 'ui:guia' %}"
-                            class="{% if request.resolver_match.url_name == 'guia' %}active{% endif %}">
-                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <span style="opacity: 0.5; cursor: not-allowed; display: flex; align-items: center; padding: 0.75rem 1rem; color: #6b7280; position: relative;">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 1.25rem; height: 1.25rem; margin-right: 0.75rem;">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                             </svg>
                             Guia de Implementação
-                        </a>
+                            <span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; background: #fbbf24; color: #78350f; font-size: 0.7rem; border-radius: 9999px; font-weight: 600;">Em breve</span>
+                        </span>
                     </li>
                     {% endif %}
 
@@ -181,18 +181,6 @@
                 {% if user.is_superuser or user.profile.role != 'admin' %}
                 <div class="sidebar-divider">OUTROS</div>
                 <ul>
-                    {% if user.is_superuser %}
-                    <li>
-                        <a href="{% url 'organizations:apikeys' %}"
-                            class="{% if 'apikey' in request.path %}active{% endif %}">
-                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                            </svg>
-                            API Keys
-                        </a>
-                    </li>
-                    {% endif %}
                     {% if user.is_superuser %}
                     <li>
                         <a href="{% url 'audit:list' %}"

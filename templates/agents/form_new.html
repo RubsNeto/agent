@@ -124,6 +124,40 @@
         border-top: 1px solid var(--gray-200);
         margin: 2rem 0;
     }
+
+    /* Estilos para botões de dias de funcionamento */
+    .day-button {
+        background: white;
+        color: var(--gray-700);
+    }
+
+    input[type="checkbox"]:checked + .day-button {
+        background: #f59e0b;
+        color: white;
+        border-color: #f59e0b !important;
+    }
+
+    /* Estilos para botões de dias de funcionamento */
+    .day-button {
+        background: white;
+        color: #6b7280;
+        transition: all 0.2s;
+    }
+
+    input[type="checkbox"]:checked + .day-button {
+        background: linear-gradient(135deg, #f59e0b, #ea580c);
+        color: white;
+        border-color: #f59e0b !important;
+    }
+
+    .day-button:hover {
+        border-color: #f59e0b !important;
+        background: rgba(245, 158, 11, 0.05);
+    }
+
+    input[type="checkbox"]:checked + .day-button:hover {
+        background: linear-gradient(135deg, #ea580c, #d97706);
+    }
 </style>
 
 <a href="{% url 'agents:list' %}" class="back-link">
@@ -302,216 +336,70 @@
 
         <div class="section-divider"></div>
 
-        <!-- SEÇÃO 3: CONHECIMENTO (DESTAQUE) -->
-        <div
-            style="margin-bottom: 2rem; background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(251, 191, 36, 0.05)); padding: 1.5rem; border-radius: 12px; border: 2px dashed var(--orange-500);">
-            <h3
-                style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+        <!-- SEÇÃO 2.5: CRONOGRAMA DE ATENDIMENTO -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
                 </svg>
-                Base de Conhecimento
+                Defina seu Cronograma de Atendimento
             </h3>
             <p class="form-help" style="margin-bottom: 1.5rem;">
-                Esta é a principal fonte de informação do seu agente
+                Configure os dias e horários de funcionamento. A mensagem fora do horário será atualizada automaticamente.
             </p>
 
-            {% if agent and agent.knowledge_pdf %}
-            <div class="pdf-preview">
-                <div class="pdf-info">
-                    <div class="pdf-icon">PDF</div>
-                    <div style="flex: 1;">
-                        <h4 style="margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 600;">
-                            {{ agent.knowledge_pdf.name|default:"Documento.pdf" }}
-                        </h4>
-                        <p style="margin: 0; font-size: 0.875rem; color: var(--gray-600);">
-                            {% if agent.knowledge_pdf_category %}{{ agent.knowledge_pdf_category }} • {% endif %}
-                            Enviado em {{ agent.created_at|date:"d/m/Y" }}
-                        </p>
-                    </div>
-                    <a href="{% url 'agents:delete_pdf' agent.slug %}" class="btn btn-secondary"
-                        style="background: #ef4444; color: white; display: flex; align-items: center; gap: 0.5rem;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                        Remover
-                    </a>
-                </div>
-
-                {% if agent.knowledge_pdf_text %}
-                <details>
-                    <summary
-                        style="cursor: pointer; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
-                        </svg>
-                        Ver preview do texto extraído
-                    </summary>
-                    <div style="background: white; padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.875rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap;">{{ agent.knowledge_pdf_text|slice:":1000" }}{% if agent.knowledge_pdf_text|length > 1000 %}...{% endif %}</div>
-                </details>
-                {% endif %}
-            </div>
-            {% else %}
+            <!-- Dias de funcionamento -->
             <div class="form-group">
-                {{ form.knowledge_pdf.label_tag }}
-                {{ form.knowledge_pdf }}
-                {% if form.knowledge_pdf.help_text %}
-                <p class="form-help">{{ form.knowledge_pdf.help_text }}</p>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            <div class="form-group">
-                {{ form.knowledge_pdf_category.label_tag }}
-                {{ form.knowledge_pdf_category }}
-            </div>
-
-            <div class="form-group">
-                {{ form.knowledge_base.label_tag }}
-                {{ form.knowledge_base }}
-                {% if form.knowledge_base.help_text %}
-                <p class="form-help">{{ form.knowledge_base.help_text }}</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="section-divider"></div>
-
-        <!-- SEÇÃO 4: ATENDIMENTO HUMANO (EM BREVE) -->
-        <div style="margin-bottom: 2rem; position: relative;">
-            <!-- Overlay "Em Breve" -->
-            <div
-                style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.85); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; backdrop-filter: blur(2px);">
-                <div
-                    style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 0.75rem 2rem; border-radius: 50px; font-weight: 700; font-size: 1.125rem; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); display: flex; align-items: center; gap: 0.5rem;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12,6 12,12 16,14" />
-                    </svg>
-                    Em Breve
-                </div>
-                <p style="margin-top: 0.75rem; color: var(--gray-600); font-size: 0.875rem; text-align: center;">
-                    Transferência para atendimento humano<br>será implementada em breve
-                </p>
-            </div>
-
-            <!-- Conteúdo original (desfocado) -->
-            <div style="filter: blur(2px); pointer-events: none; opacity: 0.6;">
-                <h3
-                    style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg>
-                    Atendimento Humano
-                </h3>
-
-                <div class="form-group">
-                    <label
-                        style="display: flex; align-items: center; gap: 0.75rem; cursor: default; padding: 1rem; border: 2px solid var(--gray-300); border-radius: 8px;">
-                        <input type="checkbox" disabled>
-                        <div>
-                            <div style="font-weight: 600; color: var(--gray-900);">Habilitar transferência para humano
-                            </div>
-                            <div style="font-size: 0.875rem; color: var(--gray-600);">Permite que o cliente solicite
-                                falar
-                                com uma pessoa</div>
+                <label class="form-label" style="margin-bottom: 0.75rem; color: #f59e0b; font-weight: 600;">Dias de funcionamento*</label>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    {% for value, label in form.working_days.field.choices %}
+                    <label style="flex: 1; min-width: 120px;">
+                        <input type="checkbox" name="working_days" value="{{ value }}" 
+                            {% if form.working_days.value and value in form.working_days.value %}checked{% endif %}
+                            onchange="toggleDaySchedule('{{ value }}'); updateOutOfHoursMessage();"
+                            style="display: none;">
+                        <div class="day-button" style="padding: 0.75rem; text-align: center; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: 600; font-size: 0.875rem;">
+                            {{ label }}
                         </div>
                     </label>
-                </div>
-
-                <div class="transfer-fields">
-                    <div class="form-group">
-                        <label class="form-label">Palavras-chave de Transferência</label>
-                        <input type="text" class="form-input" disabled
-                            placeholder="falar com atendente, pessoa real, humano">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Limite de falhas para transferência</label>
-                        <input type="number" class="form-input" disabled value="3">
-                    </div>
+                    {% endfor %}
                 </div>
             </div>
+
+            <!-- Horários específicos por dia -->
+            <div id="scheduleContainer" style="margin-top: 1.5rem;">
+                {% for value, label in form.working_days.field.choices %}
+                <div id="schedule_{{ value }}" class="day-schedule" style="display: none; background: #f9fafb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #e5e7eb;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                        <h4 style="margin: 0; font-size: 1rem; font-weight: 600; color: #f59e0b;">{{ label }}</h4>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label class="form-label" for="start_{{ value }}">Horário de Abertura</label>
+                            <input type="time" id="start_{{ value }}" name="schedule_{{ value }}_start" 
+                                class="form-input schedule-time" 
+                                onchange="updateOutOfHoursMessage()"
+                                value="07:00">
+                        </div>
+                        <div>
+                            <label class="form-label" for="end_{{ value }}">Horário de Fechamento</label>
+                            <input type="time" id="end_{{ value }}" name="schedule_{{ value }}_end" 
+                                class="form-input schedule-time" 
+                                onchange="updateOutOfHoursMessage()"
+                                value="17:00">
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Campos hidden antigos (manter para compatibilidade) -->
+            <input type="hidden" name="morning_start" id="morning_start_hidden">
+            <input type="hidden" name="morning_end" id="morning_end_hidden">
+            <input type="hidden" name="afternoon_start" id="afternoon_start_hidden">
+            <input type="hidden" name="afternoon_end" id="afternoon_end_hidden">
         </div>
-
-        <div class="section-divider"></div>
-
-        <!-- SEÇÃO 5: AVANÇADO (COLAPSADO) -->
-        <details style="margin-bottom: 2rem;">
-            <summary
-                style="cursor: pointer; padding: 1rem; background: var(--gray-50); border-radius: 8px; font-weight: 600; font-size: 1.125rem; color: var(--gray-700); display: flex; align-items: center; gap: 0.5rem;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
-                    <circle cx="12" cy="12" r="3" />
-                    <path
-                        d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24" />
-                </svg>
-                Configurações Avançadas (opcional)
-            </summary>
-
-            <div style="padding: 1.5rem 0;">
-                <div class="form-group">
-                    {{ form.sector.label_tag }}
-                    {{ form.sector }}
-                    <script>
-                        // Sincronizar campo sector visível com hidden
-                        {% if is_create %}
-                        document.addEventListener('DOMContentLoaded', function ()
-                        {
-                            const sectorField = document.querySelector('input[name="sector"]:not([type="hidden"]), select[name="sector"]');
-                            const sectorHidden = document.getElementById('sector_hidden');
-                            if (sectorField && sectorHidden)
-                            {
-                                sectorField.addEventListener('change', function ()
-                                {
-                                    sectorHidden.value = this.value || 'geral';
-                                });
-                                sectorField.addEventListener('input', function ()
-                                {
-                                    sectorHidden.value = this.value || 'geral';
-                                });
-                            }
-                        });
-                        {% endif %}
-                    </script>
-                </div>
-
-                <div class="form-group">
-                    {{ form.personality.label_tag }}
-                    {{ form.personality }}
-                </div>
-
-                <div class="form-group">
-                    {{ form.tone.label_tag }}
-                    {{ form.tone }}
-                </div>
-
-                <div class="form-group">
-                    {{ form.style_guidelines.label_tag }}
-                    {{ form.style_guidelines }}
-                </div>
-
-                <div class="form-group">
-                    {{ form.escalation_rule.label_tag }}
-                    {{ form.escalation_rule }}
-                </div>
-
-                <div class="form-group">
-                    {{ form.max_response_time.label_tag }}
-                    {{ form.max_response_time }}
-                </div>
-
-                <div class="form-group">
-                    {{ form.n8n_webhook_url.label_tag }}
-                    {{ form.n8n_webhook_url }}
-                </div>
-            </div>
-        </details>
 
         <!-- BOTÕES DE AÇÃO -->
         <div style="display: flex; gap: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-200);">
@@ -586,7 +474,93 @@
         {
             checkbox.addEventListener('change', toggleTransferFields);
         }
+
+        // Inicializar dias já selecionados
+        document.querySelectorAll('input[name="working_days"]:checked').forEach(input => {
+            toggleDaySchedule(input.value, false);
+        });
     });
+
+    function toggleDaySchedule(dayValue, updateMessage = true) {
+        const checkbox = document.querySelector(`input[name="working_days"][value="${dayValue}"]`);
+        const scheduleDiv = document.getElementById(`schedule_${dayValue}`);
+        
+        if (checkbox && scheduleDiv) {
+            if (checkbox.checked) {
+                scheduleDiv.style.display = 'block';
+            } else {
+                scheduleDiv.style.display = 'none';
+            }
+        }
+        
+        if (updateMessage) {
+            updateOutOfHoursMessage();
+        }
+    }
+
+    function updateOutOfHoursMessage() {
+        const daysMap = {
+            'monday': 'Segunda',
+            'tuesday': 'Terça',
+            'wednesday': 'Quarta',
+            'thursday': 'Quinta',
+            'friday': 'Sexta',
+            'saturday': 'Sábado',
+            'sunday': 'Domingo'
+        };
+
+        // Obter dias selecionados com seus horários
+        const selectedDaysData = [];
+        document.querySelectorAll('input[name="working_days"]:checked').forEach(cb => {
+            const dayValue = cb.value;
+            const startTime = document.getElementById(`start_${dayValue}`)?.value;
+            const endTime = document.getElementById(`end_${dayValue}`)?.value;
+            
+            if (startTime && endTime) {
+                selectedDaysData.push({
+                    name: daysMap[dayValue],
+                    start: startTime,
+                    end: endTime
+                });
+            }
+        });
+
+        // Construir mensagem
+        let message = 'Olá! No momento estamos fora do horário de atendimento.';
+        
+        if (selectedDaysData.length > 0) {
+            message += ' Nosso horário de funcionamento é:\n';
+            
+            // Agrupar dias com mesmo horário
+            const scheduleGroups = {};
+            selectedDaysData.forEach(day => {
+                const schedule = `${day.start} às ${day.end}`;
+                if (!scheduleGroups[schedule]) {
+                    scheduleGroups[schedule] = [];
+                }
+                scheduleGroups[schedule].push(day.name);
+            });
+            
+            // Formatar mensagem
+            const scheduleLines = [];
+            Object.entries(scheduleGroups).forEach(([schedule, days]) => {
+                const daysText = days.length === 1 
+                    ? days[0]
+                    : days.slice(0, -1).join(', ') + ' e ' + days[days.length - 1];
+                scheduleLines.push(`${daysText} das ${schedule}`);
+            });
+            
+            message += scheduleLines.join('\n');
+        }
+        
+        message += '\n\nDeixe sua mensagem que retornaremos assim que possível!';
+
+        // Atualizar o textarea
+        const textarea = document.getElementById('id_out_of_hours_message');
+        if (textarea) {
+            textarea.value = message;
+        }
+    }
 </script>
 
 {% endblock %}

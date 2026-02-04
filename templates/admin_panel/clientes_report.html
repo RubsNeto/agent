@@ -356,8 +356,8 @@
                 <label class="filter-label">Status</label>
                 <select name="status" class="filter-select">
                     <option value="">Todos</option>
-                    <option value="ativas" {% if status_filter=='ativas' %}selected{% endif %}>Ativas</option>
-                    <option value="inativas" {% if status_filter=='inativas' %}selected{% endif %}>Inativas</option>
+                    <option value="ativas" {% if status_filter == "ativas" %}selected{% endif %}>Ativas</option>
+                    <option value="inativas" {% if status_filter == "inativas" %}selected{% endif %}>Inativas</option>
                 </select>
             </div>
 
@@ -365,9 +365,9 @@
                 <label class="filter-label">WhatsApp</label>
                 <select name="whatsapp" class="filter-select">
                     <option value="">Todos</option>
-                    <option value="conectado" {% if whatsapp_filter=='conectado' %}selected{% endif %}>Conectado
+                    <option value="conectado" {% if whatsapp_filter == "conectado" %}selected{% endif %}>Conectado
                     </option>
-                    <option value="desconectado" {% if whatsapp_filter=='desconectado' %}selected{% endif %}>
+                    <option value="desconectado" {% if whatsapp_filter == "desconectado" %}selected{% endif %}>
                         Desconectado</option>
                 </select>
             </div>
@@ -376,8 +376,8 @@
                 <label class="filter-label">Assinatura</label>
                 <select name="subscription" class="filter-select">
                     <option value="">Todas</option>
-                    <option value="ativa" {% if subscription_filter=='ativa' %}selected{% endif %}>Ativa</option>
-                    <option value="inativa" {% if subscription_filter=='inativa' %}selected{% endif %}>Inativa/Expirada
+                    <option value="ativa" {% if subscription_filter == "ativa" %}selected{% endif %}>Ativa</option>
+                    <option value="inativa" {% if subscription_filter == "inativa" %}selected{% endif %}>Inativa/Expirada
                     </option>
                 </select>
             </div>

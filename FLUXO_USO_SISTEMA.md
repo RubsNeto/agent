@@ -1,4 +1,4 @@
-﻿#  Fluxo de Uso do Sistema - InnoTalk Agent
+﻿#  Fluxo de Uso do Sistema - Pandia
 
 > Documento que descreve o fluxo completo desde a criação de uma padaria pelo Admin até a recepção de mensagens no WhatsApp, gerenciamento de promoções e campanhas.
 
@@ -695,4 +695,4 @@ Para problemas ou dúvidas:
 
 **Versão:** 2.0.0  
 **Última atualização:** Dezembro 2025  
-**Sistema:** InnoTalk Agent
+**Sistema:** Pandia

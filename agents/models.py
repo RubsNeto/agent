@@ -106,8 +106,7 @@ DEFAULT_KNOWLEDGE_BASE = """## Produtos da Padaria
 - PIX
 """
 
-DEFAULT_FALLBACK_MESSAGE = """Desculpe, não entendi bem sua solicitação. Pode reformular? 
-Ou se preferir, posso transferir para um atendente humano."""
+DEFAULT_FALLBACK_MESSAGE = """Desculpe, não entendi bem sua solicitação. Pode reformular de outra forma?"""
 
 DEFAULT_ESCALATION_RULE = """Transferir para atendente humano quando:
 - Cliente solicitar explicitamente
@@ -216,6 +215,38 @@ class Agent(models.Model):
         blank=True,
         verbose_name="Horário de Funcionamento",
         help_text="JSON com horários por dia da semana"
+    )
+    
+    # Novos campos para cronograma de atendimento
+    working_days = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Dias de Funcionamento",
+        help_text="Lista de dias que funciona: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']"
+    )
+    morning_start = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name="Horário Inicial - Matutino",
+        help_text="Ex: 07:00"
+    )
+    morning_end = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name="Horário Final - Matutino",
+        help_text="Ex: 11:00"
+    )
+    afternoon_start = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name="Horário Inicial - Vespertino",
+        help_text="Ex: 13:00"
+    )
+    afternoon_end = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name="Horário Final - Vespertino",
+        help_text="Ex: 17:00"
     )
     
     # Base de conhecimento

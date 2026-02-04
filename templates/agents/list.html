@@ -10,12 +10,15 @@
         <h2 class="content-title">Agente IA</h2>
         <p class="content-subtitle">Configure seu agente conversacional</p>
     </div>
+    {% if not agents %}
     <a href="{% url 'agents:create' %}" class="btn btn-primary">
         + Criar Agente
     </a>
+    {% endif %}
 </div>
 
-<!-- Filter by Organization -->
+<!-- Filter by Organization - Only for Admin -->
+{% if is_admin %}
 <div class="card" style="margin-bottom: 1.5rem;">
     <form method="get" id="filterForm">
         <div class="form-group" style="margin-bottom: 0;">
@@ -30,6 +33,7 @@
         </div>
     </form>
 </div>
+{% endif %}
 
 {% if agents %}
 {% for agent in agents %}

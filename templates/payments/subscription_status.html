@@ -40,7 +40,21 @@
                 {% endif %}
             </div>
             <div class="card-content">
-                <span class="card-value">{% if subscription.status == 'active' %}Ativa{% elif subscription.status == 'overdue' %}Inadimplente{% elif subscription.status == 'pending' %}Aguardando{% elif subscription.status == 'cancelled' %}Cancelada{% else %}{{ subscription.get_status_display }}{% endif %}</span>
+                <span class="card-value">
+                    {% if subscription.status == 'active' and not subscription.asaas_subscription_id %}
+                        Trial Ativo
+                    {% elif subscription.status == 'active' %}
+                        Ativa
+                    {% elif subscription.status == 'overdue' %}
+                        Inadimplente
+                    {% elif subscription.status == 'pending' %}
+                        Aguardando
+                    {% elif subscription.status == 'cancelled' %}
+                        Cancelada
+                    {% else %}
+                        {{ subscription.get_status_display }}
+                    {% endif %}
+                </span>
                 <span class="card-label">Status da Assinatura</span>
             </div>
         </div>
@@ -56,7 +70,13 @@
             </div>
             <div class="card-content">
                 <span class="card-value">{% if subscription.next_due_date %}{{ subscription.next_due_date|date:"d/m/Y" }}{% else %}—{% endif %}</span>
-                <span class="card-label">Próximo Vencimento</span>
+                <span class="card-label">
+                    {% if subscription.status == 'active' and not subscription.asaas_subscription_id %}
+                        Fim do Trial Gratuito
+                    {% else %}
+                        Próximo Vencimento
+                    {% endif %}
+                </span>
             </div>
         </div>
 
@@ -76,6 +96,51 @@
         </div>
     </div>
 
+    <!-- Banner de Trial Ativo -->
+    {% if subscription.status == 'active' and not subscription.asaas_subscription_id %}
+    <div class="action-banner banner-success">
+        <div class="banner-content">
+            <div class="banner-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="banner-text">
+                <h3>🎉 Trial de 15 dias ativo!</h3>
+                <p>Aproveite todos os recursos gratuitamente até {{ subscription.next_due_date|date:"d/m/Y" }}. Configure o pagamento antes dessa data para continuar usando o sistema.</p>
+            </div>
+        </div>
+        <div class="banner-action">
+            <form method="post" action="{% url 'payments:create_subscription' %}" class="subscription-form">
+                {% csrf_token %}
+                <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
+                <div class="payment-method-select">
+                    <label class="payment-option">
+                        <input type="radio" name="billing_type" value="PIX" checked>
+                        <div class="option-content">
+                            <span class="option-icon">🔑</span>
+                            <span class="option-label">PIX</span>
+                        </div>
+                    </label>
+                    <label class="payment-option">
+                        <input type="radio" name="billing_type" value="CREDIT_CARD">
+                        <div class="option-content">
+                            <span class="option-icon">💳</span>
+                            <span class="option-label">Cartão</span>
+                        </div>
+                    </label>
+                </div>
+                <button type="submit" class="btn-action btn-activate">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                    </svg>
+                    Configurar Pagamento
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Banner de Ação -->
     {% if subscription.status == 'pending' or subscription.status == 'overdue' %}
     <div class="action-banner {% if subscription.status == 'overdue' %}banner-warning{% else %}banner-info{% endif %}">
@@ -94,10 +159,16 @@
                 {% endif %}
             </div>
             <div class="banner-text">
-                <h3>{% if subscription.status == 'overdue' %}Pagamento Pendente{% else %}Ative sua Assinatura{% endif %}
-                </h3>
-                <p>{% if subscription.current_payment_link %}Clique no botão ao lado para realizar o pagamento.{% else
-                    %}Configure sua forma de pagamento para começar a usar o sistema.{% endif %}</p>
+                <h3>{% if subscription.status == 'overdue' %}Pagamento Pendente{% else %}Ative sua Assinatura{% endif %}</h3>
+                <p>
+                    {% if subscription.current_payment_link %}
+                        Clique no botão ao lado para realizar o pagamento.
+                    {% elif not subscription.asaas_subscription_id %}
+                        Você está no período de trial de 15 dias. Configure o pagamento para continuar usando após o trial.
+                    {% else %}
+                        Configure sua forma de pagamento para começar a usar o sistema.
+                    {% endif %}
+                </p>
             </div>
         </div>
         <div class="banner-action">
@@ -207,11 +278,27 @@
             </div>
             <div class="detail-item">
                 <span class="detail-label">Forma de Pagamento</span>
-                <span class="detail-value">{% if subscription.billing_type == 'CREDIT_CARD' %}Cartão de Crédito{% elif subscription.billing_type == 'DEBIT_CARD' %}Cartão de Débito{% elif subscription.billing_type == 'PIX' %}PIX{% elif subscription.billing_type == 'BOLETO' %}Boleto{% else %}{{ subscription.billing_type|default:"Não definido" }}{% endif %}</span>
+                <span class="detail-value">
+                    {% if subscription.billing_type == 'CREDIT_CARD' %}Cartão de Crédito
+                    {% elif subscription.billing_type == 'DEBIT_CARD' %}Cartão de Débito
+                    {% elif subscription.billing_type == 'PIX' %}PIX
+                    {% elif subscription.billing_type == 'BOLETO' %}Boleto
+                    {% elif subscription.status == 'active' and not subscription.asaas_subscription_id %}Trial - A configurar
+                    {% else %}{{ subscription.billing_type|default:"Não definido" }}
+                    {% endif %}
+                </span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Último Pagamento</span>
-                <span class="detail-value">{% if subscription.last_payment_date %}{{ subscription.last_payment_date|date:"d/m/Y" }}{% else %}—{% endif %}</span>
+                <span class="detail-value">
+                    {% if subscription.last_payment_date %}
+                        {{ subscription.last_payment_date|date:"d/m/Y" }}
+                    {% elif subscription.status == 'active' and not subscription.asaas_subscription_id %}
+                        Trial gratuito
+                    {% else %}
+                        Nenhum
+                    {% endif %}
+                </span>
             </div>
         </div>
     </div>
@@ -268,8 +355,20 @@
 
     <!-- Histórico de Pagamentos -->
     <div class="history-card">
-        <div class="history-header">
+        <div class="history-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h2>💰 Histórico de Pagamentos</h2>
+            {% if subscription.asaas_subscription_id %}
+            <form method="post" action="{% url 'payments:subscription_status' %}" style="margin: 0;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="sync_payments">
+                <button type="submit" class="btn-small" style="background: #6b7280;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 4px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Sincronizar
+                </button>
+            </form>
+            {% endif %}
         </div>
         <div class="history-body">
             {% if payments %}
@@ -288,16 +387,30 @@
                     <tr>
                         <td>{{ payment.due_date|date:"d/m/Y" }}</td>
                         <td>R$ {{ payment.value|floatformat:2 }}</td>
-                        <td>{{ payment.billing_type }}</td>
+                        <td>
+                            {% if payment.billing_type == 'PIX' %}PIX
+                            {% elif payment.billing_type == 'CREDIT_CARD' %}Cartão
+                            {% elif payment.billing_type == 'BOLETO' %}Boleto
+                            {% else %}{{ payment.billing_type }}{% endif %}
+                        </td>
                         <td>
                             <span
-                                class="status-badge {% if payment.status == 'received' %}badge-success{% elif payment.status == 'pending' %}badge-warning{% elif payment.status == 'overdue' %}badge-danger{% else %}badge-neutral{% endif %}">
+                                class="status-badge {% if payment.status == 'received' or payment.status == 'confirmed' %}badge-success{% elif payment.status == 'pending' %}badge-warning{% elif payment.status == 'overdue' %}badge-danger{% else %}badge-neutral{% endif %}">
                                 {{ payment.get_status_display }}
                             </span>
                         </td>
                         <td>
-                            {% if payment.invoice_url and payment.status == 'pending' %}
-                            <a href="{{ payment.invoice_url }}" target="_blank" class="btn-small">Pagar</a>
+                            {% if payment.invoice_url and payment.status in 'pending,overdue' %}
+                            <a href="{{ payment.invoice_url }}" target="_blank" class="btn-small btn-primary">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                </svg>
+                                Pagar
+                            </a>
+                            {% elif payment.status == 'received' or payment.status == 'confirmed' %}
+                            <span style="color: #10b981; font-size: 0.875rem;">✓ Pago</span>
+                            {% elif payment.status == 'refunded' %}
+                            <span style="color: #6b7280; font-size: 0.875rem;">Estornado</span>
                             {% else %}—{% endif %}
                         </td>
                     </tr>
@@ -311,7 +424,16 @@
                         d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z">
                     </path>
                 </svg>
-                <p>Nenhum pagamento registrado ainda</p>
+                <p style="font-weight: 600; margin-bottom: 0.5rem;">Nenhum pagamento registrado ainda</p>
+                <p style="font-size: 0.875rem; color: #6b7280;">
+                    {% if subscription.status == 'active' and not subscription.asaas_subscription_id %}
+                    Você está no período de trial de 15 dias. O primeiro pagamento será gerado após o trial.
+                    {% elif subscription.status == 'pending' %}
+                    Assim que você criar a assinatura, os pagamentos aparecerão aqui.
+                    {% else %}
+                    Os pagamentos aparecerão aqui quando forem gerados.
+                    {% endif %}
+                </p>
             </div>
             {% endif %}
         </div>
@@ -476,6 +598,23 @@
 
     .banner-info p {
         color: #3b82f6;
+    }
+
+    .banner-success {
+        background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        border: 1px solid #6ee7b7;
+    }
+
+    .banner-success .banner-icon {
+        color: #059669;
+    }
+
+    .banner-success h3 {
+        color: #065f46;
+    }
+
+    .banner-success p {
+        color: #047857;
     }
 
     .banner-warning {
@@ -719,19 +858,32 @@
     }
 
     .btn-small {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
         padding: 0.375rem 0.875rem;
-        background: #3b82f6;
+        background: #f59e0b;
         color: white;
         border-radius: 6px;
         font-size: 0.8125rem;
         font-weight: 500;
         text-decoration: none;
-        transition: background 0.2s;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
     }
 
     .btn-small:hover {
-        background: #2563eb;
+        background: #d97706;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-small.btn-primary {
+        background: linear-gradient(135deg, #f59e0b, #ea580c);
+    }
+
+    .btn-small.btn-primary:hover {
+        background: linear-gradient(135deg, #ea580c, #d97706);
     }
 
     /* Empty State */

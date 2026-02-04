@@ -24,15 +24,33 @@ def get_user_padarias(user):
 @login_required
 def agent_list(request):
     """Redireciona para o agente do usuário ou lista se tiver múltiplos."""
+    user_role = get_user_role(request.user)
     padarias = get_user_padarias(request.user)
-    agents = Agent.objects.filter(padaria__in=padarias).select_related('padaria')
+    
+    # Para admin/superuser, permite filtrar por organização
+    if request.user.is_superuser or user_role == 'admin_master':
+        # Filtro opcional por organização
+        org_filter = request.GET.get('organization')
+        if org_filter:
+            padarias = padarias.filter(slug=org_filter)
+        agents = Agent.objects.filter(padaria__in=padarias).select_related('padaria')
+    else:
+        # Para usuários de padaria, mostrar apenas agente da sua padaria
+        user_padaria = get_user_padaria(request.user)
+        if user_padaria:
+            agents = Agent.objects.filter(padaria=user_padaria).select_related('padaria')
+        else:
+            agents = Agent.objects.none()
     
     # Se não for superuser e tiver apenas um agente, redireciona direto
-    if not request.user.is_superuser and agents.count() == 1:
+    if not request.user.is_superuser and user_role != 'admin_master' and agents.count() == 1:
         agent = agents.first()
         return redirect('agents:detail', slug=agent.slug)
     
-    return render(request, "agents/list.html", {"agents": agents})
+    return render(request, "agents/list.html", {
+        "agents": agents,
+        "is_admin": request.user.is_superuser or user_role == 'admin_master'
+    })
 
 
 @login_required
@@ -40,7 +58,16 @@ def agent_detail(request, slug):
     """Detalhe de um agente."""
     padarias = get_user_padarias(request.user)
     agent = get_object_or_404(Agent, slug=slug, padaria__in=padarias)
-    return render(request, "agents/detail.html", {"agent": agent})
+    
+    # Processar palavras-chave para exibição
+    transfer_keywords_list = []
+    if agent.transfer_keywords:
+        transfer_keywords_list = [kw.strip() for kw in agent.transfer_keywords.split(',')]
+    
+    return render(request, "agents/detail.html", {
+        "agent": agent,
+        "transfer_keywords_list": transfer_keywords_list
+    })
 
 
 @login_required

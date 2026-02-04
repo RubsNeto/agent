@@ -94,6 +94,18 @@ def subscription_status(request):
         }
     )
     
+    # Processar ação de sincronização manual
+    if request.method == 'POST' and request.POST.get('action') == 'sync_payments':
+        if subscription.asaas_subscription_id:
+            try:
+                sync_subscription_status(subscription)
+                messages.success(request, "Pagamentos sincronizados com sucesso!")
+            except Exception as e:
+                messages.error(request, f"Erro ao sincronizar: {str(e)}")
+        else:
+            messages.warning(request, "Assinatura ainda não foi criada no Asaas.")
+        return redirect('payments:subscription_status')
+    
     # Sincronizar status com o Asaas (verifica se pagamento foi confirmado)
     if subscription.asaas_subscription_id and subscription.status != 'active':
         try:
@@ -138,6 +150,7 @@ def sync_subscription_status(subscription):
     """
     Sincroniza o status da assinatura com o Asaas.
     Verifica se há pagamentos confirmados e atualiza o status local.
+    Também sincroniza os pagamentos no banco de dados.
     """
     if not subscription.asaas_subscription_id:
         return
@@ -149,15 +162,37 @@ def sync_subscription_status(subscription):
         )
         
         for payment_data in payments_data.get('data', []):
+            payment_id = payment_data.get('id')
             payment_status = payment_data.get('status', '')
+            
+            # Sincronizar/criar pagamento no banco local
+            AsaasPayment.objects.update_or_create(
+                asaas_payment_id=payment_id,
+                defaults={
+                    "subscription": subscription,
+                    "value": payment_data.get("value", 0),
+                    "due_date": payment_data.get("dueDate"),
+                    "payment_date": payment_data.get("paymentDate") if payment_status in ['RECEIVED', 'CONFIRMED'] else None,
+                    "billing_type": payment_data.get("billingType", "PIX"),
+                    "invoice_url": payment_data.get("invoiceUrl", ""),
+                    "status": {
+                        'PENDING': 'pending',
+                        'RECEIVED': 'received',
+                        'CONFIRMED': 'confirmed',
+                        'OVERDUE': 'overdue',
+                        'REFUNDED': 'refunded',
+                        'RECEIVED_IN_CASH': 'received',
+                    }.get(payment_status, 'pending'),
+                }
+            )
             
             # Se há um pagamento confirmado/recebido, ativar assinatura
             if payment_status in ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH']:
                 subscription.status = 'active'
                 subscription.last_payment_date = timezone.now().date()
                 
-                # Atualizar próximo vencimento (30 dias a partir de HOJE, não da data original)
-                subscription.next_due_date = timezone.now().date() + timezone.timedelta(days=30)
+                # Atualizar próximo vencimento (30 dias a partir da data do último pagamento)
+                subscription.next_due_date = subscription.last_payment_date + timezone.timedelta(days=30)
                 
                 # Limpar link de pagamento pendente
                 subscription.current_payment_link = ''

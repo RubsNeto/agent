@@ -154,10 +154,8 @@ def handle_payment_received(data, full_payload):
             )
             subscription.status = "active"
             subscription.last_payment_date = timezone.now().date()
-            # Próximo vencimento = 30 dias
-            subscription.next_due_date = (
-                timezone.now() + timezone.timedelta(days=30)
-            ).date()
+            # Próximo vencimento = last_payment_date + 30 dias
+            subscription.next_due_date = subscription.last_payment_date + timezone.timedelta(days=30)
             subscription.current_payment_id = ""
             subscription.current_payment_link = ""
             subscription.save()

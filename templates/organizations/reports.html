@@ -455,8 +455,7 @@
     <!-- Taxa de Problemas -->
     <div class="kpi-card">
         <div class="kpi-card-title">Cancelamentos/Reembolsos</div>
-        <div class="kpi-card-value" style="color: {% if refund_rate > 5 %}#ef4444{% else %}#f59e0b{% endif %};">{{
-            refund_rate|floatformat:1 }}%</div>
+        <div class="kpi-card-value" style="color: {% if refund_rate > 5 %}#ef4444{% else %}#f59e0b{% endif %};">{{ refund_rate|floatformat:1 }}%</div>
         <div class="kpi-card-subtext">Do total de transações</div>
     </div>
 </div>

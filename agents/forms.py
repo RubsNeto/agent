@@ -69,6 +69,12 @@ class AgentSimpleForm(forms.ModelForm):
             'knowledge_pdf_category',
             'knowledge_base',
             'transfer_keywords',
+            # Campos de horário
+            'working_days',
+            'morning_start',
+            'morning_end',
+            'afternoon_start',
+            'afternoon_end',
             # Campos avançados
             'sector',
             'personality',
@@ -119,6 +125,12 @@ class AgentSimpleForm(forms.ModelForm):
                 'class': 'form-input',
                 'placeholder': 'Ex: falar com humano, atendente, pessoa'
             }),
+            # Campos de horário
+            'working_days': forms.CheckboxSelectMultiple(attrs={'class': 'working-days-selector'}),
+            'morning_start': forms.TimeInput(attrs={'class': 'form-input', 'type': 'time'}),
+            'morning_end': forms.TimeInput(attrs={'class': 'form-input', 'type': 'time'}),
+            'afternoon_start': forms.TimeInput(attrs={'class': 'form-input', 'type': 'time'}),
+            'afternoon_end': forms.TimeInput(attrs={'class': 'form-input', 'type': 'time'}),
             # Campos avançados
             'sector': forms.Select(attrs={'class': 'form-select'}),
             'personality': forms.Select(attrs={'class': 'form-select'}),
@@ -161,6 +173,22 @@ class AgentSimpleForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
+        # Configurar choices para working_days
+        self.fields['working_days'] = forms.MultipleChoiceField(
+            label='Dias de funcionamento',
+            choices=[
+                ('monday', 'SEGUNDA'),
+                ('tuesday', 'TERÇA'),
+                ('wednesday', 'QUARTA'),
+                ('thursday', 'QUINTA'),
+                ('friday', 'SEXTA'),
+                ('saturday', 'SÁBADO'),
+                ('sunday', 'DOMINGO'),
+            ],
+            widget=forms.CheckboxSelectMultiple(attrs={'class': 'working-days-checkbox'}),
+            required=False
+        )
         
         # Make message fields optional
         self.fields['greeting'].required = False

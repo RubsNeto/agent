@@ -27,14 +27,6 @@
             </svg>
             Importar do Excel
         </a>
-        <a href="{% url 'organizations:produto_import' %}" class="btn btn-secondary">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
-                style="margin-right: 0.5rem;">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            Importar do PDF
-        </a>
         <a href="{% url 'organizations:produto_create' %}" class="btn btn-primary">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
                 style="margin-right: 0.5rem;">
@@ -170,16 +162,16 @@
         Nenhum produto cadastrado
     </h3>
     <p style="color: var(--gray-500); margin: 0 0 1.5rem 0;">
-        Importe produtos do PDF do catálogo ou adicione manualmente
+        Importe produtos do Excel ou adicione manualmente
     </p>
     <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-        <a href="{% url 'organizations:produto_import' %}" class="btn btn-primary" style="display: inline-flex;">
+        <a href="{% url 'organizations:produto_import_excel' %}" class="btn btn-primary" style="display: inline-flex;">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
                 style="margin-right: 0.5rem;">
                 <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            Importar do PDF
+            Importar do Excel
         </a>
         <a href="{% url 'organizations:produto_create' %}" class="btn btn-secondary" style="display: inline-flex;">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
