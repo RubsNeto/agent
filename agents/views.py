@@ -47,9 +47,15 @@ def agent_list(request):
         agent = agents.first()
         return redirect('agents:detail', slug=agent.slug)
     
+    # Lista de padarias para o filtro (apenas para admin)
+    padarias_for_filter = []
+    if request.user.is_superuser or user_role == 'admin_master':
+        padarias_for_filter = padarias
+    
     return render(request, "agents/list.html", {
         "agents": agents,
-        "is_admin": request.user.is_superuser or user_role == 'admin_master'
+        "is_admin": request.user.is_superuser or user_role == 'admin_master',
+        "padarias_for_filter": padarias_for_filter,
     })
 
 
