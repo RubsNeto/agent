@@ -27,7 +27,7 @@
                 onchange="document.getElementById('filterForm').submit();">
                 <option value="">Todas as Organizações</option>
                 {% for padaria in padarias_for_filter %}
-                <option value="{{ padaria.slug }}" {% if request.GET.organization == padaria.slug %}selected{% endif %}>
+                <option value="{{ padaria.slug }}" {% if request.GET.organization==padaria.slug %}selected{% endif %}>
                     {{ padaria.name }}
                 </option>
                 {% endfor %}
