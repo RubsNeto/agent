@@ -362,8 +362,8 @@
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     {% for value, label in form.working_days.field.choices %}
                     <label style="flex: 1; min-width: 120px;">
-                        <input type="checkbox" name="working_days" value="{{ value }}" {% if form.working_days.value and
-                            value in form.working_days.value %}checked{% endif %}
+                        <input type="checkbox" name="working_days" value="{{ value }}" 
+                        {% if form.working_days.value and value in form.working_days.value %}checked{% endif %}
                             onchange="toggleDaySchedule('{{ value }}'); updateOutOfHoursMessage();"
                             style="display: none;">
                         <div class="day-button"
