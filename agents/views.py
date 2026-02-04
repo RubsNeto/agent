@@ -27,6 +27,15 @@ def agent_list(request):
     user_role = get_user_role(request.user)
     padarias = get_user_padarias(request.user)
     
+    # Redirecionamento rápido para usuários não-admin com apenas um agente
+    if not request.user.is_superuser and user_role != 'admin_master':
+        user_padaria = get_user_padaria(request.user)
+        if user_padaria:
+            agents_count = Agent.objects.filter(padaria=user_padaria).count()
+            if agents_count == 1:
+                agent = Agent.objects.filter(padaria=user_padaria).select_related('padaria').first()
+                return redirect('agents:detail', slug=agent.slug)
+    
     # Para admin/superuser, permite filtrar por organização
     if request.user.is_superuser or user_role == 'admin_master':
         # Filtro opcional por organização
@@ -41,11 +50,6 @@ def agent_list(request):
             agents = Agent.objects.filter(padaria=user_padaria).select_related('padaria')
         else:
             agents = Agent.objects.none()
-    
-    # Se não for superuser e tiver apenas um agente, redireciona direto
-    if not request.user.is_superuser and user_role != 'admin_master' and agents.count() == 1:
-        agent = agents.first()
-        return redirect('agents:detail', slug=agent.slug)
     
     # Lista de padarias para o filtro (apenas para admin)
     padarias_for_filter = []
