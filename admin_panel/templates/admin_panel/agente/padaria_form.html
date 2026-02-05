@@ -1,0 +1,191 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Nova Padaria{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{% url 'admin_panel:agente_minhas_padarias' %}">Minhas Padarias</a> /
+    Nova Padaria
+</div>
+
+<div class="content-header">
+    <div>
+        <h2 class="content-title">Cadastrar Nova Padaria</h2>
+        <p class="content-subtitle">Preencha os dados para cadastrar uma nova padaria</p>
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 class="card-title">Dados da Empresa</h3>
+        
+        <div class="form-group">
+            <label class="form-label">Nome da Padaria *</label>
+            <input type="text" name="name" class="form-input" required value="{{ form_data.name }}" placeholder="">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">CNPJ</label>
+            <input type="text" name="cnpj" class="form-input" value="{{ form_data.cnpj }}" placeholder="00.000.000/0000-00" maxlength="18">
+        </div>
+        
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label class="form-label">Telefone da Padaria</label>
+                <input type="text" name="phone" class="form-input" value="{{ form_data.phone }}" placeholder="5511999999999">
+            </div>
+            <div class="form-group">
+                <label class="form-label">E-mail da Empresa</label>
+                <input type="email" name="company_email" class="form-input" value="{{ form_data.company_email }}" placeholder="contato@padaria.com">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Endereço</label>
+            <textarea name="address" class="form-input" rows="2" placeholder="Rua, número, bairro, cidade - CEP">{{ form_data.address }}</textarea>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 class="card-title">Dados do Sócio Administrador</h3>
+        <p style="color: var(--gray-500); margin-bottom: 1rem;">Informações do sócio administrador da padaria.</p>
+        
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label class="form-label">Nome do Sócio Administrador</label>
+                <input type="text" name="socio_nome" class="form-input" value="{{ form_data.socio_nome }}" placeholder="Ex: João da Silva">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CPF do Sócio Administrador</label>
+                <input type="text" name="socio_cpf" class="form-input" value="{{ form_data.socio_cpf }}" placeholder="000.000.000-00" maxlength="14">
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 class="card-title">Dados do Responsável pelo Pandia</h3>
+        <p style="color: var(--gray-500); margin-bottom: 1rem;">Pessoa responsável pelo uso do sistema Pandia na padaria.</p>
+        
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label class="form-label">Nome do Responsável</label>
+                <input type="text" name="responsavel_nome" class="form-input" value="{{ form_data.responsavel_nome }}" placeholder="Ex: Maria Santos">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CPF do Responsável</label>
+                <input type="text" name="responsavel_cpf" class="form-input" value="{{ form_data.responsavel_cpf }}" placeholder="000.000.000-00" maxlength="14">
+            </div>
+        </div>
+        
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label class="form-label">E-mail de Contato</label>
+                <input type="email" name="responsavel_email" class="form-input" value="{{ form_data.responsavel_email }}" placeholder="responsavel@email.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Telefone de Contato</label>
+                <input type="text" name="responsavel_telefone" class="form-input" value="{{ form_data.responsavel_telefone }}" placeholder="(11) 99999-9999">
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 class="card-title">Dados de Acesso (Login)</h3>
+        <p style="color: var(--gray-500); margin-bottom: 1rem;">Credenciais para o responsável da padaria acessar o sistema.</p>
+        
+        <div class="form-group">
+            <label class="form-label">Nome de Usuário para Login *</label>
+            <input type="text" name="owner_username" class="form-input" required placeholder="Ex: joaopadaria" value="{{ form_data.owner_username }}">
+            <p class="form-help" style="font-size: 0.75rem; color: var(--gray-500);">Nome único para login no sistema.</p>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">E-mail para Login *</label>
+            <input type="email" name="owner_email" class="form-input" required placeholder="joao@email.com" value="{{ form_data.owner_email }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Senha *</label>
+            <input type="password" name="owner_password" class="form-input" required placeholder="Mínimo 6 caracteres" minlength="6">
+        </div>
+    </div>
+    
+    <div style="display: flex; gap: 1rem;">
+        <button type="submit" id="btnSubmit" class="btn btn-primary">Cadastrar Padaria</button>
+        <a href="{% url 'admin_panel:agente_minhas_padarias' %}" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cnpjInput = document.querySelector('input[name="cnpj"]');
+    const nameInput = document.querySelector('input[name="name"]');
+    const phoneInput = document.querySelector('input[name="phone"]');
+    const emailInput = document.querySelector('input[name="company_email"]');
+    const addressInput = document.querySelector('textarea[name="address"]');
+    const btnSubmit = document.getElementById('btnSubmit');
+    
+    // Elemento para feedback
+    const feedbackDiv = document.createElement('div');
+    feedbackDiv.style.fontSize = '0.875rem';
+    feedbackDiv.style.marginTop = '0.5rem';
+    cnpjInput.parentNode.appendChild(feedbackDiv);
+    
+    cnpjInput.addEventListener('blur', function() {
+        const cnpj = this.value.replace(/\D/g, '');
+        
+        if (cnpj.length !== 14) return;
+        
+        // Feedback visual de carregamento
+        feedbackDiv.textContent = 'Validando CNPJ e região de atuação...';
+        feedbackDiv.style.color = 'var(--gray-600)';
+        cnpjInput.style.borderColor = 'var(--gray-300)';
+        btnSubmit.disabled = true;
+        
+        // Consultar API
+        fetch(`{% url 'admin_panel:api_validate_cnpj' %}?cnpj=${cnpj}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.valid) {
+                    // Sucesso
+                    feedbackDiv.textContent = 'CNPJ validado com sucesso! Região permitida.';
+                    feedbackDiv.style.color = '#10b981'; // green
+                    cnpjInput.style.borderColor = '#10b981';
+                    btnSubmit.disabled = false;
+                    
+                    // Preencher campos
+                    if (data.data.name) nameInput.value = data.data.name;
+                    if (data.data.phone) phoneInput.value = data.data.phone;
+                    if (data.data.company_email) emailInput.value = data.data.company_email;
+                    if (data.data.address) addressInput.value = data.data.address;
+                    
+                } else {
+                    // Erro (inclusive região não permitida)
+                    feedbackDiv.textContent = data.error;
+                    feedbackDiv.style.color = '#ef4444'; // red
+                    cnpjInput.style.borderColor = '#ef4444';
+                    btnSubmit.disabled = true;
+                    
+                    // Opcional: limpar campos
+                    // this.value = ''; 
+                }
+            })
+            .catch(error => {
+                feedbackDiv.textContent = 'Erro ao validar CNPJ. Verifique a conexão.';
+                feedbackDiv.style.color = '#ef4444';
+                console.error(error);
+                btnSubmit.disabled = false; // Permitir tentar de novo ou editar
+            });
+    });
+    
+    // Resetar erro ao digitar
+    cnpjInput.addEventListener('input', function() {
+        feedbackDiv.textContent = '';
+        cnpjInput.style.borderColor = 'var(--gray-300)';
+        btnSubmit.disabled = false;
+    });
+});
+</script>
+{% endblock %}

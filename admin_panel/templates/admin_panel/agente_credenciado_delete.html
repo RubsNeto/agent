@@ -1,0 +1,75 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Remover Agente - {{ agente.nome }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{% url 'admin_panel:dashboard' %}">Dashboard</a> /
+    <a href="{% url 'admin_panel:agentes_credenciados_list' %}">Agentes Credenciados</a> /
+    <a href="{% url 'admin_panel:agente_credenciado_detail' agente.pk %}">{{ agente.nome }}</a> /
+    Remover
+</div>
+
+<div class="content-header">
+    <div>
+        <h2 class="content-title" style="color: #ef4444;">Remover Agente Credenciado</h2>
+        <p class="content-subtitle">Esta ação não pode ser desfeita</p>
+    </div>
+</div>
+
+<div class="card" style="max-width: 600px; border-left: 4px solid #ef4444;">
+    <div style="text-align: center; padding: 1rem 0;">
+        <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; border-radius: 50%; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1)); display: flex; align-items: center; justify-content: center;">
+            <svg width="40" height="40" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+        </div>
+        
+        <h3 style="color: var(--gray-800); margin-bottom: 0.5rem;">Remover "{{ agente.nome }}"?</h3>
+        <p style="color: var(--gray-600); margin-bottom: 1.5rem;">
+            O agente perderá o acesso como agente credenciado, mas a conta de usuário será mantida. 
+            As padarias cadastradas por este agente não serão afetadas.
+        </p>
+        
+        <div style="background: var(--gray-50); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; text-align: left;">
+            <div style="display: grid; gap: 0.5rem;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--gray-500);">CPF:</span>
+                    <span style="font-weight: 500;">{{ agente.cpf }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--gray-500);">E-mail:</span>
+                    <span style="font-weight: 500;">{{ agente.email }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--gray-500);">Padarias Cadastradas:</span>
+                    <span style="font-weight: 500;">{{ agente.get_padarias_count }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post" style="display: flex; gap: 1rem; justify-content: center;">
+            {% csrf_token %}
+            <a href="{% url 'admin_panel:agente_credenciado_detail' agente.pk %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-danger">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 0.5rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                Confirmar Remoção
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border: none;
+}
+.btn-danger:hover {
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}

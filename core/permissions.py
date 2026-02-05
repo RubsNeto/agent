@@ -30,6 +30,33 @@ def is_system_admin(user):
         return False
 
 
+def is_agente_credenciado(user):
+    """
+    Verifica se o usuário é um agente credenciado.
+    """
+    if not user.is_authenticated:
+        return False
+    
+    try:
+        return hasattr(user, 'profile') and user.profile.role == 'agente_credenciado'
+    except Exception:
+        return False
+
+
+def get_agente_credenciado(user):
+    """
+    Retorna o objeto AgenteCredenciado do usuário, se existir.
+    """
+    if not is_agente_credenciado(user):
+        return None
+    
+    try:
+        from accounts.models import AgenteCredenciado
+        return AgenteCredenciado.objects.get(user=user)
+    except Exception:
+        return None
+
+
 def get_user_padaria(user):
     """
     Retorna a padaria do usuário.
@@ -125,6 +152,49 @@ def require_system_admin(view_func):
         if not is_system_admin(request.user):
             messages.error(request, "Acesso restrito a administradores do sistema.")
             return redirect('ui:dashboard')
+        
+        return view_func(request, *args, **kwargs)
+    
+    return wrapper
+
+
+def require_agente_credenciado(view_func):
+    """
+    Decorator que exige que o usuário seja agente credenciado.
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+        
+        if not is_agente_credenciado(request.user):
+            messages.error(request, "Acesso restrito a agentes credenciados.")
+            return redirect('ui:welcome')
+        
+        # Anexar objeto agente ao request para uso na view
+        request.agente_credenciado = get_agente_credenciado(request.user)
+        
+        return view_func(request, *args, **kwargs)
+    
+    return wrapper
+
+
+def require_admin_or_agente(view_func):
+    """
+    Decorator que exige que o usuário seja admin do sistema OU agente credenciado.
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+        
+        if not is_system_admin(request.user) and not is_agente_credenciado(request.user):
+            messages.error(request, "Acesso restrito.")
+            return redirect('ui:welcome')
+        
+        # Anexar informações ao request
+        if is_agente_credenciado(request.user):
+            request.agente_credenciado = get_agente_credenciado(request.user)
         
         return view_func(request, *args, **kwargs)
     

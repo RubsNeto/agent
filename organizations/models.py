@@ -42,6 +42,16 @@ class Padaria(models.Model):
     cnpj = models.CharField(max_length=18, blank=True, verbose_name="CNPJ")
     address = models.TextField(blank=True, verbose_name="Endereço")
     
+    # Dados do Sócio Administrador
+    socio_nome = models.CharField(max_length=200, blank=True, verbose_name="Nome do Sócio Administrador")
+    socio_cpf = models.CharField(max_length=14, blank=True, verbose_name="CPF do Sócio Administrador")
+    
+    # Dados do Responsável pelo Pandia na Padaria
+    responsavel_nome = models.CharField(max_length=200, blank=True, verbose_name="Nome do Responsável Pandia")
+    responsavel_cpf = models.CharField(max_length=14, blank=True, verbose_name="CPF do Responsável Pandia")
+    responsavel_email = models.EmailField(blank=True, verbose_name="E-mail do Responsável Pandia")
+    responsavel_telefone = models.CharField(max_length=20, blank=True, verbose_name="Telefone do Responsável Pandia")
+    
     # Status
     is_active = models.BooleanField(default=True, verbose_name="Ativa")
     

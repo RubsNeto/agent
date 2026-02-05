@@ -15,6 +15,36 @@ def guia(request):
 
 
 @login_required
+def welcome(request):
+    """Tela de boas-vindas após login."""
+    user = request.user
+    
+    # Pegar perfil do usuário
+    profile = getattr(user, 'profile', None)
+    user_role = profile.role if profile else 'user'
+    
+    # Buscar padaria do usuário (onde é membro)
+    padaria = None
+    agente = None
+    
+    if not user.is_superuser:
+        user_membership = PadariaUser.objects.filter(user=user).first()
+        if user_membership:
+            padaria = user_membership.padaria
+            agente = padaria.agents.first() if padaria else None
+    
+    context = {
+        'user': user,
+        'profile': profile,
+        'user_role': user_role,
+        'padaria': padaria,
+        'agente': agente,
+    }
+    
+    return render(request, "ui/welcome.html", context)
+
+
+@login_required
 def dashboard(request):
     """Dashboard principal."""
     user = request.user

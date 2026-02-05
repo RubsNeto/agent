@@ -26,32 +26,32 @@
         <div class="form-group">
             <label class="form-label">Nome da Padaria *</label>
             <input type="text" name="name" class="form-input" required
-                value="{% if is_edit %}{{ padaria.name }}{% endif %}" placeholder="Ex: Padaria Pao Quente">
+                value="{% if is_edit %}{{ padaria.name }}{% else %}{{ form_data.name }}{% endif %}" placeholder="Ex: Padaria Pao Quente">
         </div>
 
         <div class="form-group">
             <label class="form-label">CNPJ</label>
-            <input type="text" name="cnpj" class="form-input" value="{% if is_edit %}{{ padaria.cnpj }}{% endif %}"
+            <input type="text" name="cnpj" class="form-input" value="{% if is_edit %}{{ padaria.cnpj }}{% else %}{{ form_data.cnpj }}{% endif %}"
                 placeholder="00.000.000/0000-00" maxlength="18">
         </div>
 
         <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div class="form-group">
-                <label class="form-label">Telefone</label>
+                <label class="form-label">Telefone da Padaria</label>
                 <input type="text" name="phone" class="form-input"
-                    value="{% if is_edit %}{{ padaria.phone }}{% endif %}" placeholder="(11) 99999-9999">
+                    value="{% if is_edit %}{{ padaria.phone }}{% else %}{{ form_data.phone }}{% endif %}" placeholder="(11) 99999-9999">
             </div>
             <div class="form-group">
                 <label class="form-label">E-mail da Empresa</label>
                 <input type="email" name="company_email" class="form-input"
-                    value="{% if is_edit %}{{ padaria.email }}{% endif %}" placeholder="contato@padaria.com">
+                    value="{% if is_edit %}{{ padaria.email }}{% else %}{{ form_data.company_email }}{% endif %}" placeholder="contato@padaria.com">
             </div>
         </div>
 
         <div class="form-group">
             <label class="form-label">Endereco</label>
             <textarea name="address" class="form-input" rows="2"
-                placeholder="Rua, numero, bairro, cidade - CEP">{% if is_edit %}{{ padaria.address }}{% endif %}</textarea>
+                placeholder="Rua, numero, bairro, cidade - CEP">{% if is_edit %}{{ padaria.address }}{% else %}{{ form_data.address }}{% endif %}</textarea>
         </div>
 
         {% if is_edit %}
@@ -64,22 +64,72 @@
         {% endif %}
     </div>
 
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 class="card-title">Dados do Sócio Administrador</h3>
+        <p style="color: var(--gray-500); margin-bottom: 1rem;">Informações do sócio administrador da padaria.</p>
+
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label class="form-label">Nome do Sócio Administrador</label>
+                <input type="text" name="socio_nome" class="form-input" 
+                    value="{% if is_edit %}{{ padaria.socio_nome }}{% else %}{{ form_data.socio_nome }}{% endif %}" placeholder="Ex: João da Silva">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CPF do Sócio Administrador</label>
+                <input type="text" name="socio_cpf" class="form-input" 
+                    value="{% if is_edit %}{{ padaria.socio_cpf }}{% else %}{{ form_data.socio_cpf }}{% endif %}" placeholder="000.000.000-00" maxlength="14">
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 class="card-title">Dados do Responsável pelo Pandia</h3>
+        <p style="color: var(--gray-500); margin-bottom: 1rem;">Pessoa responsável pelo uso do sistema Pandia na padaria. Pode ser contatado em caso de necessidade.</p>
+
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label class="form-label">Nome do Responsável</label>
+                <input type="text" name="responsavel_nome" class="form-input" 
+                    value="{% if is_edit %}{{ padaria.responsavel_nome }}{% else %}{{ form_data.responsavel_nome }}{% endif %}" placeholder="Ex: Maria Santos">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CPF do Responsável</label>
+                <input type="text" name="responsavel_cpf" class="form-input" 
+                    value="{% if is_edit %}{{ padaria.responsavel_cpf }}{% else %}{{ form_data.responsavel_cpf }}{% endif %}" placeholder="000.000.000-00" maxlength="14">
+            </div>
+        </div>
+
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label class="form-label">E-mail de Contato</label>
+                <input type="email" name="responsavel_email" class="form-input" 
+                    value="{% if is_edit %}{{ padaria.responsavel_email }}{% else %}{{ form_data.responsavel_email }}{% endif %}" placeholder="responsavel@email.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Telefone de Contato</label>
+                <input type="text" name="responsavel_telefone" class="form-input" 
+                    value="{% if is_edit %}{{ padaria.responsavel_telefone }}{% else %}{{ form_data.responsavel_telefone }}{% endif %}" placeholder="(11) 99999-9999">
+            </div>
+        </div>
+    </div>
+
     {% if not is_edit %}
     <div class="card" style="margin-bottom: 1.5rem;">
-        <h3 class="card-title">Dados do Usuario Dono</h3>
-        <p style="color: var(--gray-500); margin-bottom: 1rem;">O usuario dono tera acesso completo a padaria e podera
-            gerenciar agentes e funcionarios.</p>
+        <h3 class="card-title">Dados de Acesso (Login)</h3>
+        <p style="color: var(--gray-500); margin-bottom: 1rem;">Credenciais para acesso ao sistema. O usuário criado terá acesso completo à padaria e poderá gerenciar agentes e funcionários.</p>
 
         <div class="form-group">
-            <label class="form-label">Nome Completo *</label>
-            <input type="text" name="owner_name" class="form-input" required placeholder="Ex: Joao da Silva">
+            <label class="form-label">Nome de Usuário para Login *</label>
+            <input type="text" name="owner_username" class="form-input" required placeholder="Ex: joaopadaria"
+                value="{{ form_data.owner_username }}">
+            <p class="form-help" style="font-size: 0.75rem; color: var(--gray-500);">Nome único para login no sistema (sem espaços ou caracteres especiais).</p>
         </div>
 
         <div class="form-group">
-            <label class="form-label">E-mail (para login) *</label>
-            <input type="email" name="owner_email" class="form-input" required placeholder="joao@email.com">
-            <p class="form-help" style="font-size: 0.75rem; color: var(--gray-500);">O nome de usuario sera gerado
-                automaticamente a partir do email.</p>
+            <label class="form-label">E-mail para Login *</label>
+            <input type="email" name="owner_email" class="form-input" required placeholder="joao@email.com"
+                value="{{ form_data.owner_email }}">
+            <p class="form-help" style="font-size: 0.75rem; color: var(--gray-500);">E-mail único usado para login e recuperação de senha.</p>
         </div>
 
         <div class="form-group">

@@ -1,0 +1,177 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Minhas Padarias{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div>
+        <h2 class="content-title">Minhas Padarias</h2>
+        <p class="content-subtitle">Padarias cadastradas por você</p>
+    </div>
+    <a href="{% url 'admin_panel:agente_padaria_create' %}" class="btn btn-primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 0.5rem;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Nova Padaria
+    </a>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="margin-bottom: 1.5rem;">
+    <div class="stat-card">
+        <div class="stat-title">Total de Padarias</div>
+        <div class="stat-value">{{ total_padarias }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-title">Regiões de Atuação</div>
+        <div class="stat-value" style="font-size: 1rem; color: var(--gray-600);">{{ agente.get_regioes_display|truncatechars:40 }}</div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card" style="padding: 1rem; margin-bottom: 1.5rem;">
+    <form method="get" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+        <div style="flex: 1; min-width: 200px;">
+            <input type="text" name="search" class="form-input" placeholder="Buscar por nome, CNPJ..." value="{{ search }}">
+        </div>
+        <div style="min-width: 150px;">
+            <select name="status" class="form-input">
+                <option value="">Todos os status</option>
+                <option value="ativa" {% if status == 'ativa' %}selected{% endif %}>Ativas</option>
+                <option value="inativa" {% if status == 'inativa' %}selected{% endif %}>Inativas</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-secondary">Filtrar</button>
+        {% if search or status %}
+        <a href="{% url 'admin_panel:agente_minhas_padarias' %}" class="btn btn-secondary">Limpar</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Lista -->
+<div class="card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>CNPJ</th>
+                <th>Telefone</th>
+                <th>Responsável</th>
+                <th>Status</th>
+                <th>Cadastrada em</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for padaria in padarias %}
+            <tr>
+                <td>
+                    <a href="{% url 'admin_panel:agente_padaria_detail' padaria.pk %}" style="color: var(--primary); text-decoration: none; font-weight: 500;">
+                        {{ padaria.name }}
+                    </a>
+                </td>
+                <td>{{ padaria.cnpj|default:"-" }}</td>
+                <td>{{ padaria.phone|default:"-" }}</td>
+                <td>{{ padaria.responsavel_nome|default:"-" }}</td>
+                <td>
+                    {% if padaria.is_active %}
+                    <span class="badge badge-success">Ativa</span>
+                    {% else %}
+                    <span class="badge badge-danger">Inativa</span>
+                    {% endif %}
+                </td>
+                <td>{{ padaria.created_at|date:"d/m/Y" }}</td>
+                <td>
+                    <a href="{% url 'admin_panel:agente_padaria_detail' padaria.pk %}" class="btn btn-sm btn-secondary" title="Ver detalhes">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 3rem; color: var(--gray-500);">
+                    <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin: 0 auto 1rem; opacity: 0.5;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                    <p>Você ainda não cadastrou nenhuma padaria.</p>
+                    <a href="{% url 'admin_panel:agente_padaria_create' %}" class="btn btn-primary" style="margin-top: 1rem;">Cadastrar Primeira Padaria</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Paginação -->
+    {% if padarias.has_other_pages %}
+    <div style="padding: 1rem; border-top: 1px solid var(--gray-100); display: flex; justify-content: center; gap: 0.5rem;">
+        {% if padarias.has_previous %}
+        <a href="?page={{ padarias.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="btn btn-sm btn-secondary">Anterior</a>
+        {% endif %}
+        
+        <span style="padding: 0.5rem 1rem; color: var(--gray-600);">
+            Página {{ padarias.number }} de {{ padarias.paginator.num_pages }}
+        </span>
+        
+        {% if padarias.has_next %}
+        <a href="?page={{ padarias.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="btn btn-sm btn-secondary">Próxima</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: white;
+}
+.badge-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+.badge-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+.btn-sm {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* Fix Table Styles */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.data-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--gray-500);
+    border-bottom: 1px solid var(--gray-200);
+    background-color: var(--gray-50);
+}
+
+.data-table td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--gray-100);
+    color: var(--gray-700);
+}
+
+.data-table tbody tr:hover {
+    background-color: var(--gray-50);
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+</style>
+{% endblock %}
