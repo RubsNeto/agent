@@ -119,7 +119,7 @@ def send_products_webhook(padaria, user=None, action="product_update"):
         }
         
         # Enviar para webhook N8N
-        webhook_url = "https://n8n.newcouros.com.br/webhook/memoria"
+        webhook_url = "https://n8n.newcouros.com.br/webhook/memoria_pandia"
         
         response = requests.post(
             webhook_url,
@@ -2087,14 +2087,14 @@ def _configure_webhook(api_url, headers, instance_name):
     Configura webhook automaticamente para a instância.
     
     Configura:
-    - URL: https://n8n.newcouros.com.br/webhook/vendedorrr
+    - URL: https://n8n.newcouros.com.br/webhook/vendedor_pandia
     - Enabled: True
     - Evento: MESSAGES_UPSERT
     """
     try:
         webhook_url = f"{api_url}/webhook/set/{instance_name}"
         webhook_payload = {
-            "url": "https://n8n.newcouros.com.br/webhook/vendedorrr",
+            "url": "https://n8n.newcouros.com.br/webhook/vendedor_pandia",
             "enabled": True,
             "webhookByEvents": False,
             "webhookBase64": False,
