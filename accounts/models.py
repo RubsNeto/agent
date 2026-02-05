@@ -1,6 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
+import unicodedata
 
+def normalize_text(text):
+    """Remove acentos e converte para minúsculas para comparação."""
+    if not text:
+        return ""
+    return unicodedata.normalize('NFKD', str(text)).encode('ASCII', 'ignore').decode('ASCII').lower()
 
 class UserProfile(models.Model):
     """
@@ -119,21 +125,21 @@ class AgenteCredenciado(models.Model):
             return False
         
         # Garantir inputs seguros
-        uf_check = (uf or '').upper()
-        cidade_check = (cidade or '').lower()
+        uf_check = (uf or '').upper().strip()
+        cidade_check = normalize_text(cidade)
         
         for regiao in self.regioes_atuacao:
             if isinstance(regiao, dict):
                 # Usar (val or '') para garantir string mesmo se for None
-                regiao_uf = (regiao.get('uf') or '').upper()
-                regiao_cidade = (regiao.get('cidade') or '').lower()
+                regiao_uf = (regiao.get('uf') or '').upper().strip()
+                regiao_cidade = normalize_text(regiao.get('cidade'))
                 
                 # Se a UF corresponde
                 if regiao_uf == uf_check:
                     # Se não tem cidade especificada na região (vazio), vale para todo o estado
                     if not regiao_cidade:
                         return True
-                    # Se tem cidade, verifica se corresponde
+                    # Se tem cidade, verifica se corresponde (normalizado)
                     if cidade_check and regiao_cidade == cidade_check:
                         return True
         
