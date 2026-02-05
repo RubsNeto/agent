@@ -269,8 +269,26 @@ def padaria_detail(request, slug):
     """Detalhes de uma padaria."""
     padaria = get_object_or_404(Padaria.objects.select_related('owner'), slug=slug)
     
-    # Agente (se existir)
+    # Agente IA (se existir)
     agent = padaria.agents.first()
+
+    # Buscar Agente Credenciado que cadastrou (baseado na lista de IDs)
+    agente_criador = None
+    try:
+        from accounts.models import AgenteCredenciado
+        # Em JSONField lista, contains busca se o elemento está presente
+        # Nota: SQLite pode ter limitações, então vamos iterar se falhar ou se não encontrar
+        agentes = AgenteCredenciado.objects.filter(padarias_cadastradas_ids__contains=padaria.id)
+        if agentes.exists():
+            agente_criador = agentes.first()
+        else:
+            # Fallback manual caso o JSON lookup falhe no DB (ex: SQLite antigo)
+            for agente in AgenteCredenciado.objects.exclude(padarias_cadastradas_ids=[]):
+                if padaria.id in agente.padarias_cadastradas_ids:
+                    agente_criador = agente
+                    break
+    except Exception:
+        pass
     
     # API Keys
     api_keys = padaria.api_keys.order_by('-created_at')
@@ -281,6 +299,7 @@ def padaria_detail(request, slug):
     context = {
         'padaria': padaria,
         'agent': agent,
+        'agente_criador': agente_criador,
         'api_keys': api_keys,
         'logs': logs,
     }
@@ -869,8 +888,17 @@ def clientes_report(request):
     for sub in AsaasSubscription.objects.filter(padaria__in=padarias_list).select_related('padaria'):
         subs_dict[sub.padaria_id] = sub
     
+    # Buscar agentes criadores para cada padaria
+    from accounts.models import AgenteCredenciado
+    agentes_criadores = {}
+    # Buscar todos os agentes credenciados que têm padarias cadastradas
+    for agente in AgenteCredenciado.objects.exclude(padarias_cadastradas_ids=[]):
+        for padaria_id in agente.padarias_cadastradas_ids:
+            agentes_criadores[padaria_id] = agente
+    
     for padaria in padarias_page:
         padaria.subscription = subs_dict.get(padaria.id, None)
+        padaria.agente_criador = agentes_criadores.get(padaria.id, None)
     
     context = {
         'total_padarias': total_padarias,
@@ -982,6 +1010,13 @@ def clientes_export_excel(request):
     for sub in AsaasSubscription.objects.filter(padaria__in=padarias).select_related('padaria'):
         subs_dict[sub.padaria_id] = sub
     
+    # Buscar agentes criadores para cada padaria
+    from accounts.models import AgenteCredenciado
+    agentes_criadores = {}
+    for agente in AgenteCredenciado.objects.exclude(padarias_cadastradas_ids=[]):
+        for padaria_id in agente.padarias_cadastradas_ids:
+            agentes_criadores[padaria_id] = agente
+    
     # Criar Excel
     wb = Workbook()
     ws = wb.active
@@ -1003,17 +1038,17 @@ def clientes_export_excel(request):
         'Status', 'WhatsApp Conectado', 'Status Assinatura', 
         'Qtd. Agentes', 'Qtd. Usuários', 'Qtd. Produtos', 
         'Qtd. Promoções', 'Qtd. Clientes', 'Qtd. Campanhas',
-        'Data Cadastro', 'Última Atividade', 'Telefone', 'Endereço'
+        'Data Cadastro', 'Cadastrado por', 'Última Atividade', 'Telefone', 'Endereço'
     ]
     
     # Adicionar título
-    ws.merge_cells('A1:R1')
+    ws.merge_cells('A1:S1')
     ws['A1'] = 'RELATÓRIO DE CONTROLE DE CLIENTES (PADARIAS)'
     ws['A1'].font = Font(bold=True, size=16, color="667EEA")
     ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
     
     # Adicionar info de geração
-    ws.merge_cells('A2:R2')
+    ws.merge_cells('A2:S2')
     ws['A2'] = f'Gerado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")} - Total: {padarias.count()} clientes'
     ws['A2'].font = Font(size=10, italic=True)
     ws['A2'].alignment = Alignment(horizontal='center')
@@ -1047,6 +1082,10 @@ def clientes_export_excel(request):
         else:
             sub_status = 'Sem assinatura'
         
+        # Agente criador
+        agente_criador = agentes_criadores.get(padaria.id, None)
+        nome_agente = agente_criador.nome if agente_criador else 'Admin'
+        
         # Dados da linha
         row_data = [
             padaria.name,
@@ -1064,6 +1103,7 @@ def clientes_export_excel(request):
             padaria.num_clientes,
             padaria.num_campanhas,
             padaria.created_at.strftime('%d/%m/%Y') if padaria.created_at else '-',
+            nome_agente,
             padaria.ultima_atividade.strftime('%d/%m/%Y %H:%M') if padaria.ultima_atividade else '-',
             padaria.phone or '-',
             padaria.address or '-'

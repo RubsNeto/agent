@@ -28,11 +28,20 @@
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-header">
-            <div class="stat-title">Dono</div>
+            <div class="stat-title">Responsável</div>
         </div>
-        <div class="stat-value" style="font-size: 1.25rem;">{{ padaria.owner.username }}</div>
-        <div style="font-size: 0.75rem; color: var(--gray-500);">{{ padaria.owner.email }}</div>
+        <div class="stat-value" style="font-size: 1.25rem;">{{ padaria.responsavel_nome|default:padaria.owner.get_full_name|default:padaria.owner.username }}</div>
+        <div style="font-size: 0.75rem; color: var(--gray-500);">{{ padaria.responsavel_email|default:padaria.owner.email }}</div>
     </div>
+    {% if padaria.socio_nome %}
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-title">Sócio Administrador</div>
+        </div>
+        <div class="stat-value" style="font-size: 1.25rem;">{{ padaria.socio_nome }}</div>
+        <div style="font-size: 0.75rem; color: var(--gray-500);">CPF: {{ padaria.socio_cpf|default:"-" }}</div>
+    </div>
+    {% endif %}
     <div class="stat-card">
         <div class="stat-header">
             <div class="stat-title">CNPJ</div>
@@ -41,7 +50,7 @@
     </div>
     <div class="stat-card">
         <div class="stat-header">
-            <div class="stat-title">Agente</div>
+            <div class="stat-title">Agente IA</div>
         </div>
         <div class="stat-value">{% if agent %}1{% else %}0{% endif %}</div>
     </div>
@@ -51,6 +60,19 @@
         </div>
         <div class="stat-value">{{ api_keys.count }}</div>
     </div>
+    {% if agente_criador %}
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-title">Cadastrado por</div>
+        </div>
+        <div class="stat-value" style="font-size: 1.125rem;">
+            <a href="{% url 'admin_panel:agente_credenciado_detail' agente_criador.pk %}" style="text-decoration: none; color: inherit;">
+                {{ agente_criador.nome }}
+            </a>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--gray-500);">Agente Credenciado</div>
+    </div>
+    {% endif %}
 </div>
 
 <div class="grid-2">

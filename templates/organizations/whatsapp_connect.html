@@ -21,7 +21,7 @@
                 </svg>
             </div>
             <div>
-                <h2 style="font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem 0;">WhatsApp Business</h2>
+                <h2 style="font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem 0;">WhatsApp</h2>
                 <p style="margin: 0; opacity: 0.95;">{{ organization.name }}</p>
             </div>
         </div>
@@ -138,6 +138,85 @@
                 <button id="retry-btn" class="btn btn-primary">
                     Tentar Novamente
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conexão Alternativa via Pairing Code -->
+    <div class="card" style="border: 2px dashed var(--gray-300); background: var(--gray-50);">
+        <div style="text-align: center;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
+                <svg width="24" height="24" fill="none" stroke="var(--gray-500)" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <h3 style="margin: 0; font-size: 1.1rem; color: var(--gray-700);">Conexão Alternativa</h3>
+            </div>
+            
+            <p style="color: var(--gray-500); font-size: 0.875rem; margin-bottom: 1.25rem;">
+                Não conseguiu escanear o QR Code? Use o método de pareamento por código.
+            </p>
+
+            <!-- Initial Pairing State -->
+            <div id="pairing-initial-state">
+                <div style="max-width: 320px; margin: 0 auto;">
+                    <label style="display: block; text-align: left; font-size: 0.875rem; font-weight: 500; color: var(--gray-700); margin-bottom: 0.5rem;">
+                        Número do WhatsApp (com código do país)
+                    </label>
+                    <input type="tel" id="pairing-phone" 
+                        placeholder="5511999998888" 
+                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid var(--gray-300); border-radius: 8px; font-size: 1rem; margin-bottom: 1rem; box-sizing: border-box;"
+                        maxlength="15">
+                    <p style="font-size: 0.75rem; color: var(--gray-500); margin: -0.5rem 0 1rem 0; text-align: left;">
+                        Ex: 55 (Brasil) + 11 (DDD) + 999998888 (número)
+                    </p>
+                    <button id="generate-pairing-btn" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        Gerar Código de Pareamento
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Pairing State -->
+            <div id="pairing-loading-state" style="display: none;">
+                <div style="width: 50px; height: 50px; border: 3px solid var(--gray-200); border-top-color: var(--primary-600); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+                <p style="color: var(--gray-600);">Gerando código de pareamento...</p>
+            </div>
+
+            <!-- Pairing Code Display -->
+            <div id="pairing-code-display" style="display: none;">
+                <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid #25D366; margin-bottom: 1rem;">
+                    <p style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: var(--gray-600);">Seu código de pareamento:</p>
+                    <p id="pairing-code-value" style="margin: 0; font-size: 2.5rem; font-weight: 700; font-family: monospace; letter-spacing: 0.1em; color: #25D366;"></p>
+                </div>
+                <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; text-align: left; font-size: 0.875rem; color: #166534;">
+                    <p style="margin: 0 0 0.75rem 0; font-weight: 600;">Como usar:</p>
+                    <ol style="margin: 0; padding-left: 1.25rem;">
+                        <li style="margin-bottom: 0.5rem;">Abra o WhatsApp no seu celular</li>
+                        <li style="margin-bottom: 0.5rem;">Vá em <strong>Configurações → Aparelhos conectados</strong></li>
+                        <li style="margin-bottom: 0.5rem;">Toque em <strong>Conectar um aparelho</strong></li>
+                        <li style="margin-bottom: 0.5rem;">Escolha <strong>Conectar com número de telefone</strong></li>
+                        <li>Digite o código acima</li>
+                    </ol>
+                </div>
+                <button id="new-pairing-btn" class="btn btn-secondary" style="margin-top: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Gerar Novo Código
+                </button>
+            </div>
+
+            <!-- Pairing Error State -->
+            <div id="pairing-error-state" style="display: none;">
+                <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                    <svg width="24" height="24" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </div>
+                <p id="pairing-error-message" style="color: #dc2626; margin-bottom: 1rem;"></p>
+                <button id="retry-pairing-btn" class="btn btn-secondary">Tentar Novamente</button>
             </div>
         </div>
     </div>
@@ -318,6 +397,101 @@
     generateBtn.addEventListener('click', generateQRCode);
     refreshBtn.addEventListener('click', generateQRCode);
     retryBtn.addEventListener('click', generateQRCode);
+
+    // ============================================
+    // Pairing Code Functionality
+    // ============================================
+    const pairingPhoneInput = document.getElementById('pairing-phone');
+    const generatePairingBtn = document.getElementById('generate-pairing-btn');
+    const newPairingBtn = document.getElementById('new-pairing-btn');
+    const retryPairingBtn = document.getElementById('retry-pairing-btn');
+
+    const pairingInitialState = document.getElementById('pairing-initial-state');
+    const pairingLoadingState = document.getElementById('pairing-loading-state');
+    const pairingCodeDisplay = document.getElementById('pairing-code-display');
+    const pairingErrorState = document.getElementById('pairing-error-state');
+
+    function hidePairingStates() {
+        pairingInitialState.style.display = 'none';
+        pairingLoadingState.style.display = 'none';
+        pairingCodeDisplay.style.display = 'none';
+        pairingErrorState.style.display = 'none';
+    }
+
+    function resetPairingToInitial() {
+        hidePairingStates();
+        pairingInitialState.style.display = 'block';
+    }
+
+    async function generatePairingCode() {
+        const phone = pairingPhoneInput.value.replace(/\D/g, '');
+        
+        if (!phone) {
+            showMessage('Por favor, informe o número de telefone.', 'warning');
+            pairingPhoneInput.focus();
+            return;
+        }
+        
+        if (phone.length < 10) {
+            showMessage('Número de telefone inválido. Utilize o formato: 5511999998888', 'warning');
+            pairingPhoneInput.focus();
+            return;
+        }
+
+        hidePairingStates();
+        pairingLoadingState.style.display = 'block';
+
+        try {
+            const response = await fetch("{% url 'organizations:whatsapp_pairing_code' organization.slug %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ phone: phone })
+            });
+
+            const data = await response.json();
+            
+            hidePairingStates();
+
+            if (data.success) {
+                if (data.is_connected) {
+                    // Já está conectado - mostrar estado conectado principal
+                    hideAllStates();
+                    connectedState.style.display = 'block';
+                    showMessage('WhatsApp já está conectado!', 'success');
+                } else if (data.pairing_code) {
+                    // Mostrar código de pareamento
+                    document.getElementById('pairing-code-value').textContent = data.pairing_code;
+                    pairingCodeDisplay.style.display = 'block';
+                    showMessage('Código de pareamento gerado! Siga as instruções para conectar.', 'success');
+                }
+            } else {
+                const errorMsg = data.error || 'Erro ao gerar código de pareamento';
+                document.getElementById('pairing-error-message').textContent = errorMsg;
+                pairingErrorState.style.display = 'block';
+                showMessage(errorMsg, 'error');
+            }
+        } catch (error) {
+            hidePairingStates();
+            const errorMsg = 'Erro de conexão: ' + error.message;
+            document.getElementById('pairing-error-message').textContent = errorMsg;
+            pairingErrorState.style.display = 'block';
+            showMessage(errorMsg, 'error');
+        }
+    }
+
+    generatePairingBtn.addEventListener('click', generatePairingCode);
+    newPairingBtn.addEventListener('click', resetPairingToInitial);
+    retryPairingBtn.addEventListener('click', resetPairingToInitial);
+
+    // Formatação do input de telefone
+    pairingPhoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        e.target.value = value;
+    });
 </script>
 <style>
     @keyframes slideInRight {

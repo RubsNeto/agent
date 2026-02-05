@@ -356,8 +356,8 @@
                 <label class="filter-label">Status</label>
                 <select name="status" class="filter-select">
                     <option value="">Todos</option>
-                    <option value="ativas" {% if status_filter=="ativas" %}selected{% endif %}>Ativas</option>
-                    <option value="inativas" {% if status_filter=="inativas" %}selected{% endif %}>Inativas</option>
+                    <option value="ativas" {% if status_filter == "ativas" %}selected{% endif %}>Ativas</option>
+                    <option value="inativas" {% if status_filter == "inativas" %}selected{% endif %}>Inativas</option>
                 </select>
             </div>
 
@@ -365,9 +365,9 @@
                 <label class="filter-label">WhatsApp</label>
                 <select name="whatsapp" class="filter-select">
                     <option value="">Todos</option>
-                    <option value="conectado" {% if whatsapp_filter=="conectado" %}selected{% endif %}>Conectado
+                    <option value="conectado" {% if whatsapp_filter == "conectado" %}selected{% endif %}>Conectado
                     </option>
-                    <option value="desconectado" {% if whatsapp_filter=="desconectado" %}selected{% endif %}>
+                    <option value="desconectado" {% if whatsapp_filter == "desconectado" %}selected{% endif %}>
                         Desconectado</option>
                 </select>
             </div>
@@ -376,8 +376,8 @@
                 <label class="filter-label">Assinatura</label>
                 <select name="subscription" class="filter-select">
                     <option value="">Todas</option>
-                    <option value="ativa" {% if subscription_filter=="ativa" %}selected{% endif %}>Ativa</option>
-                    <option value="inativa" {% if subscription_filter=="inativa" %}selected{% endif %}>Inativa/Expirada
+                    <option value="ativa" {% if subscription_filter == "ativa" %}selected{% endif %}>Ativa</option>
+                    <option value="inativa" {% if subscription_filter == "inativa" %}selected{% endif %}>Inativa/Expirada
                     </option>
                 </select>
             </div>
@@ -425,6 +425,7 @@
                 <th>Produtos</th>
                 <th>Clientes</th>
                 <th>Cadastro</th>
+                <th>Cadastrado por</th>
                 <th>Última Atividade</th>
             </tr>
         </thead>
@@ -475,6 +476,15 @@
                 <td style="text-align: center;">{{ padaria.num_clientes }}</td>
                 <td>{{ padaria.created_at|date:"d/m/Y" }}</td>
                 <td>
+                    {% if padaria.agente_criador %}
+                    <a href="{% url 'admin_panel:agente_credenciado_detail' padaria.agente_criador.pk %}" style="color: #667eea; text-decoration: none;">
+                        {{ padaria.agente_criador.nome }}
+                    </a>
+                    {% else %}
+                    <span style="color: #9ca3af;">Admin</span>
+                    {% endif %}
+                </td>
+                <td>
                     {% if padaria.ultima_atividade %}
                     {{ padaria.ultima_atividade|date:"d/m/Y H:i" }}
                     {% else %}
@@ -484,7 +494,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="11" style="text-align: center; padding: 2rem; color: #9ca3af;">
+                <td colspan="12" style="text-align: center; padding: 2rem; color: #9ca3af;">
                     Nenhum cliente encontrado com os filtros aplicados.
                 </td>
             </tr>

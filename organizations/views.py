@@ -786,6 +786,182 @@ def _extract_pairing_code(data):
     return pairing_code
 
 
+@login_required
+def whatsapp_pairing_code(request, slug):
+    """Gerar Pairing Code para conectar WhatsApp via número de telefone."""
+    from django.views.decorators.http import require_POST
+    
+    padarias = get_user_padarias(request.user)
+    organization = get_object_or_404(Padaria, slug=slug)
+    
+    # Verificar acesso
+    if not request.user.is_superuser and organization not in padarias:
+        return JsonResponse({
+            "success": False,
+            "error": "Você não tem acesso a esta padaria."
+        })
+    
+    # Apenas POST
+    if request.method != "POST":
+        return JsonResponse({
+            "success": False,
+            "error": "Método não permitido."
+        })
+    
+    # Obter número de telefone do body
+    import json
+    try:
+        data = json.loads(request.body)
+        phone_number = data.get("phone", "").strip()
+    except:
+        phone_number = request.POST.get("phone", "").strip()
+    
+    # Validar número
+    phone_number = ''.join(filter(str.isdigit, phone_number))
+    
+    if not phone_number:
+        return JsonResponse({
+            "success": False,
+            "error": "Número de telefone é obrigatório."
+        })
+    
+    if len(phone_number) < 10:
+        return JsonResponse({
+            "success": False,
+            "error": "Número de telefone inválido. Inclua o código do país (ex: 5511999998888)."
+        })
+    
+    # Nome da instância
+    instance_name = f"padaria_{organization.slug}"
+    
+    try:
+        # Configurar Evolution API
+        api_url = getattr(settings, 'EVOLUTION_API_URL', None)
+        api_key = getattr(settings, 'EVOLUTION_API_KEY', None)
+        
+        if not api_url or not api_key:
+            return JsonResponse({
+                "success": False,
+                "error": "Sistema não configurado corretamente. Entre em contato com o suporte."
+            })
+        
+        headers = {
+            "apikey": api_key,
+            "Content-Type": "application/json"
+        }
+        
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[Evolution API] Gerando pairing code para {instance_name} com número {phone_number[:4]}***")
+        
+        # Chamar endpoint para gerar pairing code
+        # GET /instance/connect/{instance}?number={phone}
+        connect_url = f"{api_url}/instance/connect/{instance_name}"
+        response = requests.get(
+            connect_url, 
+            headers=headers, 
+            params={"number": phone_number},
+            timeout=15
+        )
+        
+        logger.info(f"[Evolution API] Resposta status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Log para debug
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"[Evolution API] Resposta pairing code: {data}")
+            
+            # Verificar se já está conectado
+            instance_data = data.get("instance", {})
+            state = data.get("state") or instance_data.get("state")
+            status = data.get("status") or instance_data.get("status")
+            
+            if state == "open" or status == "connected":
+                return JsonResponse({
+                    "success": True,
+                    "is_connected": True,
+                    "message": "WhatsApp já está conectado!"
+                })
+            
+            # Extrair pairing code diretamente
+            pairing_code = data.get("pairingCode")
+            code_field = data.get("code")
+            
+            # Log para debug
+            logger.info(f"[Evolution API] pairingCode: {pairing_code}")
+            logger.info(f"[Evolution API] code: {code_field[:50] if code_field else None}...")
+            
+            if pairing_code:
+                # Se o código tem 8 caracteres sem hífen, formatar
+                clean_code = str(pairing_code).replace("-", "").replace(" ", "")
+                if len(clean_code) == 8:
+                    pairing_code = f"{clean_code[:4]}-{clean_code[4:]}"
+                
+                # Registrar auditoria
+                AuditLog.log(
+                    action="whatsapp_pairing_code_generated",
+                    entity="Padaria",
+                    padaria=organization,
+                    actor=request.user,
+                    entity_id=organization.id,
+                    diff={"instance": instance_name, "phone_prefix": phone_number[:4]}
+                )
+                
+                return JsonResponse({
+                    "success": True,
+                    "pairing_code": pairing_code,
+                    "is_connected": False
+                })
+            else:
+                # Mostrar todos os valores para debug
+                debug_info = {
+                    "pairingCode": data.get("pairingCode"),
+                    "code_preview": str(data.get("code", ""))[:30] if data.get("code") else None,
+                    "count": data.get("count"),
+                    "keys": list(data.keys())
+                }
+                logger.warning(f"[Evolution API] Debug: {debug_info}")
+                return JsonResponse({
+                    "success": False,
+                    "error": f"A API não retornou o código de pareamento. O recurso de pairing code pode não estar disponível nesta versão da Evolution API."
+                })
+        
+        elif response.status_code == 404:
+            return JsonResponse({
+                "success": False,
+                "error": "Instância WhatsApp não encontrada. Gere o QR Code primeiro para criar a instância."
+            })
+        else:
+            error_msg = _extract_error_message(response)
+            return JsonResponse({
+                "success": False,
+                "error": error_msg
+            })
+            
+    except requests.exceptions.Timeout:
+        return JsonResponse({
+            "success": False,
+            "error": "A conexão demorou muito para responder. Tente novamente."
+        })
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({
+            "success": False,
+            "error": "Não foi possível conectar ao serviço WhatsApp."
+        })
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Erro no WhatsApp pairing code: {str(e)}", exc_info=True)
+        
+        return JsonResponse({
+            "success": False,
+            "error": "Ocorreu um erro inesperado. Por favor, tente novamente."
+        })
+
+
 # =====================================================
 # PROMOÇÕES E AVISOS
 # =====================================================
