@@ -1,0 +1,474 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Assinaturas - Admin{% endblock %}
+
+{% block page_title %}Gestão de Assinaturas{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" style="margin-bottom: 1.5rem;">
+        <a href="{% url 'admin_panel:dashboard' %}">Admin Panel</a>
+        <span>/</span>
+        <span>Assinaturas</span>
+    </nav>
+
+    <!-- Métricas -->
+    <div class="metrics-grid">
+        <div class="metric-card metric-primary">
+            <div class="metric-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="28" height="28">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <span class="metric-value">R$ {{ mrr|floatformat:2 }}</span>
+                <span class="metric-label">MRR (Receita Mensal)</span>
+            </div>
+        </div>
+        
+        <div class="metric-card metric-success">
+            <div class="metric-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" width="28" height="28">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <span class="metric-value">{{ active_count }}</span>
+                <span class="metric-label">Assinaturas Ativas</span>
+            </div>
+        </div>
+        
+        <div class="metric-card metric-warning">
+            <div class="metric-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="28" height="28">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <span class="metric-value">{{ pending_count }}</span>
+                <span class="metric-label">Pendentes</span>
+            </div>
+        </div>
+        
+        <div class="metric-card metric-danger">
+            <div class="metric-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="28" height="28">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <span class="metric-value">{{ overdue_count }}</span>
+                <span class="metric-label">Inadimplentes</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros e Busca -->
+    <div class="filters-card">
+        <form method="get" class="filters-form">
+            <div class="search-input">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text" name="search" value="{{ search }}" placeholder="Buscar padaria ou email...">
+            </div>
+            
+            <div class="filter-buttons">
+                <a href="{% url 'admin_panel:subscriptions_list' %}" class="filter-btn {% if not status_filter %}active{% endif %}">
+                    Todos ({{ total_subscriptions }})
+                </a>
+                <a href="?status=active" class="filter-btn filter-success {% if status_filter == 'active' %}active{% endif %}">
+                    Ativas ({{ active_count }})
+                </a>
+                <a href="?status=pending" class="filter-btn filter-warning {% if status_filter == 'pending' %}active{% endif %}">
+                    Pendentes ({{ pending_count }})
+                </a>
+                <a href="?status=overdue" class="filter-btn filter-danger {% if status_filter == 'overdue' %}active{% endif %}">
+                    Inadimplentes ({{ overdue_count }})
+                </a>
+                <a href="?status=cancelled" class="filter-btn filter-neutral {% if status_filter == 'cancelled' %}active{% endif %}">
+                    Canceladas ({{ cancelled_count }})
+                </a>
+            </div>
+            
+            <button type="submit" class="btn-search">Buscar</button>
+        </form>
+    </div>
+
+    <!-- Tabela de Assinaturas -->
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Padaria</th>
+                    <th>Responsável</th>
+                    <th>Status</th>
+                    <th>Plano</th>
+                    <th>Valor</th>
+                    <th>Próx. Vencimento</th>
+                    <th>Último Pagamento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in subscriptions %}
+                <tr>
+                    <td>
+                        <div class="padaria-info">
+                            <a href="{% url 'admin_panel:padaria_detail' sub.padaria.slug %}" class="padaria-name">
+                                {{ sub.padaria.name }}
+                            </a>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="owner-email">{{ sub.padaria.owner.email }}</span>
+                    </td>
+                    <td>
+                        <span class="status-badge 
+                            {% if sub.status == 'active' %}badge-success
+                            {% elif sub.status == 'pending' %}badge-warning
+                            {% elif sub.status == 'overdue' %}badge-danger
+                            {% else %}badge-neutral{% endif %}">
+                            {% if sub.status == 'active' and not sub.asaas_subscription_id %}
+                                Trial
+                            {% else %}
+                                {{ sub.get_status_display }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>{{ sub.plan_name }}</td>
+                    <td>R$ {{ sub.plan_value|floatformat:2 }}</td>
+                    <td>
+                        {% if sub.next_due_date %}
+                            {{ sub.next_due_date|date:"d/m/Y" }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if sub.last_payment_date %}
+                            {{ sub.last_payment_date|date:"d/m/Y" }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <div class="empty-content">
+                            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="48" height="48">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"></path>
+                            </svg>
+                            <p>Nenhuma assinatura encontrada</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Paginação -->
+        {% if subscriptions.has_other_pages %}
+        <div class="pagination">
+            {% if subscriptions.has_previous %}
+            <a href="?page={{ subscriptions.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search %}&search={{ search }}{% endif %}" class="page-btn">&laquo; Anterior</a>
+            {% endif %}
+            
+            <span class="page-info">Página {{ subscriptions.number }} de {{ subscriptions.paginator.num_pages }}</span>
+            
+            {% if subscriptions.has_next %}
+            <a href="?page={{ subscriptions.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search %}&search={{ search }}{% endif %}" class="page-btn">Próxima &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+/* Breadcrumb */
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.breadcrumb a {
+    color: #3b82f6;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.metric-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: white;
+}
+
+.metric-primary .metric-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.metric-success .metric-icon { background: linear-gradient(135deg, #10b981, #059669); }
+.metric-warning .metric-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.metric-danger .metric-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+.metric-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* Filters Card */
+.filters-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filters-form {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f3f4f6;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    flex: 1;
+    min-width: 200px;
+}
+
+.search-input svg {
+    color: #9ca3af;
+}
+
+.search-input input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    font-size: 0.875rem;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+    color: #6b7280;
+    background: #f3f4f6;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    background: #e5e7eb;
+}
+
+.filter-btn.active {
+    background: #1f2937;
+    color: white;
+}
+
+.filter-success.active { background: #10b981; }
+.filter-warning.active { background: #f59e0b; }
+.filter-danger.active { background: #ef4444; }
+.filter-neutral.active { background: #6b7280; }
+
+.btn-search {
+    padding: 0.5rem 1.5rem;
+    background: linear-gradient(135deg, #e94560, #d63652);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-search:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
+}
+
+/* Table Card */
+.table-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 1rem 1.5rem;
+    background: #f9fafb;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.data-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.875rem;
+    color: #374151;
+}
+
+.data-table tr:hover {
+    background: #f9fafb;
+}
+
+.padaria-name {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.padaria-name:hover {
+    text-decoration: underline;
+}
+
+.owner-email {
+    color: #6b7280;
+    font-size: 0.8125rem;
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-flex;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-neutral {
+    background: #e5e7eb;
+    color: #4b5563;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem !important;
+}
+
+.empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: #9ca3af;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.page-btn {
+    padding: 0.5rem 1rem;
+    background: #f3f4f6;
+    border-radius: 6px;
+    color: #374151;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.page-btn:hover {
+    background: #e5e7eb;
+}
+
+.page-info {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

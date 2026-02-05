@@ -1807,3 +1807,66 @@ def api_validate_cnpj(request):
         return JsonResponse({'valid': False, 'error': 'Tempo limite de conexão excedido ao consultar CNPJ.'})
     except Exception as e:
         return JsonResponse({'valid': False, 'error': f'Erro interno: {str(e)}'})
+
+
+# ============================================
+# GESTÃO DE ASSINATURAS
+# ============================================
+
+@login_required
+@require_system_admin
+def subscriptions_list(request):
+    """Lista todas as assinaturas do sistema para admin."""
+    from payments.models import AsaasSubscription
+    from django.db.models import Sum
+    from decimal import Decimal
+    
+    # Filtros
+    status_filter = request.GET.get('status', '')
+    search = request.GET.get('search', '')
+    
+    # Query base
+    subscriptions = AsaasSubscription.objects.select_related('padaria', 'padaria__owner').order_by('-created_at')
+    
+    # Aplicar filtros
+    if status_filter:
+        subscriptions = subscriptions.filter(status=status_filter)
+    
+    if search:
+        subscriptions = subscriptions.filter(
+            Q(padaria__name__icontains=search) |
+            Q(padaria__owner__email__icontains=search) |
+            Q(asaas_customer_id__icontains=search)
+        )
+    
+    # Métricas
+    total_subscriptions = AsaasSubscription.objects.count()
+    active_count = AsaasSubscription.objects.filter(status='active').count()
+    pending_count = AsaasSubscription.objects.filter(status='pending').count()
+    overdue_count = AsaasSubscription.objects.filter(status='overdue').count()
+    cancelled_count = AsaasSubscription.objects.filter(status='cancelled').count()
+    
+    # MRR (Monthly Recurring Revenue) - soma dos valores de planos ativos
+    mrr = AsaasSubscription.objects.filter(status='active').aggregate(
+        total=Sum('plan_value')
+    )['total'] or Decimal('0')
+    
+    # Paginação
+    paginator = Paginator(subscriptions, 20)
+    page = request.GET.get('page', 1)
+    subscriptions_page = paginator.get_page(page)
+    
+    context = {
+        'subscriptions': subscriptions_page,
+        'total_subscriptions': total_subscriptions,
+        'active_count': active_count,
+        'pending_count': pending_count,
+        'overdue_count': overdue_count,
+        'cancelled_count': cancelled_count,
+        'mrr': mrr,
+        'status_filter': status_filter,
+        'search': search,
+    }
+    
+    return render(request, 'admin_panel/subscriptions_list.html', context)
+

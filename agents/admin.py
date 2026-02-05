@@ -9,7 +9,7 @@ class AgentAdmin(admin.ModelAdmin):
     list_filter = ("status", "personality", "role", "sector", "created_at")
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ("knowledge_updated_at", "created_at", "updated_at")
-    autocomplete_fields = ("padaria",)
+    autocomplete_fields = ()  # Padaria removida do admin
     
     fieldsets = (
         ("Informações Básicas", {

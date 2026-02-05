@@ -16,28 +16,30 @@ class ApiKeyInline(admin.TabularInline):
     autocomplete_fields = ['agent']
 
 
-@admin.register(Padaria)
-class PadariaAdmin(admin.ModelAdmin):
-    list_display = ['name', 'owner', 'is_active', 'created_at']
-    list_filter = ['is_active', 'created_at']
-    search_fields = ['name', 'slug', 'owner__username', 'email']
-    prepopulated_fields = {'slug': ('name',)}
-    inlines = [PadariaUserInline, ApiKeyInline]
-    readonly_fields = ['created_at', 'updated_at']
-    
-    fieldsets = (
-        (None, {
-            'fields': ('name', 'slug', 'owner', 'is_active')
-        }),
-        ('Contato', {
-            'fields': ('phone', 'email', 'address'),
-            'classes': ('collapse',)
-        }),
-        ('Datas', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
+
+# Padaria removida do admin - gerenciada pelo admin_panel customizado
+# @admin.register(Padaria)
+# class PadariaAdmin(admin.ModelAdmin):
+#     list_display = ['name', 'owner', 'is_active', 'created_at']
+#     list_filter = ['is_active', 'created_at']
+#     search_fields = ['name', 'slug', 'owner__username', 'email']
+#     prepopulated_fields = {'slug': ('name',)}
+#     inlines = [PadariaUserInline, ApiKeyInline]
+#     readonly_fields = ['created_at', 'updated_at']
+#     
+#     fieldsets = (
+#         (None, {
+#             'fields': ('name', 'slug', 'owner', 'is_active')
+#         }),
+#         ('Contato', {
+#             'fields': ('phone', 'email', 'address'),
+#             'classes': ('collapse',)
+#         }),
+#         ('Datas', {
+#             'fields': ('created_at', 'updated_at'),
+#             'classes': ('collapse',)
+#         }),
+#     )
 
 
 @admin.register(PadariaUser)
@@ -45,7 +47,7 @@ class PadariaUserAdmin(admin.ModelAdmin):
     list_display = ['user', 'padaria', 'role', 'created_at']
     list_filter = ['role', 'padaria']
     search_fields = ['user__username', 'user__email', 'padaria__name']
-    autocomplete_fields = ['user', 'padaria']
+    autocomplete_fields = ['user']  # Padaria removida do admin
 
 
 @admin.register(ApiKey)

@@ -44,6 +44,9 @@ urlpatterns = [
     
     # API Agente
     path('api/validate-cnpj/', views.api_validate_cnpj, name='api_validate_cnpj'),
+    
+    # Assinaturas
+    path('assinaturas/', views.subscriptions_list, name='subscriptions_list'),
 ]
 
 
