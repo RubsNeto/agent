@@ -230,6 +230,10 @@ CAKTO_API_URL = "https://api.cakto.com.br/public_api"
 
 # Valor da assinatura (R$ 1,00 em modo teste, R$ 140,00 em produção)
 from decimal import Decimal
-CAKTO_PLAN_VALUE = Decimal("1.00") if CAKTO_TEST_MODE else Decimal("140.00")
+CAKTO_PLAN_VALUE = Decimal("140.00")
 CAKTO_PLAN_NAME = "Plano Mensal PanDia"
 CAKTO_DEFAULT_TRIAL_DAYS = 15
+
+# ID da Oferta criada no painel Cakto (copie do dashboard)
+CAKTO_OFFER_ID = os.getenv("CAKTO_OFFER_ID", "")
+

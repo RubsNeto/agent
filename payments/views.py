@@ -12,6 +12,9 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.mail import send_mail
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 from organizations.models import Padaria, PadariaUser
 from .models import (
@@ -463,7 +466,7 @@ def create_subscription(request):
 @require_http_methods(["POST"])
 def cancel_subscription(request):
     """
-    Cancela assinatura e envia email para suporte.
+    Cancela assinatura Cakto e envia email para suporte.
     Qualquer membro da padaria pode solicitar cancelamento.
     """
     print(f"DEBUG: cancel_subscription chamada")
@@ -489,18 +492,25 @@ def cancel_subscription(request):
         return redirect('payments:subscription_status')
     
     try:
-        subscription = AsaasSubscription.objects.get(padaria=padaria)
+        # Tentar primeiro CaktoSubscription (sistema novo)
+        subscription = CaktoSubscription.objects.get(padaria=padaria)
         
-        # Cancelar no Asaas se existir
-        if subscription.asaas_subscription_id:
+        # Cancelar na Cakto se existir ID da assinatura
+        if subscription.cakto_subscription_id:
             try:
-                asaas_service.cancel_subscription(subscription.asaas_subscription_id)
-            except AsaasAPIError:
-                pass  # Continua mesmo se falhar no Asaas
+                result = cakto_service.cancel_subscription(subscription.cakto_subscription_id)
+                if not result.get("success"):
+                    logger.warning(f"Falha ao cancelar na Cakto: {result.get('error')}")
+            except Exception as e:
+                logger.error(f"Erro ao cancelar na Cakto: {str(e)}")
         
         # Atualizar status local
         subscription.status = 'cancelled'
         subscription.save()
+        
+        # Desativar padaria
+        padaria.is_active = False
+        padaria.save()
         
         # Enviar email para suporte
         support_email = os.getenv('EMAIL_SUPPORT', 'suporte@pandia.com.br')
@@ -508,13 +518,13 @@ def cancel_subscription(request):
         
         try:
             send_mail(
-                subject=f"[Cancelamento] Assinatura - {padaria.name}",
+                subject=f"[Cancelamento] Assinatura Cakto - {padaria.name}",
                 message=f"""
 Uma assinatura foi cancelada:
 
 Padaria: {padaria.name}
 Slug: {padaria.slug}
-Email: {padaria.email or padaria.owner.email}
+Email: {padaria.responsavel_email or padaria.email or padaria.owner.email}
 Telefone: {padaria.phone or 'N/A'}
 
 Solicitante: {request.user.email}
@@ -535,8 +545,24 @@ Este é um email automático do sistema Pandia.
         
         messages.success(request, "Assinatura cancelada. A equipe de suporte foi notificada.")
         
-    except AsaasSubscription.DoesNotExist:
-        messages.error(request, "Assinatura não encontrada.")
+    except CaktoSubscription.DoesNotExist:
+        # Fallback para AsaasSubscription (sistema legado)
+        try:
+            subscription = AsaasSubscription.objects.get(padaria=padaria)
+            
+            if subscription.asaas_subscription_id:
+                try:
+                    asaas_service.cancel_subscription(subscription.asaas_subscription_id)
+                except AsaasAPIError:
+                    pass
+            
+            subscription.status = 'cancelled'
+            subscription.save()
+            messages.success(request, "Assinatura cancelada.")
+            
+        except AsaasSubscription.DoesNotExist:
+            messages.error(request, "Assinatura não encontrada.")
+            
     except Exception as e:
         messages.error(request, f"Erro ao cancelar: {str(e)}")
     
@@ -620,15 +646,13 @@ def cakto_register_card(request):
         # Buscar assinatura Cakto
         subscription = CaktoSubscription.objects.get(padaria=padaria)
         
-        # Se já tem cartão cadastrado
-        if subscription.card_registered:
+        # Se já tem cartão cadastrado E assinatura está ativa, não precisa cadastrar novamente
+        # Mas se está inativa, permite ir para o checkout para regularizar
+        if subscription.card_registered and subscription.status == 'active':
             messages.info(request, "Cartão já cadastrado!")
             return redirect('payments:subscription_status')
         
-        # Se já tem link de checkout, usar
-        if subscription.checkout_url:
-            return redirect(subscription.checkout_url)
-        
+        # Gerar nova URL de checkout (sem cache para permitir novo pagamento)
         # Criar oferta na Cakto
         email = padaria.responsavel_email or padaria.email or padaria.owner.email
         name = padaria.responsavel_nome or padaria.name
@@ -666,6 +690,54 @@ def cakto_register_card(request):
 
 
 @login_required
+def sync_cakto_status(request):
+    """
+    Força sincronização do status da assinatura Cakto consultando a API.
+    """
+    padaria_slug = request.GET.get('padaria')
+    padaria = get_user_padaria(request.user, padaria_slug)
+    
+    if not padaria:
+        messages.error(request, "Padaria não encontrada.")
+        return redirect('payments:subscription_status')
+    
+    try:
+        subscription = CaktoSubscription.objects.get(padaria=padaria)
+        
+        # Tentar consultar status pelo ID do pedido
+        if subscription.cakto_order_id:
+            try:
+                result = cakto_service.get_order_status(subscription.cakto_order_id)
+                
+                if result.get("success"):
+                    status = result.get("status")
+                    # Se aprovado na API mas não local, ativar
+                    if status == "approved" and subscription.status != 'active':
+                        subscription.activate()
+                        messages.success(request, "Status sincronizado: Assinatura Ativa!")
+                    else:
+                        messages.info(request, f"Status verificado na Cakto: {status}")
+                else:
+                    messages.error(request, f"Não foi possível consultar o status: {result.get('error')}")
+            except Exception as e:
+                logger.error(f"Erro ao consultar Cakto: {e}")
+                messages.error(request, "Erro ao conectar com a Cakto.")
+        else:
+            messages.warning(request, "Não foi possível localizar o pedido automaticamente. Se pagou agora, aguarde alguns instantes ou use 'Simular Pagamento' em ambiente de teste.")
+            
+    except CaktoSubscription.DoesNotExist:
+        messages.error(request, "Assinatura Cakto não encontrada.")
+    except Exception as e:
+        messages.error(request, f"Erro ao sincronizar: {str(e)}")
+        
+    url = reverse('payments:subscription_status')
+    if padaria_slug:
+        url += f"?padaria={padaria_slug}"
+    return redirect(url)
+
+
+
+@login_required
 @require_http_methods(["POST"])
 def subscription_test_action(request):
     """
@@ -689,7 +761,13 @@ def subscription_test_action(request):
         subscription = CaktoSubscription.objects.get(padaria=padaria)
         today = timezone.now().date()
         
-        if action == 'trial_3_days':
+        if action == 'update_plan_value':
+            from decimal import Decimal
+            subscription.plan_value = Decimal("140.00")
+            subscription.save()
+            messages.success(request, "Valor do plano atualizado para R$ 140,00.")
+            
+        elif action == 'trial_3_days':
             # Simular trial expirando em 3 dias
             subscription.status = 'trial'
             subscription.trial_end_date = today + timezone.timedelta(days=3)
@@ -1064,19 +1142,37 @@ def payment_success(request):
     # Tentar buscar a assinatura do usuário
     padaria = None
     subscription = None
+    is_cakto = False
     
     if request.user.is_authenticated:
         padaria_slug = request.GET.get('padaria')
         padaria = get_user_padaria(request.user, padaria_slug)
         
         if padaria:
-            subscription = AsaasSubscription.objects.filter(padaria=padaria).first()
+            # Tentar Cakto primeiro
+            try:
+                subscription = CaktoSubscription.objects.get(padaria=padaria)
+                is_cakto = True
+                
+                # Se ainda estiver em trial/inactive e tivermos order_id, consultar API
+                if subscription.status not in ['active'] and subscription.cakto_order_id:
+                    try:
+                        result = cakto_service.get_order_status(subscription.cakto_order_id)
+                        if result.get("success") and result.get("status") == "approved":
+                            subscription.activate()
+                            messages.success(request, "Pagamento confirmado! Sua assinatura está ativa.")
+                    except Exception:
+                        pass
+                
+            except CaktoSubscription.DoesNotExist:
+                subscription = AsaasSubscription.objects.filter(padaria=padaria).first()
     
     # Se temos assinatura, mostrar página detalhada
     if padaria and subscription:
         return render(request, 'payments/subscription_success.html', {
             'padaria': padaria,
             'subscription': subscription,
+            'is_cakto': is_cakto,
         })
     
     # Fallback para página genérica

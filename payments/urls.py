@@ -15,6 +15,7 @@ urlpatterns = [
     path('assinatura/link/', views.subscription_payment_link, name='subscription_payment_link'),
     path('assinatura/cadastrar-cartao/', views.cakto_register_card, name='cakto_register_card'),
     path('assinatura/test-action/', views.subscription_test_action, name='subscription_test_action'),
+    path('assinatura/sincronizar/', views.sync_cakto_status, name='sync_cakto_status'),
     
     # === Webhook Cakto ===
     path('cakto/webhook/', cakto_webhook, name='cakto_webhook'),

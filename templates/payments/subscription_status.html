@@ -20,13 +20,18 @@
     <div class="subscription-cards">
         <!-- Status Atual -->
         <div
-            class="subscription-card status-card {% if subscription.status == 'active' %}status-active{% elif subscription.status == 'overdue' %}status-overdue{% else %}status-pending{% endif %}">
+            class="subscription-card status-card {% if subscription.status == 'active' %}status-active{% elif subscription.status == 'trial' %}status-trial{% elif subscription.status == 'overdue' or subscription.status == 'inactive' %}status-overdue{% else %}status-pending{% endif %}">
             <div class="card-icon">
                 {% if subscription.status == 'active' %}
                 <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" width="28" height="28">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
                 </svg>
-                {% elif subscription.status == 'overdue' %}
+                {% elif subscription.status == 'trial' %}
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="28" height="28">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {% elif subscription.status == 'overdue' or subscription.status == 'inactive' %}
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="28" height="28">
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
@@ -41,18 +46,32 @@
             </div>
             <div class="card-content">
                 <span class="card-value">
-                    {% if subscription.status == 'active' and not subscription.asaas_subscription_id %}
-                    Trial Ativo
-                    {% elif subscription.status == 'active' %}
-                    Ativa
-                    {% elif subscription.status == 'overdue' %}
-                    Inadimplente
-                    {% elif subscription.status == 'pending' %}
-                    Aguardando
-                    {% elif subscription.status == 'cancelled' %}
-                    Cancelada
+                    {% if is_cakto %}
+                        {% if subscription.status == 'trial' %}
+                        Trial
+                        {% elif subscription.status == 'active' %}
+                        Ativa
+                        {% elif subscription.status == 'inactive' %}
+                        Inativa
+                        {% elif subscription.status == 'cancelled' %}
+                        Cancelada
+                        {% else %}
+                        {{ subscription.get_status_display }}
+                        {% endif %}
                     {% else %}
-                    {{ subscription.get_status_display }}
+                        {% if subscription.status == 'active' and not subscription.asaas_subscription_id %}
+                        Trial Ativo
+                        {% elif subscription.status == 'active' %}
+                        Ativa
+                        {% elif subscription.status == 'overdue' %}
+                        Inadimplente
+                        {% elif subscription.status == 'pending' %}
+                        Aguardando
+                        {% elif subscription.status == 'cancelled' %}
+                        Cancelada
+                        {% else %}
+                        {{ subscription.get_status_display }}
+                        {% endif %}
                     {% endif %}
                 </span>
                 <span class="card-label">Status da Assinatura</span>
@@ -113,8 +132,8 @@
         </div>
     </div>
 
-    <!-- Banner de Trial Ativo -->
-    {% if subscription.status == 'active' and not subscription.asaas_subscription_id %}
+    <!-- Banner de Trial Ativo (Asaas - legado) -->
+    {% if not is_cakto and subscription.status == 'active' and not subscription.asaas_subscription_id %}
     <div class="action-banner banner-success">
         <div class="banner-content">
             <div class="banner-icon">
@@ -161,6 +180,49 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- Banner de Trial Ativo - Cakto -->
+    {% if is_cakto and subscription.status == 'trial' %}
+    <div class="action-banner banner-trial">
+        <div class="banner-content">
+            <div class="banner-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="banner-text">
+                <h3>🎉 Trial Gratuito de {{ days_remaining }} dias restantes!</h3>
+                <p>
+                    Aproveite todos os recursos gratuitamente até {{ subscription.trial_end_date|date:"d/m/Y" }}.
+                    {% if not subscription.card_registered %}
+                    <strong>Cadastre seu cartão agora</strong> para garantir acesso contínuo. 
+                    A primeira cobrança será feita somente após o fim do trial.
+                    {% else %}
+                    Seu cartão já está cadastrado! A cobrança automática iniciará após o trial.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% if not subscription.card_registered %}
+        <div class="banner-action">
+            <form method="post" action="{% url 'payments:cakto_register_card' %}">
+                {% csrf_token %}
+                <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
+                <button type="submit" class="btn-action btn-activate">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
+                        </path>
+                    </svg>
+                    Cadastrar Cartão
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
 
     <!-- Banner de Ação -->
     {% if subscription.status == 'pending' or subscription.status == 'overdue' %}
@@ -235,6 +297,43 @@
     </div>
     {% endif %}
 
+    <!-- Banner de Regularização (para assinaturas inativas - Cakto) -->
+    {% if is_cakto and subscription.status == 'inactive' %}
+    <div class="action-banner banner-danger">
+        <div class="banner-content">
+            <div class="banner-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                    </path>
+                </svg>
+            </div>
+            <div class="banner-text">
+                <h3>⚠️ Assinatura Inativa - Regularize seu Pagamento</h3>
+                <p>
+                    Seu período de trial expirou ou houve falha no pagamento. 
+                    Clique no botão para realizar o pagamento e reativar seu acesso ao sistema.
+                </p>
+            </div>
+        </div>
+        <div class="banner-action">
+            <form method="post" action="{% url 'payments:cakto_register_card' %}">
+                {% csrf_token %}
+                <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
+                <button type="submit" class="btn-action btn-pay">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
+                        </path>
+                    </svg>
+                    Realizar Pagamento
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+
     <!-- Banner de Reativação (para assinaturas canceladas) -->
     {% if subscription.status == 'cancelled' %}
     <div class="action-banner banner-cancelled">
@@ -252,6 +351,20 @@
             </div>
         </div>
         <div class="banner-action">
+            {% if is_cakto %}
+            <form method="post" action="{% url 'payments:cakto_register_card' %}">
+                {% csrf_token %}
+                <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
+                <button type="submit" class="btn-action btn-reactivate">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                        </path>
+                    </svg>
+                    Reativar Assinatura
+                </button>
+            </form>
+            {% else %}
             <form method="post" action="{% url 'payments:create_subscription' %}" class="subscription-form">
                 {% csrf_token %}
                 <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
@@ -280,6 +393,7 @@
                     Reativar Assinatura
                 </button>
             </form>
+            {% endif %}
         </div>
     </div>
     {% endif %}
@@ -301,13 +415,30 @@
             <div class="detail-item">
                 <span class="detail-label">Forma de Pagamento</span>
                 <span class="detail-value">
-                    {% if subscription.billing_type == 'CREDIT_CARD' %}Cartão de Crédito
-                    {% elif subscription.billing_type == 'DEBIT_CARD' %}Cartão de Débito
-                    {% elif subscription.billing_type == 'PIX' %}PIX
-                    {% elif subscription.billing_type == 'BOLETO' %}Boleto
-                    {% elif subscription.status == 'active' and not subscription.asaas_subscription_id %}Trial - A
-                    configurar
-                    {% else %}{{ subscription.billing_type|default:"Não definido" }}
+                    {% if is_cakto %}
+                        {% if subscription.status == 'active' %}
+                            {% if subscription.card_brand %}
+                                Cartão ({{ subscription.card_brand }} final {{ subscription.card_last_4 }})
+                            {% else %}
+                                Cartão de Crédito
+                            {% endif %}
+                        {% elif subscription.status == 'trial' %}
+                            {% if subscription.card_registered %}
+                                Cartão Cadastrado
+                            {% else %}
+                                Trial - A configurar
+                            {% endif %}
+                        {% else %}
+                            A definir
+                        {% endif %}
+                    {% else %}
+                        {% if subscription.billing_type == 'CREDIT_CARD' %}Cartão de Crédito
+                        {% elif subscription.billing_type == 'DEBIT_CARD' %}Cartão de Débito
+                        {% elif subscription.billing_type == 'PIX' %}PIX
+                        {% elif subscription.billing_type == 'BOLETO' %}Boleto
+                        {% elif subscription.status == 'active' and not subscription.asaas_subscription_id %}Trial - A configurar
+                        {% else %}{{ subscription.billing_type|default:"Não definido" }}
+                        {% endif %}
                     {% endif %}
                 </span>
             </div>
@@ -350,67 +481,7 @@
     </div>
     {% endif %}
 
-    <!-- Ferramentas de Teste (Temporário - Todos usuários) -->
-    {% if is_cakto %}
-    <div class="actions-card" style="border: 2px dashed #f59e0b; background: #fffbeb;">
-        <div class="actions-header" style="background: #fef3c7;">
-            <h2>🧪 Ferramentas de Teste (Admin)</h2>
-        </div>
-        <div class="actions-body">
-            <p style="color: #92400e; margin-bottom: 1rem; font-size: 0.875rem;">
-                ⚠️ Estas opções são apenas para testes. Use com cuidado em produção.
-            </p>
-            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
-                <!-- Simular trial expirando em 3 dias -->
-                <form method="post" action="{% url 'payments:subscription_test_action' %}" style="margin: 0;">
-                    {% csrf_token %}
-                    <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
-                    <input type="hidden" name="action" value="trial_3_days">
-                    <button type="submit" class="btn-small" style="background: #f59e0b; color: white;">
-                        ⏰ Trial → 3 dias
-                    </button>
-                </form>
-                
-                <!-- Simular trial expirado -->
-                <form method="post" action="{% url 'payments:subscription_test_action' %}" style="margin: 0;">
-                    {% csrf_token %}
-                    <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
-                    <input type="hidden" name="action" value="trial_expired">
-                    <button type="submit" class="btn-small" style="background: #ef4444; color: white;">
-                        ❌ Expirar Trial
-                    </button>
-                </form>
-                
-                <!-- Simular pagamento aprovado -->
-                <form method="post" action="{% url 'payments:subscription_test_action' %}" style="margin: 0;">
-                    {% csrf_token %}
-                    <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
-                    <input type="hidden" name="action" value="payment_approved">
-                    <button type="submit" class="btn-small" style="background: #10b981; color: white;">
-                        ✅ Simular Pagamento
-                    </button>
-                </form>
-                
-                <!-- Resetar para trial novo -->
-                <form method="post" action="{% url 'payments:subscription_test_action' %}" style="margin: 0;">
-                    {% csrf_token %}
-                    <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
-                    <input type="hidden" name="action" value="reset_trial">
-                    <button type="submit" class="btn-small" style="background: #6366f1; color: white;">
-                        🔄 Resetar Trial
-                    </button>
-                </form>
-            </div>
-            
-            <!-- Info atual -->
-            <div style="margin-top: 1rem; padding: 0.75rem; background: white; border-radius: 0.5rem; font-size: 0.875rem;">
-                <strong>Status atual:</strong> {{ subscription.status }} |
-                <strong>Trial end:</strong> {{ subscription.trial_end_date|default:"—" }} |
-                <strong>Dias restantes:</strong> {{ days_remaining }}
-            </div>
-        </div>
-    </div>
-    {% endif %}
+
 
     <!-- Modal de Cancelamento -->
     <div id="cancelModal" class="modal-overlay" style="display: none;">
@@ -442,7 +513,17 @@
     <div class="history-card">
         <div class="history-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h2>💰 Histórico de Pagamentos</h2>
-            {% if subscription.asaas_subscription_id %}
+            
+            {% if is_cakto %}
+            <a href="{% url 'payments:sync_cakto_status' %}?padaria={{ padaria.slug }}" class="btn-small" style="background: #6b7280; text-decoration: none; color: white; display: inline-flex; align-items: center;">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                    style="margin-right: 4px;">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Sincronizar
+            </a>
+            {% elif subscription.asaas_subscription_id %}
             <form method="post" action="{% url 'payments:subscription_status' %}" style="margin: 0;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="sync_payments">
@@ -642,6 +723,18 @@
         color: #d97706;
     }
 
+    .status-trial {
+        border-left: 4px solid #3b82f6;
+    }
+
+    .status-trial .card-icon {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
+
+    .status-trial .card-value {
+        color: #2563eb;
+    }
+
     .date-card {
         border-left: 4px solid #3b82f6;
     }
@@ -749,6 +842,40 @@
     .btn-reactivate:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+    }
+
+    .banner-danger {
+        background: linear-gradient(135deg, #fee2e2, #fecaca);
+        border: 1px solid #f87171;
+    }
+
+    .banner-danger .banner-icon {
+        color: #dc2626;
+    }
+
+    .banner-danger h3 {
+        color: #991b1b;
+    }
+
+    .banner-danger p {
+        color: #b91c1c;
+    }
+
+    .banner-trial {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        border: 1px solid #60a5fa;
+    }
+
+    .banner-trial .banner-icon {
+        color: #2563eb;
+    }
+
+    .banner-trial h3 {
+        color: #1e40af;
+    }
+
+    .banner-trial p {
+        color: #1d4ed8;
     }
 
     .banner-content {

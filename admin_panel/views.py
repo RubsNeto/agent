@@ -1848,7 +1848,7 @@ def api_validate_cnpj(request):
 @require_system_admin
 def subscriptions_list(request):
     """Lista todas as assinaturas do sistema para admin."""
-    from payments.models import AsaasSubscription
+    from payments.models import CaktoSubscription
     from django.db.models import Sum
     from decimal import Decimal
     
@@ -1856,8 +1856,8 @@ def subscriptions_list(request):
     status_filter = request.GET.get('status', '')
     search = request.GET.get('search', '')
     
-    # Query base
-    subscriptions = AsaasSubscription.objects.select_related('padaria', 'padaria__owner').order_by('-created_at')
+    # Query base - usar CaktoSubscription
+    subscriptions = CaktoSubscription.objects.select_related('padaria', 'padaria__owner').order_by('-created_at')
     
     # Aplicar filtros
     if status_filter:
@@ -1867,18 +1867,18 @@ def subscriptions_list(request):
         subscriptions = subscriptions.filter(
             Q(padaria__name__icontains=search) |
             Q(padaria__owner__email__icontains=search) |
-            Q(asaas_customer_id__icontains=search)
+            Q(padaria__responsavel_email__icontains=search)
         )
     
-    # Métricas
-    total_subscriptions = AsaasSubscription.objects.count()
-    active_count = AsaasSubscription.objects.filter(status='active').count()
-    pending_count = AsaasSubscription.objects.filter(status='pending').count()
-    overdue_count = AsaasSubscription.objects.filter(status='overdue').count()
-    cancelled_count = AsaasSubscription.objects.filter(status='cancelled').count()
+    # Métricas Cakto
+    total_subscriptions = CaktoSubscription.objects.count()
+    trial_count = CaktoSubscription.objects.filter(status='trial').count()
+    active_count = CaktoSubscription.objects.filter(status='active').count()
+    inactive_count = CaktoSubscription.objects.filter(status='inactive').count()
+    cancelled_count = CaktoSubscription.objects.filter(status='cancelled').count()
     
     # MRR (Monthly Recurring Revenue) - soma dos valores de planos ativos
-    mrr = AsaasSubscription.objects.filter(status='active').aggregate(
+    mrr = CaktoSubscription.objects.filter(status='active').aggregate(
         total=Sum('plan_value')
     )['total'] or Decimal('0')
     
@@ -1890,10 +1890,13 @@ def subscriptions_list(request):
     context = {
         'subscriptions': subscriptions_page,
         'total_subscriptions': total_subscriptions,
+        'trial_count': trial_count,
         'active_count': active_count,
-        'pending_count': pending_count,
-        'overdue_count': overdue_count,
+        'inactive_count': inactive_count,
         'cancelled_count': cancelled_count,
+        # Compatibilidade com template antigo
+        'pending_count': trial_count,
+        'overdue_count': inactive_count,
         'mrr': mrr,
         'status_filter': status_filter,
         'search': search,

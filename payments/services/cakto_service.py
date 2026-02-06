@@ -147,7 +147,10 @@ class CaktoService:
     
     def create_subscription_offer(self, padaria, customer_email, customer_name=None):
         """
-        Cria oferta de assinatura para cadastro de cartão.
+        Obtém URL de checkout para a oferta configurada.
+        
+        A oferta deve ser criada previamente no painel da Cakto.
+        O ID da oferta é obtido de settings.CAKTO_OFFER_ID.
         
         Args:
             padaria: Padaria Model instance
@@ -155,37 +158,41 @@ class CaktoService:
             customer_name: Nome do cliente (opcional)
             
         Returns:
-            dict com checkout_url e offer_id ou error
+            dict com checkout_url ou error
         """
-        data = {
-            "type": "subscription",
-            "name": f"{self.plan_name} - {padaria.name}",
-            "description": f"Assinatura mensal do sistema PanDia para {padaria.name}",
-            "price": float(self.plan_value),
-            "currency": "BRL",
-            "billing_cycle": "monthly",
-            "customer": {
-                "email": customer_email,
-                "name": customer_name or padaria.responsavel_nome or padaria.name,
-            },
-            "metadata": {
-                "padaria_id": str(padaria.id),
-                "padaria_slug": padaria.slug,
-            }
-        }
+        offer_id = getattr(settings, 'CAKTO_OFFER_ID', '')
         
-        result = self._make_request("POST", "offers/", data)
-        
-        if result.get("success"):
-            offer_data = result.get("data", {})
+        if not offer_id:
+            logger.error("CAKTO_OFFER_ID não configurado")
             return {
-                "success": True,
-                "offer_id": offer_data.get("id"),
-                "checkout_url": offer_data.get("checkout_url"),
-                "data": offer_data
+                "success": False, 
+                "error": "CAKTO_OFFER_ID não configurado no .env. Crie uma oferta no painel Cakto e copie o ID."
             }
-        else:
-            return result
+        
+        # A URL de checkout da Cakto segue o padrão:
+        # https://pay.cakto.com.br/OFFER_ID
+        checkout_url = f"https://pay.cakto.com.br/{offer_id}"
+        
+        # Podemos adicionar parâmetros para pré-preencher dados
+        # ex: ?email=user@email.com&name=Nome
+        params = []
+        if customer_email:
+            params.append(f"email={customer_email}")
+        if customer_name:
+            params.append(f"name={customer_name}")
+        if padaria:
+            # Adicionar metadata para identificar a padaria no webhook
+            params.append(f"metadata[padaria_id]={padaria.id}")
+            params.append(f"metadata[padaria_slug]={padaria.slug}")
+        
+        if params:
+            checkout_url += "?" + "&".join(params)
+        
+        return {
+            "success": True,
+            "offer_id": offer_id,
+            "checkout_url": checkout_url,
+        }
     
     def get_order_status(self, order_id):
         """
@@ -207,6 +214,29 @@ class CaktoService:
                 "data": order_data
             }
         else:
+            return result
+    
+    def cancel_subscription(self, subscription_id):
+        """
+        Cancela assinatura na Cakto.
+        
+        Args:
+            subscription_id: ID da assinatura na Cakto
+            
+        Returns:
+            dict com resultado do cancelamento
+        """
+        if not subscription_id:
+            logger.warning("Tentativa de cancelar assinatura sem ID")
+            return {"success": False, "error": "ID da assinatura não informado"}
+        
+        result = self._make_request("POST", f"subscriptions/{subscription_id}/cancel/")
+        
+        if result.get("success"):
+            logger.info(f"Assinatura {subscription_id} cancelada na Cakto")
+            return {"success": True}
+        else:
+            logger.error(f"Erro ao cancelar assinatura {subscription_id}: {result.get('error')}")
             return result
     
     def process_payment_approved(self, webhook_data):
@@ -265,7 +295,15 @@ class CaktoService:
                 subscription.card_last_4 = card_data.get("last4", "")[:4]
                 subscription.card_brand = card_data.get("brand", "")[:20]
             
-            # Ativar assinatura
+            # Salvar ID da assinatura se vier no webhook
+            sub_id = webhook_data.get("subscription_id") or webhook_data.get("subscription")
+            if sub_id:
+                if isinstance(sub_id, dict):
+                    sub_id = sub_id.get("id")
+                if sub_id:
+                    subscription.cakto_subscription_id = sub_id
+            
+            # Salvar ID do pedido
             subscription.cakto_order_id = order_id
             subscription.activate()
             

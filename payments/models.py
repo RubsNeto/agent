@@ -550,6 +550,11 @@ class CaktoSubscription(models.Model):
         blank=True,
         verbose_name="ID da Oferta Cakto"
     )
+    cakto_subscription_id = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="ID da Assinatura Cakto"
+    )
     cakto_order_id = models.CharField(
         max_length=100,
         blank=True,
