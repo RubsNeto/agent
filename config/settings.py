@@ -221,4 +221,15 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
+# Cakto Gateway Settings (Assinaturas)
+CAKTO_CLIENT_ID = os.getenv("CAKTO_CLIENT_ID", "")
+CAKTO_CLIENT_SECRET = os.getenv("CAKTO_CLIENT_SECRET", "")
+CAKTO_WEBHOOK_TOKEN = os.getenv("CAKTO_WEBHOOK_TOKEN", "cakto_webhook_pandia_2025")
+CAKTO_TEST_MODE = os.getenv("CAKTO_TEST_MODE", "true").lower() == "true"
+CAKTO_API_URL = "https://api.cakto.com.br/public_api"
 
+# Valor da assinatura (R$ 1,00 em modo teste, R$ 140,00 em produção)
+from decimal import Decimal
+CAKTO_PLAN_VALUE = Decimal("1.00") if CAKTO_TEST_MODE else Decimal("140.00")
+CAKTO_PLAN_NAME = "Plano Mensal PanDia"
+CAKTO_DEFAULT_TRIAL_DAYS = 15

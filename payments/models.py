@@ -502,3 +502,274 @@ class MercadoPagoPayment(models.Model):
     
     def __str__(self):
         return f"MP #{self.id} - R${self.amount} - {self.get_status_display()}"
+
+
+# =============================================================================
+# Modelos Cakto (Novo sistema de assinaturas)
+# =============================================================================
+
+class CaktoSubscription(models.Model):
+    """
+    Assinatura via Cakto Gateway.
+    Gerencia o pagamento recorrente das padarias para usar o sistema.
+    """
+    STATUS_CHOICES = [
+        ('trial', 'Trial'),
+        ('active', 'Ativa'),
+        ('inactive', 'Inativa'),
+        ('cancelled', 'Cancelada'),
+    ]
+    
+    padaria = models.OneToOneField(
+        Padaria,
+        on_delete=models.CASCADE,
+        related_name="cakto_subscription",
+        verbose_name="Padaria"
+    )
+    
+    # Trial
+    trial_days = models.IntegerField(
+        default=15,
+        verbose_name="Dias de Trial",
+        help_text="Quantidade de dias de uso gratuito"
+    )
+    trial_start_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Início do Trial"
+    )
+    trial_end_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Fim do Trial"
+    )
+    
+    # Cakto IDs
+    cakto_offer_id = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="ID da Oferta Cakto"
+    )
+    cakto_order_id = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        verbose_name="ID do Pedido Cakto"
+    )
+    
+    # Cartão cadastrado
+    card_registered = models.BooleanField(
+        default=False,
+        verbose_name="Cartão Cadastrado"
+    )
+    card_last_4 = models.CharField(
+        max_length=4,
+        blank=True,
+        verbose_name="Últimos 4 dígitos"
+    )
+    card_brand = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="Bandeira"
+    )
+    
+    # Status e datas
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='trial',
+        verbose_name="Status"
+    )
+    next_billing_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Próxima Cobrança"
+    )
+    last_payment_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Último Pagamento"
+    )
+    
+    # Valor
+    plan_name = models.CharField(
+        max_length=100,
+        default="Plano Mensal",
+        verbose_name="Nome do Plano"
+    )
+    plan_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=140.00,
+        verbose_name="Valor do Plano (R$)"
+    )
+    
+    # Link de checkout (quando precisa cadastrar cartão)
+    checkout_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="URL de Checkout"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+    cancelled_at = models.DateTimeField(null=True, blank=True, verbose_name="Cancelado em")
+    
+    class Meta:
+        verbose_name = "Assinatura Cakto"
+        verbose_name_plural = "Assinaturas Cakto"
+        ordering = ["-created_at"]
+    
+    def __str__(self):
+        return f"Cakto - {self.padaria.name} ({self.get_status_display()})"
+    
+    @property
+    def is_trial(self):
+        """Verifica se está em período de trial."""
+        return self.status == 'trial'
+    
+    @property
+    def is_active(self):
+        """Verifica se a assinatura está ativa (trial ou paga)."""
+        return self.status in ['trial', 'active']
+    
+    def days_remaining(self):
+        """Retorna dias restantes até próxima cobrança ou fim do trial."""
+        from django.utils import timezone
+        today = timezone.now().date()
+        
+        if self.status == 'trial' and self.trial_end_date:
+            delta = self.trial_end_date - today
+            return max(0, delta.days)
+        elif self.status == 'active' and self.next_billing_date:
+            delta = self.next_billing_date - today
+            return max(0, delta.days)
+        return 0
+    
+    def should_show_card_urgency(self):
+        """Verifica se deve mostrar urgência para cadastrar cartão (3 dias ou menos)."""
+        if self.status == 'trial' and not self.card_registered:
+            return self.days_remaining() <= 3
+        return False
+    
+    def start_trial(self, trial_days=None):
+        """Inicia o período de trial."""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        if trial_days is not None:
+            self.trial_days = trial_days
+        
+        today = timezone.now().date()
+        self.trial_start_date = today
+        self.trial_end_date = today + timedelta(days=self.trial_days)
+        self.status = 'trial'
+        self.save()
+    
+    def activate(self):
+        """Ativa a assinatura após pagamento."""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        today = timezone.now().date()
+        self.status = 'active'
+        self.last_payment_date = today
+        self.next_billing_date = today + timedelta(days=30)
+        
+        # Ativar padaria
+        self.padaria.is_active = True
+        self.padaria.save()
+        self.save()
+    
+    def deactivate(self):
+        """Desativa a assinatura por falta de pagamento."""
+        self.status = 'inactive'
+        
+        # Desativar padaria
+        self.padaria.is_active = False
+        self.padaria.save()
+        self.save()
+    
+    def cancel(self):
+        """Cancela a assinatura."""
+        from django.utils import timezone
+        
+        self.status = 'cancelled'
+        self.cancelled_at = timezone.now()
+        
+        # Desativar padaria
+        self.padaria.is_active = False
+        self.padaria.save()
+        self.save()
+
+
+class CaktoPayment(models.Model):
+    """
+    Histórico de pagamentos Cakto.
+    Registra cada transação de cobrança.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pendente'),
+        ('approved', 'Aprovado'),
+        ('rejected', 'Rejeitado'),
+        ('refunded', 'Estornado'),
+    ]
+    
+    subscription = models.ForeignKey(
+        CaktoSubscription,
+        on_delete=models.CASCADE,
+        related_name="payments",
+        verbose_name="Assinatura"
+    )
+    
+    # Cakto ID
+    cakto_order_id = models.CharField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        verbose_name="ID do Pedido Cakto"
+    )
+    
+    # Informações do pagamento
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Valor (R$)"
+    )
+    billing_period_start = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Início do Período"
+    )
+    billing_period_end = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Fim do Período"
+    )
+    
+    # Status
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Status"
+    )
+    error_message = models.TextField(
+        blank=True,
+        verbose_name="Mensagem de Erro"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+    paid_at = models.DateTimeField(null=True, blank=True, verbose_name="Pago em")
+    
+    class Meta:
+        verbose_name = "Pagamento Cakto"
+        verbose_name_plural = "Pagamentos Cakto"
+        ordering = ["-created_at"]
+    
+    def __str__(self):
+        return f"Cakto #{self.id} - R${self.amount} - {self.get_status_display()}"
+

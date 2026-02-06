@@ -55,6 +55,15 @@
                             style="color: var(--gray-400);">Não informado</span>{% endif %}
                     </p>
                 </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-500); margin-bottom: 0.5rem;">Sócio
+                        Administrador</label>
+                    <p style="color: var(--gray-900); font-size: 1rem; margin: 0;">
+                        {% if organization.socio_nome %}{{ organization.socio_nome }}{% else %}<span
+                            style="color: var(--gray-400);">Não informado</span>{% endif %}
+                    </p>
+                </div>
                 <div style="grid-column: 1 / -1;">
                     <label
                         style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--gray-500); margin-bottom: 0.5rem;">Endereço</label>

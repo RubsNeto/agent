@@ -59,7 +59,7 @@
             </div>
         </div>
 
-        <!-- Próximo Vencimento -->
+        <!-- Próximo Vencimento / Fim do Trial -->
         <div class="subscription-card date-card">
             <div class="card-icon">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="28" height="28">
@@ -69,11 +69,27 @@
                 </svg>
             </div>
             <div class="card-content">
-                <span class="card-value">{% if subscription.next_due_date %}{{ subscription.next_due_date|date:"d/m/Y"
-                    }}{% else %}—{% endif %}</span>
+                <span class="card-value">
+                    {% if is_cakto and subscription.status == 'trial' %}
+                        {% if subscription.trial_end_date %}
+                            {{ subscription.trial_end_date|date:"d/m/Y" }}
+                            <small style="font-size: 0.7em; display: block; color: #f59e0b;">({{ days_remaining }} dias)</small>
+                        {% else %}
+                            —
+                        {% endif %}
+                    {% elif is_cakto and subscription.next_billing_date %}
+                        {{ subscription.next_billing_date|date:"d/m/Y" }}
+                    {% elif subscription.next_due_date %}
+                        {{ subscription.next_due_date|date:"d/m/Y" }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </span>
                 <span class="card-label">
-                    {% if subscription.status == 'active' and not subscription.asaas_subscription_id %}
+                    {% if is_cakto and subscription.status == 'trial' %}
                     Fim do Trial Gratuito
+                    {% elif subscription.status == 'active' %}
+                    Próxima Cobrança
                     {% else %}
                     Próximo Vencimento
                     {% endif %}
@@ -329,6 +345,68 @@
                     </svg>
                     Cancelar Assinatura
                 </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Ferramentas de Teste (Temporário - Todos usuários) -->
+    {% if is_cakto %}
+    <div class="actions-card" style="border: 2px dashed #f59e0b; background: #fffbeb;">
+        <div class="actions-header" style="background: #fef3c7;">
+            <h2>🧪 Ferramentas de Teste (Admin)</h2>
+        </div>
+        <div class="actions-body">
+            <p style="color: #92400e; margin-bottom: 1rem; font-size: 0.875rem;">
+                ⚠️ Estas opções são apenas para testes. Use com cuidado em produção.
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                <!-- Simular trial expirando em 3 dias -->
+                <form method="post" action="{% url 'payments:subscription_test_action' %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
+                    <input type="hidden" name="action" value="trial_3_days">
+                    <button type="submit" class="btn-small" style="background: #f59e0b; color: white;">
+                        ⏰ Trial → 3 dias
+                    </button>
+                </form>
+                
+                <!-- Simular trial expirado -->
+                <form method="post" action="{% url 'payments:subscription_test_action' %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
+                    <input type="hidden" name="action" value="trial_expired">
+                    <button type="submit" class="btn-small" style="background: #ef4444; color: white;">
+                        ❌ Expirar Trial
+                    </button>
+                </form>
+                
+                <!-- Simular pagamento aprovado -->
+                <form method="post" action="{% url 'payments:subscription_test_action' %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
+                    <input type="hidden" name="action" value="payment_approved">
+                    <button type="submit" class="btn-small" style="background: #10b981; color: white;">
+                        ✅ Simular Pagamento
+                    </button>
+                </form>
+                
+                <!-- Resetar para trial novo -->
+                <form method="post" action="{% url 'payments:subscription_test_action' %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="padaria_slug" value="{{ padaria.slug }}">
+                    <input type="hidden" name="action" value="reset_trial">
+                    <button type="submit" class="btn-small" style="background: #6366f1; color: white;">
+                        🔄 Resetar Trial
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Info atual -->
+            <div style="margin-top: 1rem; padding: 0.75rem; background: white; border-radius: 0.5rem; font-size: 0.875rem;">
+                <strong>Status atual:</strong> {{ subscription.status }} |
+                <strong>Trial end:</strong> {{ subscription.trial_end_date|default:"—" }} |
+                <strong>Dias restantes:</strong> {{ days_remaining }}
             </div>
         </div>
     </div>

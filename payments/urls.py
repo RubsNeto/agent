@@ -1,17 +1,23 @@
 from django.urls import path
 from . import views
 from . import api_views
+from .cakto_webhook import cakto_webhook
 
 app_name = 'payments'
 
 urlpatterns = [
-    # === Assinatura (SaaS -> Padaria) ===
+    # === Assinatura Cakto (Novo sistema) ===
     path('assinatura/', views.subscription_status, name='subscription_status'),
     path('assinatura/lista/', views.subscription_list, name='subscription_list'),
     path('assinatura/criar/', views.create_subscription, name='create_subscription'),
     path('assinatura/nova-padaria/', views.create_padaria_subscription, name='create_padaria_subscription'),
     path('assinatura/cancelar/', views.cancel_subscription, name='cancel_subscription'),
     path('assinatura/link/', views.subscription_payment_link, name='subscription_payment_link'),
+    path('assinatura/cadastrar-cartao/', views.cakto_register_card, name='cakto_register_card'),
+    path('assinatura/test-action/', views.subscription_test_action, name='subscription_test_action'),
+    
+    # === Webhook Cakto ===
+    path('cakto/webhook/', cakto_webhook, name='cakto_webhook'),
     
     # === Mercado Pago (Padaria -> Cliente) ===
     path('mercadopago/', views.mercadopago_config, name='mercadopago_config'),

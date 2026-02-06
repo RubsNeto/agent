@@ -207,6 +207,35 @@ def padaria_create(request):
                 name='Chave Principal'
             )
             
+            # Criar assinatura Cakto com trial
+            try:
+                from payments.models import CaktoSubscription
+                from django.conf import settings
+                
+                trial_days = int(request.POST.get('trial_days', settings.CAKTO_DEFAULT_TRIAL_DAYS))
+                trial_days = max(0, min(90, trial_days))  # Limitar entre 0-90 dias
+                
+                subscription = CaktoSubscription.objects.create(
+                    padaria=padaria,
+                    plan_name=settings.CAKTO_PLAN_NAME,
+                    plan_value=settings.CAKTO_PLAN_VALUE,
+                    trial_days=trial_days,
+                )
+                
+                # Iniciar trial automaticamente
+                if trial_days > 0:
+                    subscription.start_trial(trial_days)
+                else:
+                    # Sem trial, fica inativo até pagamento
+                    subscription.status = 'inactive'
+                    subscription.save()
+                    padaria.is_active = False
+                    padaria.save()
+                    
+            except Exception as e:
+                # Log erro mas não bloqueia a criação da padaria
+                print(f"Erro ao criar CaktoSubscription: {e}")
+            
             # Log
             AuditLog.log(
                 action='create',
@@ -1623,6 +1652,35 @@ def agente_padaria_create(request):
                 padaria=padaria,
                 name='Chave Principal'
             )
+            
+            # Criar assinatura Cakto com trial
+            try:
+                from payments.models import CaktoSubscription
+                from django.conf import settings
+                
+                trial_days = int(request.POST.get('trial_days', settings.CAKTO_DEFAULT_TRIAL_DAYS))
+                trial_days = max(0, min(90, trial_days))  # Limitar entre 0-90 dias
+                
+                subscription = CaktoSubscription.objects.create(
+                    padaria=padaria,
+                    plan_name=settings.CAKTO_PLAN_NAME,
+                    plan_value=settings.CAKTO_PLAN_VALUE,
+                    trial_days=trial_days,
+                )
+                
+                # Iniciar trial automaticamente
+                if trial_days > 0:
+                    subscription.start_trial(trial_days)
+                else:
+                    # Sem trial, fica inativo até pagamento
+                    subscription.status = 'inactive'
+                    subscription.save()
+                    padaria.is_active = False
+                    padaria.save()
+                    
+            except Exception as e:
+                # Log erro mas não bloqueia a criação da padaria
+                print(f"Erro ao criar CaktoSubscription: {e}")
             
             # Adicionar padaria ao agente credenciado
             agente.adicionar_padaria(padaria.id)

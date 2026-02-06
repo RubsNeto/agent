@@ -1,6 +1,6 @@
 """
-Views para integração de pagamentos - Asaas + Mercado Pago.
-Gerencia assinaturas do SaaS e configuração de MP por padaria.
+Views para integração de pagamentos - Cakto + Mercado Pago.
+Gerencia assinaturas do SaaS (Cakto) e configuração de MP por padaria.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -14,9 +14,14 @@ from django.core.mail import send_mail
 import os
 
 from organizations.models import Padaria, PadariaUser
-from .models import AsaasSubscription, AsaasPayment, MercadoPagoConfig, MercadoPagoPayment
+from .models import (
+    AsaasSubscription, AsaasPayment,  # Legado - mantido para compatibilidade
+    MercadoPagoConfig, MercadoPagoPayment,
+    CaktoSubscription, CaktoPayment,  # Novo sistema
+)
 from .services.asaas_service import asaas_service, AsaasAPIError
 from .services.mercadopago_service import MercadoPagoService, MercadoPagoAPIError, get_mp_service
+from .services.cakto_service import cakto_service
 
 
 def get_user_padaria(user, padaria_slug=None):
@@ -60,7 +65,7 @@ def subscription_status(request):
     """
     Página de status da assinatura da padaria.
     Mostra status atual, próximo vencimento, histórico de pagamentos.
-    Superusers podem ver lista de todas as padarias.
+    Usa CaktoSubscription como fonte primária (novo sistema).
     """
     padaria_slug = request.GET.get('padaria')
     padaria = get_user_padaria(request.user, padaria_slug)
@@ -70,10 +75,13 @@ def subscription_status(request):
         padarias = Padaria.objects.all().order_by('name')
         subscriptions_data = []
         for p in padarias:
-            subscription = AsaasSubscription.objects.filter(padaria=p).first()
+            # Tentar buscar Cakto primeiro, depois Asaas (legado)
+            cakto_sub = CaktoSubscription.objects.filter(padaria=p).first()
+            asaas_sub = AsaasSubscription.objects.filter(padaria=p).first() if not cakto_sub else None
             subscriptions_data.append({
                 'padaria': p,
-                'subscription': subscription,
+                'subscription': cakto_sub or asaas_sub,
+                'is_cakto': cakto_sub is not None,
             })
         return render(request, 'payments/subscription_list.html', {
             'subscriptions_data': subscriptions_data,
@@ -84,47 +92,49 @@ def subscription_status(request):
         messages.error(request, "Você precisa estar associado a uma padaria.")
         return redirect('ui:dashboard')
     
-    # Buscar ou criar assinatura
-    subscription, created = AsaasSubscription.objects.get_or_create(
-        padaria=padaria,
-        defaults={
-            'plan_name': 'Plano Único',
-            'plan_value': settings.ASAAS_SUBSCRIPTION_VALUE,
-            'status': 'pending',
-        }
-    )
+    # Buscar assinatura Cakto (novo sistema)
+    cakto_subscription = CaktoSubscription.objects.filter(padaria=padaria).first()
     
-    # Processar ação de sincronização manual
-    if request.method == 'POST' and request.POST.get('action') == 'sync_payments':
-        if subscription.asaas_subscription_id:
-            try:
-                sync_subscription_status(subscription)
-                messages.success(request, "Pagamentos sincronizados com sucesso!")
-            except Exception as e:
-                messages.error(request, f"Erro ao sincronizar: {str(e)}")
-        else:
-            messages.warning(request, "Assinatura ainda não foi criada no Asaas.")
-        return redirect('payments:subscription_status')
+    # Se não tem Cakto, verificar Asaas legado
+    asaas_subscription = None
+    if not cakto_subscription:
+        asaas_subscription = AsaasSubscription.objects.filter(padaria=padaria).first()
     
-    # Sincronizar status com o Asaas (verifica se pagamento foi confirmado)
-    if subscription.asaas_subscription_id and subscription.status != 'active':
-        try:
-            sync_subscription_status(subscription)
-        except Exception as e:
-            print(f"DEBUG: Erro ao sincronizar status: {e}")
+    # Se não tem nenhuma, criar Cakto nova
+    if not cakto_subscription and not asaas_subscription:
+        cakto_subscription = CaktoSubscription.objects.create(
+            padaria=padaria,
+            plan_name=settings.CAKTO_PLAN_NAME,
+            plan_value=settings.CAKTO_PLAN_VALUE,
+            trial_days=settings.CAKTO_DEFAULT_TRIAL_DAYS,
+        )
+        cakto_subscription.start_trial(settings.CAKTO_DEFAULT_TRIAL_DAYS)
     
-    # Corrigir data de vencimento se estiver incorreta (mais de 35 dias no futuro)
-    if subscription.status == 'active' and subscription.next_due_date:
-        days_until_due = (subscription.next_due_date - timezone.now().date()).days
-        if days_until_due > 35:  # Se está mais de 35 dias no futuro, está errado
-            print(f"DEBUG: Corrigindo data de vencimento de {subscription.next_due_date} para 30 dias")
-            subscription.next_due_date = timezone.now().date() + timezone.timedelta(days=30)
-            subscription.save(update_fields=['next_due_date', 'updated_at'])
+    # Usar Cakto como fonte primária
+    subscription = cakto_subscription
+    is_cakto = True
+    
+    if not cakto_subscription and asaas_subscription:
+        # Fallback para Asaas legado (padarias antigas)
+        subscription = asaas_subscription
+        is_cakto = False
     
     # Histórico de pagamentos
-    payments = AsaasPayment.objects.filter(
-        subscription=subscription
-    ).order_by('-due_date')[:10]
+    if is_cakto and subscription:
+        payments = CaktoPayment.objects.filter(
+            subscription=subscription
+        ).order_by('-created_at')[:10]
+    elif not is_cakto and subscription:
+        payments = AsaasPayment.objects.filter(
+            subscription=subscription
+        ).order_by('-due_date')[:10]
+    else:
+        payments = []
+    
+    # Calcular dias restantes
+    days_remaining = 0
+    if subscription and hasattr(subscription, 'days_remaining'):
+        days_remaining = subscription.days_remaining()
     
     # Verificar permissões
     can_edit = is_owner_or_superuser(request.user, padaria)
@@ -137,10 +147,12 @@ def subscription_status(request):
         'padaria': padaria,
         'subscription': subscription,
         'payments': payments,
-        'subscription_value': settings.ASAAS_SUBSCRIPTION_VALUE,
+        'subscription_value': settings.CAKTO_PLAN_VALUE if is_cakto else getattr(settings, 'ASAAS_SUBSCRIPTION_VALUE', 140),
         'can_edit': can_edit,
         'can_cancel': can_cancel,
         'is_superuser': request.user.is_superuser,
+        'is_cakto': is_cakto,
+        'days_remaining': days_remaining,
     }
     
     return render(request, 'payments/subscription_status.html', context)
@@ -586,9 +598,171 @@ def subscription_payment_link(request):
         return JsonResponse({'error': e.message}, status=500)
 
 
+@login_required
+@require_http_methods(["POST"])
+def cakto_register_card(request):
+    """
+    Cadastra cartão para débito automático via Cakto.
+    Cria oferta de assinatura e redireciona para checkout.
+    """
+    padaria_slug = request.POST.get('padaria_slug') or request.GET.get('padaria')
+    padaria = get_user_padaria(request.user, padaria_slug)
+    
+    if not padaria:
+        messages.error(request, "Você precisa estar associado a uma padaria.")
+        return redirect('ui:dashboard')
+    
+    if not is_owner_or_superuser(request.user, padaria):
+        messages.error(request, "Você não tem permissão para gerenciar assinatura.")
+        return redirect('payments:subscription_status')
+    
+    try:
+        # Buscar assinatura Cakto
+        subscription = CaktoSubscription.objects.get(padaria=padaria)
+        
+        # Se já tem cartão cadastrado
+        if subscription.card_registered:
+            messages.info(request, "Cartão já cadastrado!")
+            return redirect('payments:subscription_status')
+        
+        # Se já tem link de checkout, usar
+        if subscription.checkout_url:
+            return redirect(subscription.checkout_url)
+        
+        # Criar oferta na Cakto
+        email = padaria.responsavel_email or padaria.email or padaria.owner.email
+        name = padaria.responsavel_nome or padaria.name
+        
+        result = cakto_service.create_subscription_offer(
+            padaria=padaria,
+            customer_email=email,
+            customer_name=name
+        )
+        
+        if result.get("success"):
+            # Salvar IDs e URL
+            subscription.cakto_offer_id = result.get("offer_id", "")
+            subscription.checkout_url = result.get("checkout_url", "")
+            subscription.save()
+            
+            # Redirecionar para checkout
+            checkout_url = subscription.checkout_url
+            if checkout_url:
+                return redirect(checkout_url)
+            else:
+                messages.error(request, "URL de checkout não foi gerada. Tente novamente.")
+        else:
+            error_msg = result.get("error", "Erro desconhecido")
+            messages.error(request, f"Erro ao criar oferta: {error_msg}")
+            
+    except CaktoSubscription.DoesNotExist:
+        messages.error(request, "Assinatura não encontrada. Entre em contato com o suporte.")
+    except Exception as e:
+        messages.error(request, f"Erro inesperado: {str(e)}")
+    
+    if padaria_slug:
+        return redirect(f"/payments/assinatura/?padaria={padaria_slug}")
+    return redirect('payments:subscription_status')
+
+
+@login_required
+@require_http_methods(["POST"])
+def subscription_test_action(request):
+    """
+    Ações de teste para simular cenários de assinatura.
+    Temporário: disponível para todos os usuários para testes.
+    """
+    # Temporariamente removido para testes
+    # if not request.user.is_superuser:
+    #     messages.error(request, "Acesso negado.")
+    #     return redirect('payments:subscription_status')
+    
+    padaria_slug = request.POST.get('padaria_slug')
+    action = request.POST.get('action')
+    
+    padaria = get_user_padaria(request.user, padaria_slug)
+    if not padaria:
+        messages.error(request, "Padaria não encontrada.")
+        return redirect('payments:subscription_status')
+    
+    try:
+        subscription = CaktoSubscription.objects.get(padaria=padaria)
+        today = timezone.now().date()
+        
+        if action == 'trial_3_days':
+            # Simular trial expirando em 3 dias
+            subscription.status = 'trial'
+            subscription.trial_end_date = today + timezone.timedelta(days=3)
+            subscription.save()
+            padaria.is_active = True
+            padaria.save()
+            messages.success(request, f"Trial configurado para expirar em 3 dias ({subscription.trial_end_date}).")
+            
+        elif action == 'trial_expired':
+            # Simular trial expirado (ontem)
+            subscription.status = 'inactive'
+            subscription.trial_end_date = today - timezone.timedelta(days=1)
+            subscription.save()
+            padaria.is_active = False
+            padaria.save()
+            messages.warning(request, "Trial expirado! Padaria desativada.")
+            
+        elif action == 'payment_approved':
+            # Simular pagamento aprovado
+            subscription.status = 'active'
+            subscription.card_registered = True
+            subscription.card_last_4 = '4242'
+            subscription.card_brand = 'Visa'
+            subscription.last_payment_date = today
+            subscription.next_billing_date = today + timezone.timedelta(days=30)
+            subscription.save()
+            padaria.is_active = True
+            padaria.save()
+            
+            # Criar pagamento de teste
+            CaktoPayment.objects.create(
+                subscription=subscription,
+                cakto_order_id=f"test_{timezone.now().timestamp()}",
+                amount=subscription.plan_value,
+                status='approved',
+                paid_at=timezone.now(),
+                billing_period_start=today,
+                billing_period_end=today + timezone.timedelta(days=30),
+            )
+            messages.success(request, "Pagamento simulado! Assinatura ativada.")
+            
+        elif action == 'reset_trial':
+            # Resetar para trial novo de 15 dias
+            subscription.status = 'trial'
+            subscription.trial_days = settings.CAKTO_DEFAULT_TRIAL_DAYS
+            subscription.trial_end_date = today + timezone.timedelta(days=settings.CAKTO_DEFAULT_TRIAL_DAYS)
+            subscription.card_registered = False
+            subscription.card_last_4 = ''
+            subscription.card_brand = ''
+            subscription.next_billing_date = None
+            subscription.last_payment_date = None
+            subscription.save()
+            padaria.is_active = True
+            padaria.save()
+            messages.success(request, f"Trial resetado para {settings.CAKTO_DEFAULT_TRIAL_DAYS} dias.")
+            
+        else:
+            messages.error(request, f"Ação desconhecida: {action}")
+            
+    except CaktoSubscription.DoesNotExist:
+        messages.error(request, "Assinatura Cakto não encontrada.")
+    except Exception as e:
+        messages.error(request, f"Erro: {str(e)}")
+    
+    if padaria_slug:
+        return redirect(f"/payments/assinatura/?padaria={padaria_slug}")
+    return redirect('payments:subscription_status')
+
+
 # =============================================================================
 # Views de Mercado Pago (Padaria -> Cliente)
 # =============================================================================
+
 
 @login_required
 def mercadopago_config(request):
