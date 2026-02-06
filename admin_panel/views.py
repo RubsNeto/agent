@@ -163,42 +163,6 @@ def padaria_create(request):
         if owner_username and User.objects.filter(username=owner_username).exists():
             errors.append('Ja existe um usuario com este nome de usuario.')
         
-        # Validação de UF: CNPJ da padaria deve ser da mesma UF do CEP do admin
-        admin_cep = None
-        if hasattr(request.user, 'profile') and request.user.profile.cep:
-            admin_cep = request.user.profile.cep
-        
-        if cnpj and admin_cep:
-            from core.uf_validator import validate_same_uf
-            
-            try:
-                uf_result = validate_same_uf(cnpj, admin_cep)
-                
-                if uf_result.get('error'):
-                    # Erro na validação (API indisponível, formato inválido, etc)
-                    messages.warning(
-                        request, 
-                        f"Aviso: Não foi possível validar a região do CNPJ. {uf_result['error']}"
-                    )
-                elif not uf_result.get('valid'):
-                    # UFs diferentes - bloquear criação
-                    errors.append(
-                        f"O CNPJ pertence ao estado {uf_result['cnpj_uf']}, "
-                        f"mas sua região de atuação é {uf_result['cep_uf']}. "
-                        f"Você só pode criar padarias na sua região."
-                    )
-            except Exception as e:
-                # Em caso de erro inesperado, apenas avisa mas não bloqueia
-                messages.warning(request, f"Aviso: Erro ao validar região do CNPJ: {str(e)}")
-        elif cnpj and not admin_cep:
-            # Admin não tem CEP cadastrado - apenas avisa
-            messages.warning(
-                request, 
-                "Aviso: Seu CEP não está cadastrado. "
-                "A validação de região foi ignorada. "
-                "Recomendamos que atualize seu perfil."
-            )
-        
         if errors:
             for error in errors:
                 messages.error(request, error)
@@ -649,11 +613,12 @@ def user_create(request):
         )
         
         # Atribuir papel e CEP (para admins)
-        if hasattr(user, 'profile'):
-            user.profile.role = role
-            if role == 'admin' and cep:
-                user.profile.cep = cep
-            user.profile.save()
+        from accounts.models import UserProfile
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.role = role
+        if role == 'admin' and cep:
+            profile.cep = cep
+        profile.save()
         
         AuditLog.log(
             action='create',
@@ -1272,9 +1237,11 @@ def agente_credenciado_create(request):
             )
             
             # Atualizar perfil para agente_credenciado
-            user.profile.role = 'agente_credenciado'
-            user.profile.phone = telefone
-            user.profile.save()
+            from accounts.models import UserProfile
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            profile.role = 'agente_credenciado'
+            profile.phone = telefone
+            profile.save()
             
             # Criar agente credenciado
             agente = AgenteCredenciado.objects.create(
@@ -1377,9 +1344,11 @@ def agente_credenciado_edit(request, pk):
         agente.user.email = agente.email
         agente.user.save()
         
-        # Atualizar perfil
-        agente.user.profile.phone = agente.telefone
-        agente.user.profile.save()
+        # Atualizar telefone no profile
+        from accounts.models import UserProfile
+        profile, _ = UserProfile.objects.get_or_create(user=agente.user)
+        profile.phone = agente.telefone
+        profile.save()
         
         agente.save()
         
@@ -1422,8 +1391,12 @@ def agente_credenciado_delete(request, pk):
         
         # Deletar agente (o usuário será mantido, mas sem role de agente)
         agente.delete()
-        user.profile.role = 'user'
-        user.profile.save()
+        
+        # Limpar role do usuário
+        from accounts.models import UserProfile
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.role = 'user'
+        profile.save()
         
         messages.success(request, f"Agente '{nome}' removido com sucesso!")
         return redirect('admin_panel:agentes_credenciados_list')
