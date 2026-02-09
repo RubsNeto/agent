@@ -15,65 +15,90 @@ from django.conf import settings
 from organizations.models import Padaria
 from payments.models import CaktoSubscription, CaktoPayment
 
+def run_verification():
     import argparse
     
     parser = argparse.ArgumentParser(description='Verificação de Assinatura via Webhook')
     parser.add_argument('--url', default="http://127.0.0.1:8000/payments/cakto/webhook/", help='URL do Webhook')
     parser.add_argument('--token', default=settings.CAKTO_WEBHOOK_TOKEN, help='Token do Webhook (X-Webhook-Token)')
-    parser.add_argument('--padaria-slug', type=str, help='Slug da padaria para teste (opcional, usa a primeira se não informado)')
+    parser.add_argument('--padaria-slug', type=str, help='Slug da padaria para teste (busca no banco local)')
+    parser.add_argument('--padaria-id', type=int, help='ID da padaria para teste (ignora banco local e usa este ID no payload)')
     args = parser.parse_args()
 
     print(f"=== Iniciando Verificação de Fluxo de Assinatura via Webhook ===\n")
     print(f"   Alvo: {args.url}")
 
-    # 1. Obter uma padaria de teste (ou criar)
-    if args.padaria_slug:
-        padaria = Padaria.objects.filter(slug=args.padaria_slug).first()
+    # 1. Definir Padaria Alvo
+    padaria_local = None
+    target_padaria_id = None
+    target_padaria_slug = "padaria-teste"
+    
+    if args.padaria_id:
+        # Modo Manual (Ideal para produção)
+        target_padaria_id = args.padaria_id
+        print(f"1. Padaria Alvo (ID Manual): {target_padaria_id}")
+        
+        # Tenta achar local só para mostrar o nome
+        padaria_local = Padaria.objects.filter(id=target_padaria_id).first()
+        if padaria_local:
+            print(f"   (Encontrada localmente: {padaria_local.name})")
+            target_padaria_slug = padaria_local.slug
+        else:
+            print(f"   (Não encontrada localmente - usando dados mock para payload)")
+            
     else:
-        padaria = Padaria.objects.first()
-    
-    if not padaria:
-        print("ERRO: Nenhuma padaria encontrada no banco de dados.")
-        return
+        # Modo Automático (Baseado no banco local)
+        if args.padaria_slug:
+            padaria_local = Padaria.objects.filter(slug=args.padaria_slug).first()
+        else:
+            padaria_local = Padaria.objects.first()
+        
+        if not padaria_local:
+            print("ERRO: Nenhuma padaria encontrada no banco de dados local.")
+            return
 
-    print(f"1. Padaria Alvo: {padaria.name} (ID: {padaria.id})")
+        target_padaria_id = padaria_local.id
+        target_padaria_slug = padaria_local.slug
+        print(f"1. Padaria Alvo (Local): {padaria_local.name} (ID: {target_padaria_id})")
 
-    # 2. Garantir que exite assinatura Cakto
-    subscription, created = CaktoSubscription.objects.get_or_create(padaria=padaria)
-    
-    # Resetar status para teste (se já estiver ativa)
-    # NOTA: Em produção, cuidado ao resetar status!
-    original_status = subscription.status
-    if "127.0.0.1" in args.url or "localhost" in args.url:
-        if subscription.status == 'active':
-            print("   (Teste Local: Resetando para 'trial' para teste de ativação)")
-            subscription.status = 'trial'
+    # 2. Configuração Local (Só funciona se tiver padaria local)
+    subscription = None
+    if padaria_local:
+        subscription, created = CaktoSubscription.objects.get_or_create(padaria=padaria_local)
+        
+        # Resetar status para teste (se já estiver ativa e for localhost)
+        if "127.0.0.1" in args.url or "localhost" in args.url:
+            original_status = subscription.status
+            if subscription.status == 'active':
+                print("   (Teste Local: Resetando para 'trial' para teste de ativação)")
+                subscription.status = 'trial'
+                subscription.save()
+            print(f"2. Status da assinatura local antes do teste: {subscription.status}")
+        else:
+            print(f"2. (Teste Remoto - ignorando estado local)")
+            
+            # Atualizar ID do pedido localmente para o teste fazer sentido
+            order_id = f"test_order_{random.randint(1000, 9999)}"
+            subscription.cakto_order_id = order_id 
             subscription.save()
     else:
-        print(f"   (Teste Remoto: Mantendo status atual '{subscription.status}')")
-    
-    print(f"2. Status da assinatura antes do teste: {subscription.status}")
+         order_id = f"test_order_{random.randint(1000, 9999)}"
 
     # 3. Preparar Payload do Webhook
-    # Simular dados que viriam da Cakto
-    order_id = f"test_order_{random.randint(1000, 9999)}"
-    
-    # IMPORTANTE: Para teste remoto funcionar, o ID do pedido deve existir no banco remoto?
-    # Não necessariamente para o webhook, mas para a padaria ser identificada.
-    # O webhook usa metadata[padaria_id] se disponível.
-    
-    # Atualizar ID do pedido localmente para o teste fazer sentido
-    subscription.cakto_order_id = order_id # Associar ID para o webhook encontrar
-    subscription.save()
 
     payload = {
         "event": "purchase_approved",
         "order_id": order_id,
         "amount": "140.00",
         "status": "approved",
+    payload = {
+        "event": "purchase_approved",
+        "order_id": order_id,
+        "amount": "140.00",
+        "status": "approved",
         "metadata": {
-            "padaria_id": padaria.id,
-            "padaria_slug": padaria.slug
+            "padaria_id": target_padaria_id,
+            "padaria_slug": target_padaria_slug
         },
         "payment_method": {
             "type": "credit_card",
@@ -119,24 +144,30 @@ from payments.models import CaktoSubscription, CaktoPayment
     # OU o script apenas envia o webhook e pede para verificar no painel admin.
     
     if "127.0.0.1" in args.url or "localhost" in args.url:
-        # Recarregar assinatura
-        subscription.refresh_from_db()
-        
-        # Verificar status
-        if subscription.status == 'active':
-            print(f"   ✅ SUCESSO: Status da assinatura atualizado para 'active'")
-        else:
-            print(f"   ❌ FALHA: Status da assinatura é '{subscription.status}' (esperado: 'active')")
+        if padaria_local:
+            # Recarregar assinatura
+            subscription.refresh_from_db()
+            
+            # Verificar status
+            if subscription.status == 'active':
+                print(f"   ✅ SUCESSO: Status da assinatura atualizado para 'active'")
+            else:
+                print(f"   ❌ FALHA: Status da assinatura é '{subscription.status}' (esperado: 'active')")
 
-        # Verificar pagamento criado
-        payment = CaktoPayment.objects.filter(cakto_order_id=order_id).first()
-        if payment:
-            print(f"   ✅ SUCESSO: Pagamento registrado (ID: {payment.id}, Status: {payment.status})")
+            # Verificar pagamento criado
+            payment = CaktoPayment.objects.filter(cakto_order_id=order_id).first()
+            if payment:
+                print(f"   ✅ SUCESSO: Pagamento registrado (ID: {payment.id}, Status: {payment.status})")
+            else:
+                print(f"   ❌ FALHA: Nenhum pagamento encontrado com order_id '{order_id}'")
         else:
-            print(f"   ❌ FALHA: Nenhum pagamento encontrado com order_id '{order_id}'")
+            print("   (Teste sem padaria local: impossível verificar banco de dados localmente)")
     else:
         print("   ⚠️ Teste remoto: Verifique no painel admin da produção se a assinatura foi ativada.")
-        print(f"   Verifique a padaria: {padaria.name} (Slug: {padaria.slug})")
+        if padaria_local:
+            print(f"   Verifique a padaria: {padaria_local.name} (Slug: {padaria_local.slug})")
+        else:
+             print(f"   Verifique a padaria com ID: {target_padaria_id}")
 
 if __name__ == "__main__":
     run_verification()
