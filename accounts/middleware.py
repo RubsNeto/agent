@@ -19,6 +19,7 @@ class LoginRequiredMiddleware:
             '/media/',  # Arquivos de mídia (imagens de produtos, promoções, etc.)
             '/api/',    # API usa autenticação via API Key
             '/payments/api/',  # API de pagamentos para n8n/WhatsApp
+            '/payments/cakto/webhook/',  # Webhook Cakto (Pagamentos)
             '/webhooks/',  # Webhooks externos (Mercado Pago, etc.)
             '/accounts/password-reset/',  # Recuperação de senha - formulário
             '/accounts/password-reset-confirm/',  # Recuperação de senha - criar nova senha
