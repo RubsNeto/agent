@@ -219,28 +219,17 @@
     {% if recent_payments %}
     <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--gray-700);">
         <h4 style="font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--gray-300);">Últimos Pagamentos</h4>
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Valor</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for payment in recent_payments %}
-                <tr>
-                    <td>{{ payment.created_at|date:"d/m/Y" }}</td>
-                    <td>R$ {{ payment.amount }}</td>
-                    <td>
-                        <span class="badge {% if payment.status == 'approved' %}badge-success{% elif payment.status == 'pending' %}badge-warning{% else %}badge-danger{% endif %}">
-                            {{ payment.get_status_display }}
-                        </span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div style="display: grid; gap: 0.5rem;">
+            {% for payment in recent_payments %}
+            <div style="display: grid; grid-template-columns: 110px 1fr auto; gap: 1rem; align-items: center; padding: 0.75rem; background: var(--gray-800); border-radius: 0.5rem; border-left: 3px solid {% if payment.status == 'approved' %}#10b981{% elif payment.status == 'pending' %}#f59e0b{% else %}#ef4444{% endif %};">
+                <span style="font-weight: 500;">{{ payment.created_at|date:"d/m/Y" }}</span>
+                <span style="font-size: 1.1rem; font-weight: 600; color: var(--gray-100);">R$ {{ payment.amount }}</span>
+                <span class="badge {% if payment.status == 'approved' %}badge-success{% elif payment.status == 'pending' %}badge-warning{% else %}badge-danger{% endif %}">
+                    {{ payment.get_status_display }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
     </div>
     {% endif %}
     

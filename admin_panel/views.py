@@ -1965,6 +1965,10 @@ def confirm_subscription_payment(request, subscription_id):
         subscription.next_billing_date = date.today() + relativedelta(months=1)
         subscription.save()
         
+        # Ativar a padaria
+        padaria.is_active = True
+        padaria.save()
+        
         # Registrar pagamento manual
         CaktoPayment.objects.create(
             subscription=subscription,
@@ -2020,6 +2024,10 @@ def pause_subscription(request, subscription_id):
         subscription.status = 'inactive'
         subscription.save()
         
+        # Desativar a padaria
+        padaria.is_active = False
+        padaria.save()
+        
         AuditLog.objects.create(
             padaria=padaria,
             actor=request.user,
@@ -2073,6 +2081,10 @@ def cancel_admin_subscription(request, subscription_id):
         subscription.status = 'cancelled'
         subscription.save()
         
+        # Desativar a padaria
+        padaria.is_active = False
+        padaria.save()
+        
         AuditLog.objects.create(
             padaria=padaria,
             actor=request.user,
@@ -2117,6 +2129,10 @@ def reactivate_subscription(request, subscription_id):
         subscription.status = 'active'
         subscription.next_billing_date = date.today() + relativedelta(months=1)
         subscription.save()
+        
+        # Ativar a padaria
+        padaria.is_active = True
+        padaria.save()
         
         AuditLog.objects.create(
             padaria=padaria,
