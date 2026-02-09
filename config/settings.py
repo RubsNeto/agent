@@ -238,20 +238,17 @@ CAKTO_DEFAULT_TRIAL_DAYS = 15
 CAKTO_OFFER_ID = os.getenv("CAKTO_OFFER_ID", "")
 
 # Email Settings
-# Usa SMTP real se EMAIL_HOST_PASSWORD estiver configurado, senão imprime no console
-if os.getenv("EMAIL_HOST_PASSWORD"):
-    # Backend customizado que contorna problemas de SSL no Windows
-    EMAIL_BACKEND = "core.email_backend.CustomEmailBackend"
-    EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.sendgrid.net")
-    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
-    EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "True").lower() == "true"
-    EMAIL_USE_TLS = False  # SSL e TLS são mutuamente exclusivos
-    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "apikey")
-    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-    EMAIL_TIMEOUT = 30  # Timeout de 30 segundos
-else:
-    # Sem configuração de email, imprime no console
+if DEBUG:
+    # Em desenvolvimento, imprime emails no console
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    # Em produção, usa SMTP real
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@pandia.com.br")
 EMAIL_SUBJECT_PREFIX = "[PanDia] "
