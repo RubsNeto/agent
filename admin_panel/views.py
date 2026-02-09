@@ -289,12 +289,25 @@ def padaria_detail(request, slug):
     # Logs recentes
     logs = AuditLog.objects.filter(padaria=padaria).order_by('-created_at')[:10]
     
+    # Assinatura Cakto
+    subscription = None
+    recent_payments = []
+    try:
+        from payments.models import CaktoSubscription
+        subscription = CaktoSubscription.objects.filter(padaria=padaria).first()
+        if subscription:
+            recent_payments = subscription.payments.order_by('-created_at')[:5]
+    except Exception:
+        pass
+    
     context = {
         'padaria': padaria,
         'agent': agent,
         'agente_criador': agente_criador,
         'api_keys': api_keys,
         'logs': logs,
+        'subscription': subscription,
+        'recent_payments': recent_payments,
     }
     return render(request, 'admin_panel/padaria_detail.html', context)
 
@@ -1758,9 +1771,22 @@ def agente_padaria_detail(request, pk):
     
     padaria = get_object_or_404(Padaria, pk=pk)
     
+    # Assinatura Cakto
+    subscription = None
+    recent_payments = []
+    try:
+        from payments.models import CaktoSubscription
+        subscription = CaktoSubscription.objects.filter(padaria=padaria).first()
+        if subscription:
+            recent_payments = subscription.payments.order_by('-created_at')[:5]
+    except Exception:
+        pass
+    
     context = {
         'padaria': padaria,
         'agente': agente,
+        'subscription': subscription,
+        'recent_payments': recent_payments,
     }
     
     return render(request, 'admin_panel/agente/padaria_detail.html', context)
@@ -1904,3 +1930,208 @@ def subscriptions_list(request):
     
     return render(request, 'admin_panel/subscriptions_list.html', context)
 
+
+# =============================================================================
+# Ações de Assinatura (Admin e Agente Credenciado)
+# =============================================================================
+
+@login_required
+@require_admin_or_agente
+@require_http_methods(["POST"])
+def confirm_subscription_payment(request, subscription_id):
+    """
+    Confirmar pagamento manualmente (ativar assinatura).
+    Apenas para admin do sistema ou agente credenciado com acesso à padaria.
+    """
+    from payments.models import CaktoSubscription, CaktoPayment
+    from datetime import date
+    from dateutil.relativedelta import relativedelta
+    
+    subscription = get_object_or_404(CaktoSubscription, pk=subscription_id)
+    padaria = subscription.padaria
+    
+    # Verificar permissão
+    agente = get_agente_credenciado(request)
+    if agente:
+        # Agente credenciado só pode confirmar das suas padarias
+        if padaria.id not in agente.padarias_cadastradas_ids:
+            messages.error(request, "Você não tem permissão para esta ação.")
+            return redirect('admin_panel:agente_padaria_detail', pk=padaria.id)
+    
+    try:
+        # Atualizar status da assinatura para ativa
+        subscription.status = 'active'
+        subscription.last_payment_date = date.today()
+        subscription.next_billing_date = date.today() + relativedelta(months=1)
+        subscription.save()
+        
+        # Registrar pagamento manual
+        CaktoPayment.objects.create(
+            subscription=subscription,
+            cakto_order_id=f"MANUAL-{subscription.id}-{date.today().isoformat()}",
+            amount=subscription.plan_value,
+            status='approved',
+            billing_period_start=date.today(),
+            billing_period_end=date.today() + relativedelta(months=1),
+            paid_at=date.today()
+        )
+        
+        # Log de auditoria
+        AuditLog.objects.create(
+            padaria=padaria,
+            actor=request.user,
+            action='confirm_payment',
+            entity='CaktoSubscription',
+            entity_id=subscription.id,
+            details=f"Pagamento confirmado manualmente por {request.user.username}"
+        )
+        
+        messages.success(request, f"Pagamento confirmado! Assinatura de {padaria.name} ativada com sucesso.")
+        
+    except Exception as e:
+        messages.error(request, f"Erro ao confirmar pagamento: {str(e)}")
+    
+    # Redirecionar para página apropriada
+    if agente:
+        return redirect('admin_panel:agente_padaria_detail', pk=padaria.id)
+    return redirect('admin_panel:padaria_detail', slug=padaria.slug)
+
+
+@login_required
+@require_admin_or_agente
+@require_http_methods(["POST"])
+def pause_subscription(request, subscription_id):
+    """
+    Pausar assinatura (status = inactive).
+    """
+    from payments.models import CaktoSubscription
+    
+    subscription = get_object_or_404(CaktoSubscription, pk=subscription_id)
+    padaria = subscription.padaria
+    
+    # Verificar permissão
+    agente = get_agente_credenciado(request)
+    if agente:
+        if padaria.id not in agente.padarias_cadastradas_ids:
+            messages.error(request, "Você não tem permissão para esta ação.")
+            return redirect('admin_panel:agente_padaria_detail', pk=padaria.id)
+    
+    try:
+        subscription.status = 'inactive'
+        subscription.save()
+        
+        AuditLog.objects.create(
+            padaria=padaria,
+            actor=request.user,
+            action='pause_subscription',
+            entity='CaktoSubscription',
+            entity_id=subscription.id,
+            details=f"Assinatura pausada por {request.user.username}"
+        )
+        
+        messages.success(request, f"Assinatura de {padaria.name} pausada.")
+        
+    except Exception as e:
+        messages.error(request, f"Erro ao pausar assinatura: {str(e)}")
+    
+    if agente:
+        return redirect('admin_panel:agente_padaria_detail', pk=padaria.id)
+    return redirect('admin_panel:padaria_detail', slug=padaria.slug)
+
+
+@login_required
+@require_admin_or_agente
+@require_http_methods(["POST"])
+def cancel_admin_subscription(request, subscription_id):
+    """
+    Cancelar assinatura definitivamente (status = cancelled).
+    """
+    from payments.models import CaktoSubscription
+    from payments.services.cakto_service import CaktoService
+    
+    subscription = get_object_or_404(CaktoSubscription, pk=subscription_id)
+    padaria = subscription.padaria
+    
+    # Verificar permissão
+    agente = get_agente_credenciado(request)
+    if agente:
+        if padaria.id not in agente.padarias_cadastradas_ids:
+            messages.error(request, "Você não tem permissão para esta ação.")
+            return redirect('admin_panel:agente_padaria_detail', pk=padaria.id)
+    
+    try:
+        # Tentar cancelar na Cakto se tiver ID de assinatura
+        if subscription.cakto_subscription_id:
+            try:
+                cakto_service = CaktoService()
+                cakto_service.cancel_subscription(subscription.cakto_subscription_id)
+            except Exception as e:
+                # Logar erro mas continuar com cancelamento local
+                import logging
+                logging.warning(f"Erro ao cancelar na Cakto: {e}")
+        
+        subscription.status = 'cancelled'
+        subscription.save()
+        
+        AuditLog.objects.create(
+            padaria=padaria,
+            actor=request.user,
+            action='cancel_subscription',
+            entity='CaktoSubscription',
+            entity_id=subscription.id,
+            details=f"Assinatura cancelada por {request.user.username}"
+        )
+        
+        messages.success(request, f"Assinatura de {padaria.name} cancelada.")
+        
+    except Exception as e:
+        messages.error(request, f"Erro ao cancelar assinatura: {str(e)}")
+    
+    if agente:
+        return redirect('admin_panel:agente_padaria_detail', pk=padaria.id)
+    return redirect('admin_panel:padaria_detail', slug=padaria.slug)
+
+
+@login_required
+@require_admin_or_agente
+@require_http_methods(["POST"])
+def reactivate_subscription(request, subscription_id):
+    """
+    Reativar assinatura pausada ou cancelada.
+    """
+    from payments.models import CaktoSubscription
+    from datetime import date
+    from dateutil.relativedelta import relativedelta
+    
+    subscription = get_object_or_404(CaktoSubscription, pk=subscription_id)
+    padaria = subscription.padaria
+    
+    # Verificar permissão
+    agente = get_agente_credenciado(request)
+    if agente:
+        if padaria.id not in agente.padarias_cadastradas_ids:
+            messages.error(request, "Você não tem permissão para esta ação.")
+            return redirect('admin_panel:agente_padaria_detail', pk=padaria.id)
+    
+    try:
+        subscription.status = 'active'
+        subscription.next_billing_date = date.today() + relativedelta(months=1)
+        subscription.save()
+        
+        AuditLog.objects.create(
+            padaria=padaria,
+            actor=request.user,
+            action='reactivate_subscription',
+            entity='CaktoSubscription',
+            entity_id=subscription.id,
+            details=f"Assinatura reativada por {request.user.username}"
+        )
+        
+        messages.success(request, f"Assinatura de {padaria.name} reativada com sucesso!")
+        
+    except Exception as e:
+        messages.error(request, f"Erro ao reativar assinatura: {str(e)}")
+    
+    if agente:
+        return redirect('admin_panel:agente_padaria_detail', pk=padaria.id)
+    return redirect('admin_panel:padaria_detail', slug=padaria.slug)

@@ -47,6 +47,12 @@ urlpatterns = [
     
     # Assinaturas
     path('assinaturas/', views.subscriptions_list, name='subscriptions_list'),
+    
+    # Ações de Assinatura (Admin e Agente Credenciado)
+    path('assinatura/<int:subscription_id>/confirmar-pagamento/', views.confirm_subscription_payment, name='confirm_subscription_payment'),
+    path('assinatura/<int:subscription_id>/pausar/', views.pause_subscription, name='pause_subscription'),
+    path('assinatura/<int:subscription_id>/cancelar/', views.cancel_admin_subscription, name='cancel_admin_subscription'),
+    path('assinatura/<int:subscription_id>/reativar/', views.reactivate_subscription, name='reactivate_subscription'),
 ]
 
 
