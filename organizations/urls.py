@@ -51,5 +51,6 @@ urlpatterns = [
     path("<slug:slug>/delete/", views.organization_delete, name="delete"),
     path("<slug:slug>/whatsapp/", views.whatsapp_connect, name="whatsapp_connect"),
     path("<slug:slug>/whatsapp/pairing-code/", views.whatsapp_pairing_code, name="whatsapp_pairing_code"),
+    path("<slug:slug>/whatsapp/status/", views.whatsapp_status, name="whatsapp_status"),
 ]
 

@@ -116,41 +116,38 @@
         border-radius: 12px;
         padding: 1.5rem;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
     }
     
     .table-responsive {
         width: 100%;
         overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
     }
 
     .data-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.875rem;
     }
 
-    .data-table thead {
-        background: #f9fafb;
-    }
-
-    .data-table th {
-        padding: 0.75rem;
+    .data-table th,
+    .data-table td {
+        padding: 12px;
         text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .data-table thead th {
+        background: #f9fafb;
         font-weight: 600;
         color: #374151;
         border-bottom: 2px solid #e5e7eb;
     }
 
-    .data-table td {
-        padding: 0.75rem;
-        border-bottom: 1px solid #f3f4f6;
-        color: #6b7280;
-    }
-
     .data-table tbody tr:hover {
         background: #f9fafb;
+    }
+
+    .data-table .text-center {
+        text-align: center;
     }
 
     .status-badge {
@@ -258,75 +255,6 @@
         opacity: 0.9;
     }
     
-    /* Responsive Styles */
-    @media (max-width: 992px) {
-        .charts-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-    
-    @media (max-width: 768px) {
-        .page-header {
-            padding: 1.5rem;
-            border-radius: 12px;
-        }
-        
-        .page-header h1 {
-            font-size: 1.5rem;
-        }
-        
-        .page-header > div {
-            flex-direction: column !important;
-            gap: 1rem;
-        }
-        
-        .btn-export {
-            width: 100%;
-            justify-content: center !important;
-        }
-        
-        .metrics-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-        }
-        
-        .metric-card {
-            padding: 1rem;
-        }
-        
-        .metric-value {
-            font-size: 1.5rem;
-        }
-        
-        .filters-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .table-card {
-            padding: 1rem;
-        }
-        
-        .data-table th,
-        .data-table td {
-            padding: 0.5rem;
-            font-size: 0.8125rem;
-            white-space: nowrap;
-        }
-        
-        .hide-mobile {
-            display: none !important;
-        }
-    }
-    
-    @media (max-width: 576px) {
-        .metrics-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .chart-card {
-            padding: 1rem;
-        }
-    }
 </style>
 {% endblock %}
 
@@ -493,17 +421,17 @@
         <thead>
             <tr>
                 <th>Nome</th>
-                <th class="hide-mobile">CNPJ</th>
-                <th class="hide-mobile">Responsável</th>
+                <th>CNPJ</th>
+                <th>Responsável</th>
                 <th>Status</th>
-                <th class="hide-mobile">WhatsApp</th>
+                <th>WhatsApp</th>
                 <th>Assinatura</th>
-                <th class="hide-mobile">Agentes</th>
-                <th class="hide-mobile">Produtos</th>
-                <th class="hide-mobile">Clientes</th>
-                <th class="hide-mobile">Cadastro</th>
-                <th class="hide-mobile">Cadastrado por</th>
-                <th class="hide-mobile">Última Atividade</th>
+                <th>Agentes</th>
+                <th>Produtos</th>
+                <th>Clientes</th>
+                <th>Cadastro</th>
+                <th>Cadastrado por</th>
+                <th>Última Atividade</th>
             </tr>
         </thead>
         <tbody>
@@ -515,8 +443,8 @@
                         {{ padaria.name }}
                     </a>
                 </td>
-                <td class="hide-mobile">{{ padaria.cnpj|default:"-" }}</td>
-                <td class="hide-mobile">{{ padaria.owner.username }}</td>
+                <td>{{ padaria.cnpj|default:"-" }}</td>
+                <td>{{ padaria.owner.username }}</td>
                 <td>
                     {% if padaria.is_active %}
                     <span class="status-badge status-active">Ativa</span>
@@ -524,7 +452,7 @@
                     <span class="status-badge status-inactive">Inativa</span>
                     {% endif %}
                 </td>
-                <td class="hide-mobile">
+                <td>
                     {% if padaria.num_agents > 0 %}
                     <span class="status-badge status-active">✓ Conectado</span>
                     {% else %}
@@ -548,11 +476,11 @@
                     <span class="status-badge status-inactive">Sem assinatura</span>
                     {% endif %}
                 </td>
-                <td class="hide-mobile" style="text-align: center;">{{ padaria.num_agents }}</td>
-                <td class="hide-mobile" style="text-align: center;">{{ padaria.num_produtos }}</td>
-                <td class="hide-mobile" style="text-align: center;">{{ padaria.num_clientes }}</td>
-                <td class="hide-mobile">{{ padaria.created_at|date:"d/m/Y" }}</td>
-                <td class="hide-mobile">
+                <td>{{ padaria.num_agents }}</td>
+                <td>{{ padaria.num_produtos }}</td>
+                <td>{{ padaria.num_clientes }}</td>
+                <td>{{ padaria.created_at|date:"d/m/Y" }}</td>
+                <td>
                     {% if padaria.agente_criador %}
                     <a href="{% url 'admin_panel:agente_credenciado_detail' padaria.agente_criador.pk %}" style="color: #667eea; text-decoration: none;">
                         {{ padaria.agente_criador.nome }}
@@ -561,7 +489,7 @@
                     <span style="color: #9ca3af;">Admin</span>
                     {% endif %}
                 </td>
-                <td class="hide-mobile">
+                <td>
                     {% if padaria.ultima_atividade %}
                     {{ padaria.ultima_atividade|date:"d/m/Y H:i" }}
                     {% else %}

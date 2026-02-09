@@ -186,10 +186,32 @@
 
             <!-- Pairing Code Display -->
             <div id="pairing-code-display" style="display: none;">
-                <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid #25D366; margin-bottom: 1rem;">
+                <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid #25D366; margin-bottom: 1rem; position: relative;">
                     <p style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: var(--gray-600);">Seu código de pareamento:</p>
                     <p id="pairing-code-value" style="margin: 0; font-size: 2.5rem; font-weight: 700; font-family: monospace; letter-spacing: 0.1em; color: #25D366;"></p>
+                    
+                    <!-- Countdown Timer -->
+                    <div id="countdown-container" style="margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+                        <div style="position: relative; width: 48px; height: 48px;">
+                            <svg width="48" height="48" viewBox="0 0 48 48" style="transform: rotate(-90deg);">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#e5e7eb" stroke-width="4"/>
+                                <circle id="countdown-circle" cx="24" cy="24" r="20" fill="none" stroke="#25D366" stroke-width="4" 
+                                    stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round"
+                                    style="transition: stroke-dashoffset 1s linear;"/>
+                            </svg>
+                            <span id="countdown-seconds" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                                font-size: 0.875rem; font-weight: 600; color: var(--gray-700);">60</span>
+                        </div>
+                        <span style="font-size: 0.875rem; color: var(--gray-500);">Código expira em</span>
+                    </div>
                 </div>
+                
+                <!-- Status de verificação -->
+                <div id="status-checking" style="background: #eff6ff; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 16px; height: 16px; border: 2px solid #3b82f6; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <span style="font-size: 0.875rem; color: #1e40af;">Verificando conexão automaticamente...</span>
+                </div>
+                
                 <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; text-align: left; font-size: 0.875rem; color: #166534;">
                     <p style="margin: 0 0 0.75rem 0; font-weight: 600;">Como usar:</p>
                     <ol style="margin: 0; padding-left: 1.25rem;">
@@ -420,9 +442,113 @@
 
     function resetPairingToInitial() {
         hidePairingStates();
+        stopCountdown();
+        stopPolling();
         pairingInitialState.style.display = 'block';
     }
 
+    // ===== Countdown Timer =====
+    let countdownInterval = null;
+    let countdownSeconds = 60;
+    const COUNTDOWN_DURATION = 60;
+    const CIRCLE_CIRCUMFERENCE = 125.66; // 2 * PI * 20
+
+    function startCountdown() {
+        countdownSeconds = COUNTDOWN_DURATION;
+        updateCountdownDisplay();
+        
+        countdownInterval = setInterval(() => {
+            countdownSeconds--;
+            updateCountdownDisplay();
+            
+            if (countdownSeconds <= 0) {
+                stopCountdown();
+                stopPolling();
+                showMessage('Código expirou. Gerando novo código...', 'warning');
+                generatePairingCode(); // Auto-regenerate
+            }
+        }, 1000);
+    }
+
+    function stopCountdown() {
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+    }
+
+    function updateCountdownDisplay() {
+        const secondsEl = document.getElementById('countdown-seconds');
+        const circleEl = document.getElementById('countdown-circle');
+        
+        if (secondsEl) {
+            secondsEl.textContent = countdownSeconds;
+        }
+        
+        if (circleEl) {
+            // Calculate stroke offset (125.66 = full circle, 0 = empty)
+            const offset = CIRCLE_CIRCUMFERENCE * (1 - (countdownSeconds / COUNTDOWN_DURATION));
+            circleEl.style.strokeDashoffset = offset;
+            
+            // Change color when low
+            if (countdownSeconds <= 10) {
+                circleEl.style.stroke = '#ef4444'; // red
+            } else if (countdownSeconds <= 20) {
+                circleEl.style.stroke = '#f59e0b'; // yellow
+            } else {
+                circleEl.style.stroke = '#25D366'; // green
+            }
+        }
+    }
+
+    // ===== Status Polling =====
+    let pollingInterval = null;
+    const POLLING_INTERVAL = 3000; // 3 seconds
+
+    function startPolling() {
+        stopPolling(); // Clear any existing
+        
+        pollingInterval = setInterval(async () => {
+            try {
+                const response = await fetch("{% url 'organizations:whatsapp_status' organization.slug %}", {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.status === 'connected') {
+                    stopPolling();
+                    stopCountdown();
+                    
+                    // Show connected state
+                    hidePairingStates();
+                    hideAllStates();
+                    connectedState.style.display = 'block';
+                    showMessage('WhatsApp conectado com sucesso!', 'success');
+                }
+            } catch (error) {
+                console.log('Polling error:', error);
+                // Continue polling even on error
+            }
+        }, POLLING_INTERVAL);
+    }
+
+    function stopPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+    }
+
+    // ===== Mobile Detection =====
+    function isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+               window.innerWidth < 768;
+    }
+
+    // ===== Generate Pairing Code =====
     async function generatePairingCode() {
         const phone = pairingPhoneInput.value.replace(/\D/g, '');
         
@@ -438,6 +564,8 @@
             return;
         }
 
+        stopCountdown();
+        stopPolling();
         hidePairingStates();
         pairingLoadingState.style.display = 'block';
 
@@ -467,6 +595,10 @@
                     document.getElementById('pairing-code-value').textContent = data.pairing_code;
                     pairingCodeDisplay.style.display = 'block';
                     showMessage('Código de pareamento gerado! Siga as instruções para conectar.', 'success');
+                    
+                    // Start countdown and polling
+                    startCountdown();
+                    startPolling();
                 }
             } else {
                 const errorMsg = data.error || 'Erro ao gerar código de pareamento';
@@ -491,6 +623,30 @@
     pairingPhoneInput.addEventListener('input', function(e) {
         let value = e.target.value.replace(/\D/g, '');
         e.target.value = value;
+    });
+
+    // ===== Mobile Auto-Recommendation =====
+    document.addEventListener('DOMContentLoaded', function() {
+        if (isMobile()) {
+            // On mobile, scroll to pairing code section and highlight it
+            const pairingSection = document.querySelector('.card[style*="dashed"]');
+            if (pairingSection) {
+                pairingSection.style.border = '2px solid #25D366';
+                pairingSection.style.background = '#f0fdf4';
+                
+                // Add mobile recommendation badge
+                const badge = document.createElement('div');
+                badge.style.cssText = 'background: #25D366; color: white; padding: 0.5rem 1rem; border-radius: 8px 8px 0 0; font-size: 0.875rem; font-weight: 600; margin: -1.5rem -1.5rem 1rem -1.5rem; text-align: center;';
+                badge.textContent = '✓ Recomendado para celular';
+                pairingSection.querySelector('div').prepend(badge);
+            }
+        }
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        stopCountdown();
+        stopPolling();
     });
 </script>
 <style>

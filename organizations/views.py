@@ -775,15 +775,72 @@ def _extract_qr_code(data):
 
 
 def _extract_pairing_code(data):
-    """Extrai pairing code da resposta."""
-    pairing_code = None
+    """
+    Extrai pairing code da resposta de forma recursiva.
     
-    if "pairingCode" in data:
-        pairing_code = data["pairingCode"]
-    elif "code" in data and not _extract_qr_code(data):
-        pairing_code = data["code"]
+    A Evolution API pode retornar o código em diferentes lugares:
+    - data["pairingCode"]
+    - data["pairing_code"]
+    - data["code"]
+    - Em qualquer subnível do JSON
     
-    return pairing_code
+    Esta função procura recursivamente em todos os lugares possíveis.
+    """
+    return _find_pairing_code_recursive(data)
+
+
+def _find_pairing_code_recursive(data, keys=None):
+    """Busca recursivamente o pairing code no JSON retornado."""
+    if keys is None:
+        keys = ["pairingCode", "pairing_code", "code"]
+    
+    # Caso base: se é string e parece um pairing code
+    if isinstance(data, str) and _is_valid_pairing_code(data):
+        return _format_pairing_code(data)
+    
+    # Se é dict, procura nas chaves prioritárias primeiro
+    if isinstance(data, dict):
+        for key in keys:
+            if key in data and _is_valid_pairing_code(data[key]):
+                return _format_pairing_code(data[key])
+        
+        # Se não achou, busca recursivamente em todos os valores
+        for value in data.values():
+            found = _find_pairing_code_recursive(value, keys)
+            if found:
+                return found
+    
+    # Se é lista, procura em cada item
+    elif isinstance(data, list):
+        for item in data:
+            found = _find_pairing_code_recursive(item, keys)
+            if found:
+                return found
+    
+    return None
+
+
+def _is_valid_pairing_code(value):
+    """Valida se o valor parece um pairing code (8 caracteres alfanuméricos)."""
+    if not value or not isinstance(value, str):
+        return False
+    
+    # Remove hífen e espaços para validar
+    clean = value.replace("-", "").replace(" ", "")
+    
+    # Pairing code tem 8 caracteres alfanuméricos
+    # Não pode ser muito longo (evita confundir com QR code base64)
+    return len(clean) == 8 and clean.isalnum()
+
+
+def _format_pairing_code(code):
+    """Formata o código para o padrão 1234-5678."""
+    clean = str(code).replace("-", "").replace(" ", "")
+    
+    if len(clean) == 8:
+        return f"{clean[:4]}-{clean[4:]}"
+    
+    return code
 
 
 @login_required
@@ -959,6 +1016,116 @@ def whatsapp_pairing_code(request, slug):
         return JsonResponse({
             "success": False,
             "error": "Ocorreu um erro inesperado. Por favor, tente novamente."
+        })
+
+
+@login_required
+def whatsapp_status(request, slug):
+    """
+    Verifica o status da conexão WhatsApp.
+    Usado para polling automático no frontend.
+    
+    Returns:
+        {
+            "success": True,
+            "status": "connected" | "disconnected" | "connecting",
+            "state": "open" | "close"
+        }
+    """
+    padarias = get_user_padarias(request.user)
+    organization = get_object_or_404(Padaria, slug=slug)
+    
+    # Verificar acesso
+    if not request.user.is_superuser and organization not in padarias:
+        return JsonResponse({
+            "success": False,
+            "error": "Você não tem acesso a esta padaria."
+        }, status=403)
+    
+    # Nome da instância
+    instance_name = f"padaria_{organization.slug}"
+    
+    try:
+        # Configurar Evolution API
+        api_url = getattr(settings, 'EVOLUTION_API_URL', None)
+        api_key = getattr(settings, 'EVOLUTION_API_KEY', None)
+        
+        if not api_url or not api_key:
+            return JsonResponse({
+                "success": False,
+                "error": "Sistema não configurado."
+            })
+        
+        headers = {
+            "apikey": api_key,
+            "Content-Type": "application/json"
+        }
+        
+        # Chamar endpoint de status da Evolution API
+        status_url = f"{api_url}/instance/connectionState/{instance_name}"
+        response = requests.get(status_url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Extrair state da resposta
+            state = data.get("state") or data.get("instance", {}).get("state") or "close"
+            
+            # Mapear state para status amigável
+            status_map = {
+                "open": "connected",
+                "close": "disconnected",
+                "connecting": "connecting"
+            }
+            status = status_map.get(state, "disconnected")
+            
+            # Se conectou, atualizar status da padaria
+            if status == "connected":
+                organization.whatsapp_status = "connected"
+                organization.save(update_fields=["whatsapp_status"])
+            
+            return JsonResponse({
+                "success": True,
+                "status": status,
+                "state": state,
+                "instance": instance_name
+            })
+        
+        elif response.status_code == 404:
+            return JsonResponse({
+                "success": True,
+                "status": "disconnected",
+                "state": "close",
+                "instance": instance_name
+            })
+        else:
+            return JsonResponse({
+                "success": False,
+                "status": "error",
+                "error": "Erro ao verificar status"
+            })
+            
+    except requests.exceptions.Timeout:
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "error": "Timeout ao verificar status"
+        })
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "error": "Não foi possível conectar ao serviço"
+        })
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Erro no WhatsApp status: {str(e)}", exc_info=True)
+        
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "error": "Erro inesperado"
         })
 
 
