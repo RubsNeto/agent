@@ -32,15 +32,16 @@
 </div>
 
 <!-- Lista -->
-<div class="card">
+<div class="card" style="overflow: hidden;">
+    <div class="table-responsive">
     <table class="data-table">
         <thead>
             <tr>
                 <th>Usuário</th>
-                <th>E-mail</th>
+                <th class="hide-mobile">E-mail</th>
                 <th>Papel</th>
-                <th>Data Cadastro</th>
-                <th>Último Login</th>
+                <th class="hide-mobile">Data Cadastro</th>
+                <th class="hide-mobile">Último Login</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -58,7 +59,7 @@
                         </div>
                     </div>
                 </td>
-                <td>{{ user.email }}</td>
+                <td class="hide-mobile">{{ user.email }}</td>
                 <td>
                     {% if user.profile.role == 'admin' %}
                     <span class="role-badge role-admin">Administrador</span>
@@ -68,8 +69,8 @@
                     <span class="role-badge role-user">Usuário Padaria</span>
                     {% endif %}
                 </td>
-                <td>{{ user.date_joined|date:"d/m/Y" }}</td>
-                <td>{% if user.last_login %}{{ user.last_login|date:"d/m/Y H:i" }}{% else %}<span style="color: var(--gray-400);">Nunca</span>{% endif %}</td>
+                <td class="hide-mobile">{{ user.date_joined|date:"d/m/Y" }}</td>
+                <td class="hide-mobile">{% if user.last_login %}{{ user.last_login|date:"d/m/Y H:i" }}{% else %}<span style="color: var(--gray-400);">Nunca</span>{% endif %}</td>
                 <td>
                     {% if user.is_active %}
                     <span class="badge badge-success">Ativo</span>
@@ -90,6 +91,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     
     <!-- Paginação -->
     {% if users.has_other_pages %}

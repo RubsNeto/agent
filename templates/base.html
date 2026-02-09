@@ -13,7 +13,13 @@
 <body>
     {% if user.is_authenticated %}
     <div class="app-layout">
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
+            <!-- Close button for mobile -->
+            <button class="sidebar-close-btn" onclick="toggleSidebar()" aria-label="Fechar menu">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
             <div class="sidebar-logo" style="justify-content: center;">
                 <img src="{% static 'Logo_Pandia_branco.svg' %}" alt="Pandia"
                     style="height: 90px; width: auto; padding: 1px 16px;">
@@ -255,8 +261,16 @@
                 {% endif %}
             </nav>
         </aside>
+        <!-- Sidebar overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
         <main class="main-content">
             <header class="main-header">
+                <!-- Mobile menu button -->
+                <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Abrir menu">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
                 <h1>{% block page_title %}{% endblock %}</h1>
                 <div class="user-menu">
                     <div class="user-info">
@@ -504,6 +518,31 @@
     </style>
 
     <script>
+        // Sidebar toggle for mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+                // Prevent body scroll when sidebar is open
+                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+            }
+        }
+
+        // Close sidebar on window resize if screen becomes larger
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                if (sidebar && overlay) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            }
+        });
+
         function closeModal()
         {
             const modal = document.getElementById('messageModal');

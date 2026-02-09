@@ -20,6 +20,9 @@ class LoginRequiredMiddleware:
             '/api/',    # API usa autenticação via API Key
             '/payments/api/',  # API de pagamentos para n8n/WhatsApp
             '/webhooks/',  # Webhooks externos (Mercado Pago, etc.)
+            '/accounts/password-reset/',  # Recuperação de senha - formulário
+            '/accounts/password-reset-confirm/',  # Recuperação de senha - criar nova senha
+            '/accounts/password-reset-complete/',  # Recuperação de senha - sucesso
         ]
         
         # Verifica se a URL atual está nas exceções

@@ -49,15 +49,16 @@
 </div>
 
 <!-- Lista -->
-<div class="card">
+<div class="card" style="overflow: hidden;">
+    <div class="table-responsive">
     <table class="data-table">
         <thead>
             <tr>
                 <th>Nome</th>
-                <th>CPF</th>
-                <th>Telefone</th>
-                <th>E-mail</th>
-                <th>Regiões</th>
+                <th class="hide-mobile">CPF</th>
+                <th class="hide-mobile">Telefone</th>
+                <th class="hide-mobile">E-mail</th>
+                <th class="hide-mobile">Regiões</th>
                 <th>Padarias</th>
                 <th>Status</th>
                 <th>Ações</th>
@@ -71,10 +72,10 @@
                         {{ agente.nome }}
                     </a>
                 </td>
-                <td>{{ agente.cpf }}</td>
-                <td>{{ agente.telefone }}</td>
-                <td>{{ agente.email }}</td>
-                <td>
+                <td class="hide-mobile">{{ agente.cpf }}</td>
+                <td class="hide-mobile">{{ agente.telefone }}</td>
+                <td class="hide-mobile">{{ agente.email }}</td>
+                <td class="hide-mobile">
                     <span style="font-size: 0.875rem; color: var(--gray-600);">
                         {{ agente.get_regioes_display|truncatechars:30 }}
                     </span>
@@ -120,6 +121,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     
     <!-- Paginação -->
     {% if agentes.has_other_pages %}

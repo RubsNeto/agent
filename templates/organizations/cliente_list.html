@@ -78,16 +78,17 @@
 
 {% if clientes %}
 <div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
     <table style="width: 100%; border-collapse: collapse;">
         <thead>
             <tr style="background: var(--gray-50); border-bottom: 1px solid var(--gray-200);">
                 <th
                     style="padding: 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase;">
                     Nome</th>
-                <th
+                <th class="hide-mobile"
                     style="padding: 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase;">
                     Telefone/WhatsApp</th>
-                <th
+                <th class="hide-mobile"
                     style="padding: 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase;">
                     E-mail</th>
                 <th
@@ -95,7 +96,7 @@
                     Status</th>
                 <th
                     style="padding: 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase;">
-                    Acoes</th>
+                    Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -115,7 +116,7 @@
                         </div>
                     </div>
                 </td>
-                <td style="padding: 1rem;">
+                <td style="padding: 1rem;" class="hide-mobile">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" fill="#25D366" viewBox="0 0 24 24">
                             <path
@@ -124,7 +125,7 @@
                         <span style="color: var(--gray-700);">{{ cliente.telefone }}</span>
                     </div>
                 </td>
-                <td style="padding: 1rem; color: var(--gray-600);">{{ cliente.email|default:"-" }}</td>
+                <td style="padding: 1rem; color: var(--gray-600);" class="hide-mobile">{{ cliente.email|default:"-" }}</td>
                 <td style="padding: 1rem; text-align: center;">
                     {% if cliente.is_active and cliente.aceita_promocoes %}
                     <span
@@ -170,6 +171,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 {% else %}
 <div class="card" style="text-align: center; padding: 4rem 2rem;">
