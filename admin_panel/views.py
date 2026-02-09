@@ -1951,7 +1951,7 @@ def confirm_subscription_payment(request, subscription_id):
     padaria = subscription.padaria
     
     # Verificar permissão
-    agente = get_agente_credenciado(request)
+    agente = get_agente_credenciado(request.user)
     if agente:
         # Agente credenciado só pode confirmar das suas padarias
         if padaria.id not in agente.padarias_cadastradas_ids:
@@ -2010,7 +2010,7 @@ def pause_subscription(request, subscription_id):
     padaria = subscription.padaria
     
     # Verificar permissão
-    agente = get_agente_credenciado(request)
+    agente = get_agente_credenciado(request.user)
     if agente:
         if padaria.id not in agente.padarias_cadastradas_ids:
             messages.error(request, "Você não tem permissão para esta ação.")
@@ -2053,7 +2053,7 @@ def cancel_admin_subscription(request, subscription_id):
     padaria = subscription.padaria
     
     # Verificar permissão
-    agente = get_agente_credenciado(request)
+    agente = get_agente_credenciado(request.user)
     if agente:
         if padaria.id not in agente.padarias_cadastradas_ids:
             messages.error(request, "Você não tem permissão para esta ação.")
@@ -2107,7 +2107,7 @@ def reactivate_subscription(request, subscription_id):
     padaria = subscription.padaria
     
     # Verificar permissão
-    agente = get_agente_credenciado(request)
+    agente = get_agente_credenciado(request.user)
     if agente:
         if padaria.id not in agente.padarias_cadastradas_ids:
             messages.error(request, "Você não tem permissão para esta ação.")
