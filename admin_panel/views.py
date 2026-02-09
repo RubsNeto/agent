@@ -1986,8 +1986,8 @@ def confirm_subscription_payment(request, subscription_id):
             actor=request.user,
             action='confirm_payment',
             entity='CaktoSubscription',
-            entity_id=subscription.id,
-            details=f"Pagamento confirmado manualmente por {request.user.username}"
+            entity_id=str(subscription.id),
+            diff={'message': f'Pagamento confirmado manualmente por {request.user.username}', 'amount': str(subscription.plan_value)}
         )
         
         messages.success(request, f"Pagamento confirmado! Assinatura de {padaria.name} ativada com sucesso.")
@@ -2033,8 +2033,8 @@ def pause_subscription(request, subscription_id):
             actor=request.user,
             action='pause_subscription',
             entity='CaktoSubscription',
-            entity_id=subscription.id,
-            details=f"Assinatura pausada por {request.user.username}"
+            entity_id=str(subscription.id),
+            diff={'message': f'Assinatura pausada por {request.user.username}'}
         )
         
         messages.success(request, f"Assinatura de {padaria.name} pausada.")
@@ -2090,8 +2090,8 @@ def cancel_admin_subscription(request, subscription_id):
             actor=request.user,
             action='cancel_subscription',
             entity='CaktoSubscription',
-            entity_id=subscription.id,
-            details=f"Assinatura cancelada por {request.user.username}"
+            entity_id=str(subscription.id),
+            diff={'message': f'Assinatura cancelada por {request.user.username}'}
         )
         
         messages.success(request, f"Assinatura de {padaria.name} cancelada.")
@@ -2139,8 +2139,8 @@ def reactivate_subscription(request, subscription_id):
             actor=request.user,
             action='reactivate_subscription',
             entity='CaktoSubscription',
-            entity_id=subscription.id,
-            details=f"Assinatura reativada por {request.user.username}"
+            entity_id=str(subscription.id),
+            diff={'message': f'Assinatura reativada por {request.user.username}'}
         )
         
         messages.success(request, f"Assinatura de {padaria.name} reativada com sucesso!")
