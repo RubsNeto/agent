@@ -657,10 +657,16 @@ def cakto_register_card(request):
         email = padaria.responsavel_email or padaria.email or padaria.owner.email
         name = padaria.responsavel_nome or padaria.name
         
+        # Construir URL de retorno após pagamento
+        return_url = request.build_absolute_uri(
+            reverse('payments:cakto_return') + f"?padaria={padaria.slug}"
+        )
+        
         result = cakto_service.create_subscription_offer(
             padaria=padaria,
             customer_email=email,
-            customer_name=name
+            customer_name=name,
+            return_url=return_url
         )
         
         if result.get("success"):
@@ -1191,6 +1197,75 @@ def payment_cancel(request):
             return redirect(f"/payments/assinatura/?padaria={padaria.slug}")
     
     return render(request, 'payments/cancel.html')
+
+
+# =============================================================================
+# Views de Retorno Cakto (Checkout callback)
+# =============================================================================
+
+def cakto_return(request):
+    """
+    Página de retorno após checkout da Cakto.
+    Faz polling automático para verificar se o pagamento foi confirmado.
+    
+    Esta página é usada quando o usuário clica em "Voltar ao site" após pagar.
+    Como a Cakto não tem parâmetro de redirect automático, o usuário deve
+    clicar manualmente no botão de voltar após o pagamento.
+    
+    Parâmetros opcionais via query string:
+    - padaria: slug da padaria (para identificar assinatura)
+    - order_id: ID do pedido na Cakto (se disponível)
+    """
+    padaria_slug = request.GET.get('padaria')
+    order_id = request.GET.get('order_id')
+    
+    # Se usuário não está logado ou não temos padaria, redirecionar para login
+    if not request.user.is_authenticated:
+        if padaria_slug:
+            return redirect(f'/accounts/login/?next=/payments/cakto/return/?padaria={padaria_slug}')
+        return redirect('accounts:login')
+    
+    # Obter padaria
+    padaria = get_user_padaria(request.user, padaria_slug)
+    
+    if not padaria:
+        messages.error(request, "Você precisa estar associado a uma padaria.")
+        return redirect('ui:dashboard')
+    
+    # Buscar assinatura Cakto
+    try:
+        subscription = CaktoSubscription.objects.get(padaria=padaria)
+        
+        # Se temos order_id, salvar na subscription
+        if order_id and not subscription.cakto_order_id:
+            subscription.cakto_order_id = order_id
+            subscription.save(update_fields=['cakto_order_id', 'updated_at'])
+        
+        # Tentar sincronizar status imediatamente
+        if subscription.cakto_order_id and subscription.status not in ['active']:
+            try:
+                result = cakto_service.get_order_status(subscription.cakto_order_id)
+                if result.get("success"):
+                    status = result.get("status", "")
+                    if status in ["approved", "paid"]:
+                        subscription.activate()
+                        logger.info(f"Assinatura {padaria_slug} ativada via cakto_return")
+            except Exception as e:
+                logger.warning(f"Erro ao consultar Cakto na página de retorno: {e}")
+        
+    except CaktoSubscription.DoesNotExist:
+        # Criar assinatura se não existir
+        subscription = CaktoSubscription.objects.create(
+            padaria=padaria,
+            plan_name=settings.CAKTO_PLAN_NAME,
+            plan_value=settings.CAKTO_PLAN_VALUE,
+            cakto_order_id=order_id or "",
+        )
+    
+    return render(request, 'payments/cakto_return.html', {
+        'padaria': padaria,
+        'subscription': subscription,
+    })
 
 
 # =============================================================================

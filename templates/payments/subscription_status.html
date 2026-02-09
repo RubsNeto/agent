@@ -223,6 +223,33 @@
     </div>
     {% endif %}
 
+    <!-- Banner de verificação após pagamento (Cakto) -->
+    {% if is_cakto and subscription.status in 'trial,inactive' and subscription.checkout_url %}
+    <div class="action-banner banner-info" id="payment-check-banner">
+        <div class="banner-content">
+            <div class="banner-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="banner-text">
+                <h3>Acabou de fazer um pagamento?</h3>
+                <p>Se você acabou de pagar, aguarde alguns instantes enquanto verificamos. A página será atualizada automaticamente quando o pagamento for confirmado.</p>
+                <p class="checking-status" id="checking-status" style="font-size: 0.875rem; color: #6366f1; margin-top: 0.5rem; display: none;">
+                    <span class="spinner-small"></span> Verificando pagamento...
+                </p>
+            </div>
+        </div>
+        <div class="banner-action">
+            <a href="{% url 'payments:cakto_return' %}?padaria={{ padaria.slug }}" class="btn-action btn-secondary-outline">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="18" height="18">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Verificar Pagamento
+            </a>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Banner de Ação -->
     {% if subscription.status == 'pending' or subscription.status == 'overdue' %}
@@ -943,6 +970,35 @@
         box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
     }
 
+    .btn-secondary-outline {
+        background: white;
+        color: #6366f1;
+        border: 2px solid #6366f1;
+        box-shadow: none;
+    }
+
+    .btn-secondary-outline:hover {
+        background: #eef2ff;
+        transform: translateY(-2px);
+    }
+
+    /* Spinner pequeno para verificação */
+    .spinner-small {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid #e5e7eb;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 6px;
+        vertical-align: middle;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
     /* Details Card */
     .details-card {
         background: white;
@@ -1374,5 +1430,63 @@
     {
         if (e.target === this) hideCancelModal();
     });
+
+    // ========================================
+    // Auto-refresh para verificar status de pagamento
+    // ========================================
+    {% if is_cakto and subscription.status not in 'active' %}
+    (function() {
+        const padariaSlug = '{{ padaria.slug }}';
+        const statusApiUrl = '/payments/api/subscription/' + padariaSlug + '/status/';
+        let pollCount = 0;
+        const maxPolls = 10;
+        const pollInterval = 5000; // 5 segundos
+        
+        // Mostrar indicador de verificação
+        const checkingStatus = document.getElementById('checking-status');
+        if (checkingStatus) {
+            checkingStatus.style.display = 'block';
+        }
+        
+        function checkPaymentStatus() {
+            pollCount++;
+            if (pollCount > maxPolls) {
+                console.log('Polling parado após ' + maxPolls + ' tentativas');
+                if (checkingStatus) {
+                    checkingStatus.innerHTML = 'Verificação automática pausada. <a href="javascript:location.reload()">Atualizar página</a>';
+                }
+                return;
+            }
+            
+            if (checkingStatus) {
+                checkingStatus.innerHTML = '<span class="spinner-small"></span> Verificando pagamento... (' + pollCount + '/' + maxPolls + ')';
+            }
+            
+            fetch(statusApiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Status verificado:', data);
+                    if (data.success && data.is_active && data.status === 'active') {
+                        // Pagamento confirmado! Recarregar página
+                        console.log('Pagamento confirmado! Recarregando...');
+                        if (checkingStatus) {
+                            checkingStatus.innerHTML = '✅ Pagamento confirmado! Recarregando...';
+                        }
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        // Continuar verificando
+                        setTimeout(checkPaymentStatus, pollInterval);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao verificar status:', error);
+                    setTimeout(checkPaymentStatus, pollInterval);
+                });
+        }
+        
+        // Iniciar polling após 3 segundos
+        setTimeout(checkPaymentStatus, 3000);
+    })();
+    {% endif %}
 </script>
 {% endblock %}

@@ -20,6 +20,9 @@ urlpatterns = [
     # === Webhook Cakto ===
     path('cakto/webhook/', cakto_webhook, name='cakto_webhook'),
     
+    # === Retorno Cakto após pagamento ===
+    path('cakto/return/', views.cakto_return, name='cakto_return'),
+    
     # === Mercado Pago (Padaria -> Cliente) ===
     path('mercadopago/', views.mercadopago_config, name='mercadopago_config'),
     path('mercadopago/testar/', views.mercadopago_test_connection, name='mercadopago_test'),
@@ -49,6 +52,9 @@ urlpatterns = [
     path('api/monitor/<int:payment_id>/start/', api_views.start_monitor, name='api_start_monitor'),
     path('api/monitors/', api_views.get_active_monitors, name='api_active_monitors'),
     path('api/monitors/start-all/', api_views.start_bulk_monitor, name='api_start_bulk_monitor'),
+    
+    # === API de Status de Assinatura (para polling) ===
+    path('api/subscription/<slug:padaria_slug>/status/', api_views.check_subscription_status, name='api_subscription_status'),
     
     # === Legado (Stripe) - Mantidos para compatibilidade ===
     path('settings/', views.payment_settings, name='settings'),

@@ -1,0 +1,560 @@
+{% extends 'base.html' %}
+
+{% block title %}Verificando Pagamento - {{ padaria.name }}{% endblock %}
+{% block page_title %}Verificando Pagamento{% endblock %}
+
+{% block content %}
+<div class="return-container">
+    <!-- Estado: Verificando -->
+    <div id="state-checking" class="state-content">
+        <div class="loading-animation">
+            <div class="spinner"></div>
+        </div>
+        <h1 class="return-title">Verificando seu pagamento...</h1>
+        <p class="return-subtitle">Aguarde enquanto confirmamos o pagamento com a Cakto</p>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="attempt-counter" id="attempt-counter">Verificação 1 de 20</p>
+    </div>
+
+    <!-- Estado: Sucesso -->
+    <div id="state-success" class="state-content" style="display: none;">
+        <div class="success-animation">
+            <div class="success-icon">
+                <svg width="64" height="64" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+        </div>
+        <h1 class="success-title">Pagamento Confirmado!</h1>
+        <p class="success-subtitle">Sua assinatura foi ativada com sucesso</p>
+
+        <div class="details-card">
+            <div class="detail-row">
+                <div class="detail-icon">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                        </path>
+                    </svg>
+                </div>
+                <div class="detail-content">
+                    <span class="detail-label">Estabelecimento</span>
+                    <span class="detail-value">{{ padaria.name }}</span>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-icon status-active">
+                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <div class="detail-content">
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value status-badge" id="status-text">Assinatura Ativa</span>
+                </div>
+            </div>
+
+            <div class="detail-row highlight">
+                <div class="detail-icon">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="detail-content">
+                    <span class="detail-label">Próximo Pagamento</span>
+                    <span class="detail-value" id="next-date">em 30 dias</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box success-info">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p>Seu acesso ao sistema está <strong>liberado</strong>! Você receberá um lembrete por e-mail antes do próximo vencimento.</p>
+        </div>
+
+        <div class="action-buttons">
+            <a href="{% url 'ui:dashboard' %}" class="btn-primary">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+                    </path>
+                </svg>
+                Ir para o Dashboard
+            </a>
+            <a href="{% url 'payments:subscription_status' %}?padaria={{ padaria.slug }}" class="btn-secondary">
+                Ver Detalhes da Assinatura
+            </a>
+        </div>
+    </div>
+
+    <!-- Estado: Ainda processando (após timeout do polling) -->
+    <div id="state-pending" class="state-content" style="display: none;">
+        <div class="pending-animation">
+            <div class="pending-icon">
+                <svg width="64" height="64" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+        </div>
+        <h1 class="pending-title">Pagamento em Processamento</h1>
+        <p class="pending-subtitle">O pagamento está sendo processado pela Cakto. Isso pode levar alguns instantes.</p>
+
+        <div class="info-box warning-info">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <p>O pagamento foi recebido mas ainda não foi confirmado. Aguarde alguns minutos e verifique o status na página de assinatura.</p>
+        </div>
+
+        <div class="action-buttons">
+            <a href="{% url 'payments:subscription_status' %}?padaria={{ padaria.slug }}" class="btn-primary">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Verificar Status
+            </a>
+            <a href="{% url 'ui:dashboard' %}" class="btn-secondary">
+                Voltar ao Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Estado: Erro -->
+    <div id="state-error" class="state-content" style="display: none;">
+        <div class="error-animation">
+            <div class="error-icon">
+                <svg width="64" height="64" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </div>
+        </div>
+        <h1 class="error-title">Erro ao Verificar</h1>
+        <p class="error-subtitle" id="error-message">Não foi possível confirmar o pagamento automaticamente.</p>
+
+        <div class="action-buttons">
+            <a href="{% url 'payments:subscription_status' %}?padaria={{ padaria.slug }}" class="btn-primary">
+                Verificar Manualmente
+            </a>
+            <a href="{% url 'ui:dashboard' %}" class="btn-secondary">
+                Voltar ao Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .return-container {
+        max-width: 520px;
+        margin: 0 auto;
+        text-align: center;
+        padding: 2rem 1.5rem 3rem;
+    }
+
+    .state-content {
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Loading Animation */
+    .loading-animation {
+        margin-bottom: 1.5rem;
+    }
+
+    .spinner {
+        width: 80px;
+        height: 80px;
+        border: 4px solid #e5e7eb;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        margin: 0 auto;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        margin: 1.5rem 0 0.75rem;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #6366f1, #8b5cf6);
+        border-radius: 3px;
+        width: 5%;
+        transition: width 0.5s ease;
+    }
+
+    .attempt-counter {
+        font-size: 0.875rem;
+        color: #9ca3af;
+        margin: 0;
+    }
+
+    /* Títulos */
+    .return-title, .pending-title, .error-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #374151;
+        margin: 0 0 0.5rem;
+    }
+
+    .success-title {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #059669;
+        margin: 0 0 0.5rem;
+    }
+
+    .pending-title {
+        color: #d97706;
+    }
+
+    .error-title {
+        color: #dc2626;
+    }
+
+    .return-subtitle, .success-subtitle, .pending-subtitle, .error-subtitle {
+        font-size: 1.125rem;
+        color: #6b7280;
+        margin: 0 0 2rem;
+    }
+
+    /* Success Animation */
+    .success-animation {
+        margin-bottom: 1.5rem;
+    }
+
+    .success-icon {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        box-shadow: 0 15px 50px rgba(16, 185, 129, 0.35);
+        animation: pulse-success 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-success {
+        0%, 100% { box-shadow: 0 15px 50px rgba(16, 185, 129, 0.35); }
+        50% { box-shadow: 0 20px 60px rgba(16, 185, 129, 0.5); }
+    }
+
+    /* Pending Animation */
+    .pending-animation {
+        margin-bottom: 1.5rem;
+    }
+
+    .pending-icon {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        box-shadow: 0 15px 50px rgba(245, 158, 11, 0.35);
+    }
+
+    /* Error Animation */
+    .error-animation {
+        margin-bottom: 1.5rem;
+    }
+
+    .error-icon {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        box-shadow: 0 15px 50px rgba(239, 68, 68, 0.35);
+    }
+
+    /* Card de Detalhes */
+    .details-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        text-align: left;
+    }
+
+    .detail-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.875rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-row.highlight {
+        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        margin: 0.5rem -1.25rem -1.25rem;
+        padding: 1rem 1.25rem;
+        border-radius: 0 0 16px 16px;
+    }
+
+    .detail-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: #f3f4f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        flex-shrink: 0;
+    }
+
+    .detail-icon.status-active {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+    }
+
+    .detail-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+
+    .detail-label {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .status-badge {
+        color: #059669 !important;
+    }
+
+    /* Info Box */
+    .info-box {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: left;
+        margin-bottom: 2rem;
+    }
+
+    .success-info {
+        background: #f0fdf4;
+        border: 1px solid #86efac;
+    }
+
+    .success-info svg {
+        color: #10b981;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .success-info p {
+        margin: 0;
+        font-size: 0.875rem;
+        color: #166534;
+        line-height: 1.5;
+    }
+
+    .warning-info {
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+    }
+
+    .warning-info svg {
+        color: #f59e0b;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .warning-info p {
+        margin: 0;
+        font-size: 0.875rem;
+        color: #92400e;
+        line-height: 1.5;
+    }
+
+    /* Botões */
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.875rem 1.5rem;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 1rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    }
+
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        color: #6b7280;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        font-weight: 500;
+        font-size: 0.9375rem;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background: #f9fafb;
+        color: #374151;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const padariaSlug = '{{ padaria.slug }}';
+    const statusApiUrl = '/payments/api/subscription/' + padariaSlug + '/status/';
+    
+    const maxAttempts = 20;
+    const intervalMs = 3000; // 3 segundos entre cada verificação
+    let attempts = 0;
+    let pollingInterval = null;
+    
+    const stateChecking = document.getElementById('state-checking');
+    const stateSuccess = document.getElementById('state-success');
+    const statePending = document.getElementById('state-pending');
+    const stateError = document.getElementById('state-error');
+    const progressFill = document.getElementById('progress-fill');
+    const attemptCounter = document.getElementById('attempt-counter');
+    const nextDateEl = document.getElementById('next-date');
+    const statusTextEl = document.getElementById('status-text');
+    
+    function showState(state) {
+        stateChecking.style.display = 'none';
+        stateSuccess.style.display = 'none';
+        statePending.style.display = 'none';
+        stateError.style.display = 'none';
+        state.style.display = 'block';
+    }
+    
+    function updateProgress() {
+        const progress = Math.min((attempts / maxAttempts) * 100, 100);
+        progressFill.style.width = progress + '%';
+        attemptCounter.textContent = 'Verificação ' + attempts + ' de ' + maxAttempts;
+    }
+    
+    function formatDate(dateStr) {
+        if (!dateStr) return 'em 30 dias';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('pt-BR');
+    }
+    
+    async function checkStatus() {
+        attempts++;
+        updateProgress();
+        
+        try {
+            const response = await fetch(statusApiUrl);
+            const data = await response.json();
+            
+            if (data.success && data.is_active) {
+                // Pagamento confirmado!
+                clearInterval(pollingInterval);
+                
+                if (data.next_billing_date) {
+                    nextDateEl.textContent = formatDate(data.next_billing_date);
+                } else if (data.trial_end_date) {
+                    nextDateEl.textContent = 'Trial até ' + formatDate(data.trial_end_date);
+                }
+                
+                if (data.status === 'trial') {
+                    statusTextEl.textContent = 'Trial Ativo';
+                } else {
+                    statusTextEl.textContent = 'Assinatura Ativa';
+                }
+                
+                showState(stateSuccess);
+                return;
+            }
+            
+            // Ainda não está ativo, continuar verificando
+            if (attempts >= maxAttempts) {
+                clearInterval(pollingInterval);
+                showState(statePending);
+            }
+            
+        } catch (error) {
+            console.error('Erro ao verificar status:', error);
+            
+            if (attempts >= maxAttempts) {
+                clearInterval(pollingInterval);
+                showState(stateError);
+            }
+        }
+    }
+    
+    // Iniciar polling
+    checkStatus(); // Primeira verificação imediata
+    pollingInterval = setInterval(checkStatus, intervalMs);
+    
+    // Parar polling se o usuário sair da página
+    window.addEventListener('beforeunload', function() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+    });
+});
+</script>
+{% endblock %}

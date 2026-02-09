@@ -1135,3 +1135,89 @@ def start_bulk_monitor(request):
             "success": False,
             "error": str(e)
         }, status=500)
+
+
+# =============================================================================
+# API de Status de Assinatura Cakto
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def check_subscription_status(request, padaria_slug):
+    """
+    Verifica status da assinatura Cakto.
+    Usado para polling após pagamento.
+    
+    GET /payments/api/subscription/{padaria_slug}/status/
+    
+    Response:
+    {
+        "success": true,
+        "status": "active",
+        "is_active": true,
+        "last_payment_date": "2026-02-09",
+        "next_billing_date": "2026-03-09"
+    }
+    """
+    from payments.models import CaktoSubscription, AsaasSubscription
+    from payments.services.cakto_service import cakto_service
+    
+    try:
+        padaria = Padaria.objects.get(slug=padaria_slug)
+    except Padaria.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "error": "Padaria não encontrada"
+        }, status=404)
+    
+    # Tentar Cakto primeiro
+    subscription = None
+    is_cakto = False
+    
+    try:
+        subscription = CaktoSubscription.objects.get(padaria=padaria)
+        is_cakto = True
+        
+        # Se tiver order_id e não estiver ativo, tentar sincronizar com API
+        if subscription.cakto_order_id and subscription.status not in ['active']:
+            try:
+                result = cakto_service.get_order_status(subscription.cakto_order_id)
+                if result.get("success"):
+                    api_status = result.get("status", "")
+                    if api_status in ["approved", "paid"]:
+                        subscription.activate()
+                        logger.info(f"Assinatura {padaria_slug} ativada via polling")
+            except Exception as e:
+                logger.warning(f"Erro ao consultar API Cakto para {padaria_slug}: {e}")
+                
+    except CaktoSubscription.DoesNotExist:
+        # Fallback para Asaas
+        try:
+            subscription = AsaasSubscription.objects.get(padaria=padaria)
+        except AsaasSubscription.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "error": "Assinatura não encontrada"
+            }, status=404)
+    
+    # Retornar status
+    response_data = {
+        "success": True,
+        "status": subscription.status,
+        "is_active": subscription.status in ['active', 'trial'],
+        "is_cakto": is_cakto,
+    }
+    
+    if hasattr(subscription, 'last_payment_date') and subscription.last_payment_date:
+        response_data["last_payment_date"] = subscription.last_payment_date.isoformat()
+    
+    if is_cakto:
+        if subscription.next_billing_date:
+            response_data["next_billing_date"] = subscription.next_billing_date.isoformat()
+        if subscription.trial_end_date:
+            response_data["trial_end_date"] = subscription.trial_end_date.isoformat()
+    else:
+        if hasattr(subscription, 'next_due_date') and subscription.next_due_date:
+            response_data["next_billing_date"] = subscription.next_due_date.isoformat()
+    
+    return JsonResponse(response_data)

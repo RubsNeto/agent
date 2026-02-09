@@ -10,6 +10,7 @@ import requests
 import logging
 from django.conf import settings
 from django.core.cache import cache
+from django.db import models
 from decimal import Decimal
 from datetime import datetime, timedelta
 
@@ -145,7 +146,7 @@ class CaktoService:
             logger.error(f"Cakto API request error: {str(e)}")
             return {"success": False, "error": str(e)}
     
-    def create_subscription_offer(self, padaria, customer_email, customer_name=None):
+    def create_subscription_offer(self, padaria, customer_email, customer_name=None, return_url=None):
         """
         Obtém URL de checkout para a oferta configurada.
         
@@ -156,9 +157,10 @@ class CaktoService:
             padaria: Padaria Model instance
             customer_email: Email do cliente
             customer_name: Nome do cliente (opcional)
+            return_url: URL para retorno após pagamento (opcional)
             
         Returns:
-            dict com checkout_url ou error
+            dict com checkout_url, return_url ou error
         """
         offer_id = getattr(settings, 'CAKTO_OFFER_ID', '')
         
@@ -175,15 +177,22 @@ class CaktoService:
         
         # Podemos adicionar parâmetros para pré-preencher dados
         # ex: ?email=user@email.com&name=Nome
+        from urllib.parse import quote
         params = []
         if customer_email:
-            params.append(f"email={customer_email}")
+            params.append(f"email={quote(customer_email)}")
         if customer_name:
-            params.append(f"name={customer_name}")
+            params.append(f"name={quote(customer_name)}")
         if padaria:
             # Adicionar metadata para identificar a padaria no webhook
             params.append(f"metadata[padaria_id]={padaria.id}")
             params.append(f"metadata[padaria_slug]={padaria.slug}")
+        
+        # Adicionar redirect_url se suportado pela Cakto
+        # Nota: Este parâmetro pode ou não ser suportado dependendo da versão da Cakto
+        if return_url:
+            params.append(f"redirect_url={quote(return_url)}")
+            params.append(f"success_url={quote(return_url)}")
         
         if params:
             checkout_url += "?" + "&".join(params)
@@ -192,6 +201,7 @@ class CaktoService:
             "success": True,
             "offer_id": offer_id,
             "checkout_url": checkout_url,
+            "return_url": return_url,
         }
     
     def get_order_status(self, order_id):
@@ -255,22 +265,69 @@ class CaktoService:
         from datetime import timedelta
         
         try:
-            # Extrair dados do webhook
-            order_id = webhook_data.get("order_id") or webhook_data.get("id")
+            # Extrair dados do webhook - logs detalhados para debug
+            logger.info(f"Processando pagamento aprovado. Payload keys: {list(webhook_data.keys())}")
+            
+            order_id = webhook_data.get("order_id") or webhook_data.get("id") or webhook_data.get("refId")
             metadata = webhook_data.get("metadata", {})
             padaria_id = metadata.get("padaria_id")
+            padaria_slug = metadata.get("padaria_slug")
             
-            if not padaria_id:
-                # Tentar buscar pelo order_id salvo
+            # Também tentar extrair do customer para fallback
+            customer_data = webhook_data.get("customer", {})
+            customer_email = customer_data.get("email", "")
+            
+            logger.info(f"Order ID: {order_id}, Padaria ID: {padaria_id}, Slug: {padaria_slug}, Email: {customer_email}")
+            
+            subscription = None
+            padaria = None
+            
+            # Estratégia 1: Buscar pelo padaria_id nos metadata
+            if padaria_id:
+                try:
+                    padaria = Padaria.objects.get(id=padaria_id)
+                    subscription = CaktoSubscription.objects.get(padaria=padaria)
+                    logger.info(f"Padaria encontrada via metadata ID: {padaria.name}")
+                except (Padaria.DoesNotExist, CaktoSubscription.DoesNotExist):
+                    logger.warning(f"Padaria ID {padaria_id} não encontrada")
+            
+            # Estratégia 2: Buscar pelo slug nos metadata
+            if not subscription and padaria_slug:
+                try:
+                    padaria = Padaria.objects.get(slug=padaria_slug)
+                    subscription = CaktoSubscription.objects.get(padaria=padaria)
+                    logger.info(f"Padaria encontrada via metadata slug: {padaria.name}")
+                except (Padaria.DoesNotExist, CaktoSubscription.DoesNotExist):
+                    logger.warning(f"Padaria slug {padaria_slug} não encontrada")
+            
+            # Estratégia 3: Buscar pelo order_id já salvo
+            if not subscription and order_id:
                 try:
                     subscription = CaktoSubscription.objects.get(cakto_order_id=order_id)
                     padaria = subscription.padaria
+                    logger.info(f"Padaria encontrada via order_id: {padaria.name}")
                 except CaktoSubscription.DoesNotExist:
-                    logger.error(f"Padaria não encontrada para order {order_id}")
-                    return {"success": False, "error": "Padaria não encontrada"}
-            else:
-                padaria = Padaria.objects.get(id=padaria_id)
-                subscription = padaria.cakto_subscription
+                    logger.warning(f"Order ID {order_id} não encontrado em nenhuma assinatura")
+            
+            # Estratégia 4: Buscar pelo email do cliente
+            if not subscription and customer_email:
+                try:
+                    # Tentar encontrar padaria pelo email do responsável ou owner
+                    padaria = Padaria.objects.filter(
+                        models.Q(responsavel_email__iexact=customer_email) |
+                        models.Q(email__iexact=customer_email) |
+                        models.Q(owner__email__iexact=customer_email)
+                    ).first()
+                    if padaria:
+                        subscription = CaktoSubscription.objects.get(padaria=padaria)
+                        logger.info(f"Padaria encontrada via email {customer_email}: {padaria.name}")
+                except CaktoSubscription.DoesNotExist:
+                    logger.warning(f"Nenhuma assinatura para padaria com email {customer_email}")
+            
+            # Se ainda não encontrou, falhar
+            if not subscription or not padaria:
+                logger.error(f"Não foi possível identificar padaria para order {order_id}. Metadata: {metadata}")
+                return {"success": False, "error": "Padaria não encontrada", "status": "error"}
             
             # Registrar pagamento
             amount = Decimal(str(webhook_data.get("amount", self.plan_value)))
